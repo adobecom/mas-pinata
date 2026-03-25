@@ -414,7 +414,7 @@ export class Plans extends VariantLayout {
             padding-top: 8px;
         }
 
-:host([variant='plans']) #stock-checkbox {
+        :host([variant='plans']) #stock-checkbox {
             margin-top: 8px;
             gap: 9px;
             color: rgb(34, 34, 34);
@@ -429,7 +429,7 @@ export class Plans extends VariantLayout {
             height: 12px;
         }
 
-:host([variant='plans']) .secure-transaction-label {
+        :host([variant='plans']) .secure-transaction-label {
             color: rgb(80, 80, 80);
             line-height: var(--consonant-merch-card-detail-xs-line-height);
         }
