@@ -6,6 +6,8 @@ import './aem/mas-filter-panel.js';
 import './mas-selection-panel.js';
 import './mas-create-dialog.js';
 import './mas-copy-dialog.js';
+import { isAdobeRelatedQuery } from './utils/adobe-topic-filter.js';
+import './mas-prompt-suggestions.js';
 
 const renderModes = [
     {
@@ -38,6 +40,7 @@ class MasToolbar extends LitElement {
         filterCount: { state: true },
         copyDialogOpen: { state: true },
         fragmentToCopy: { state: true },
+        queryOutOfScope: { state: true },
     };
 
     static styles = css`
@@ -132,6 +135,7 @@ class MasToolbar extends LitElement {
         this.filterCount = 0;
         this.copyDialogOpen = false;
         this.fragmentToCopy = null;
+        this.queryOutOfScope = false;
 
         this.handleCopyToFolder = this.handleCopyToFolder.bind(this);
     }
@@ -212,16 +216,34 @@ class MasToolbar extends LitElement {
 
     handleSearchSubmit(ev) {
         ev.preventDefault();
-        this.updateQuery(ev.target.value);
-    }
-
-    handleChange(ev) {
-        if (ev.target.value === '') {
-            this.updateQuery('');
+        const value = ev.target.value;
+        this.updateQuery(value);
+        if (value) {
+            this.queryOutOfScope = !isAdobeRelatedQuery(value);
+        } else {
+            this.queryOutOfScope = false;
         }
     }
 
+    handleChange(ev) {
+        const value = ev.target.value;
+        if (value === '') {
+            this.updateQuery('');
+            this.queryOutOfScope = false;
+        } else {
+            this.queryOutOfScope = !isAdobeRelatedQuery(value);
+        }
+    }
+
+    handlePromptSelected(ev) {
+        const { query } = ev.detail;
+        Store.search.set((prev) => ({ ...prev, query }));
+        this.queryOutOfScope = false;
+        this.shadowRoot.querySelector('sp-search')?.focus();
+    }
+
     get searchAndFilterControls() {
+        const showSuggestions = !this.search.value.query;
         return html`<div id="read">
             <sp-action-button toggles label="Filter" class="filters-button ${this.filterCount > 0 ? 'shown' : ''}">
                 ${!this.filterCount > 0
@@ -237,6 +259,16 @@ class MasToolbar extends LitElement {
                 value=${this.search.value.query}
                 size="m"
             ></sp-search>
+            ${this.queryOutOfScope
+                ? html`<sp-help-text icon variant="negative">
+                      Please search for Adobe-related topics (e.g. Photoshop, AEM, Creative Cloud).
+                  </sp-help-text>`
+                : nothing}
+            ${showSuggestions
+                ? html`<mas-prompt-suggestions
+                      @prompt-selected=${this.handlePromptSelected}
+                  ></mas-prompt-suggestions>`
+                : nothing}
         </div>`;
     }
 
