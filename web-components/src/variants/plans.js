@@ -122,7 +122,7 @@ export class Plans extends VariantLayout {
             bodyPlaceholder.classList.add('slot-placeholder');
             if (!slotInFooter) {
                 const slotInBodyClone = slotInBody.cloneNode(true);
-                footer.prepend(slotInBodyClone);
+                footer?.prepend(slotInBodyClone);
             }
             slotInBody.replaceWith(bodyPlaceholder);
         }
