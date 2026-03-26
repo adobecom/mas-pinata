@@ -21,6 +21,7 @@ class MasSearchAndFilters extends LitElement {
         customerSegmentOptions: { type: Array },
         productOptions: { type: Array },
         searchOnly: { type: Boolean },
+        createdByMe: { type: Boolean, state: true },
     };
 
     constructor() {
@@ -34,6 +35,7 @@ class MasSearchAndFilters extends LitElement {
         this.marketSegmentOptions = [];
         this.customerSegmentOptions = [];
         this.productOptions = [];
+        this.createdByMe = false;
         this.dataSubscription = null;
     }
 
@@ -43,6 +45,7 @@ class MasSearchAndFilters extends LitElement {
             Store.translationProjects[`all${this.typeUppercased}`],
             Store.translationProjects[`display${this.typeUppercased}`],
             Store[this.type === TABLE_TYPE.PLACEHOLDERS ? 'placeholders' : 'fragments'].list.loading,
+            Store.profile,
         ]);
         const dataCallback = () => {
             if (!this.searchOnly) {
@@ -96,6 +99,9 @@ class MasSearchAndFilters extends LitElement {
         for (const id of this.productFilter) {
             const option = productMap.get(id);
             if (option) filters.push({ type: FILTER_TYPE.PRODUCT, id, label: option.title || option.label });
+        }
+        if (this.createdByMe) {
+            filters.push({ type: FILTER_TYPE.CREATED_BY, id: 'createdByMe', label: 'Created by me' });
         }
         return filters;
     }
@@ -200,7 +206,15 @@ class MasSearchAndFilters extends LitElement {
             case FILTER_TYPE.PRODUCT:
                 this.productFilter = this.productFilter.filter((filterId) => filterId !== id);
                 break;
+            case FILTER_TYPE.CREATED_BY:
+                this.createdByMe = false;
+                break;
         }
+        this.#applyFilters();
+    }
+
+    #handleCreatedByMeToggle() {
+        this.createdByMe = !this.createdByMe;
         this.#applyFilters();
     }
 
@@ -209,6 +223,7 @@ class MasSearchAndFilters extends LitElement {
         this.marketSegmentFilter = [];
         this.customerSegmentFilter = [];
         this.productFilter = [];
+        this.createdByMe = false;
         this.#applyFilters();
     }
 
@@ -312,6 +327,14 @@ class MasSearchAndFilters extends LitElement {
             if (hasProduct) {
                 if (!fragment.tags?.some((tag) => this.productFilter.includes(tag.id))) return false;
             }
+            if (this.createdByMe) {
+                const email = Store.profile.value?.email;
+                if (email) {
+                    const createdBy = fragment.created?.by;
+                    if (!createdBy) return false;
+                    if (createdBy.toLowerCase() !== email.toLowerCase()) return false;
+                }
+            }
             return true;
         });
 
@@ -364,6 +387,21 @@ class MasSearchAndFilters extends LitElement {
                               FILTER_TYPE.CUSTOMER_SEGMENT,
                           )}
                           ${this.#renderFilterPicker('Product', this.productOptions, this.productFilter, FILTER_TYPE.PRODUCT)}
+                          ${this.type === TABLE_TYPE.CARDS
+                              ? html`
+                                    <sp-action-button
+                                        class="filter-trigger ${this.createdByMe ? 'active' : ''}"
+                                        quiet
+                                        .disabled=${this.isLoading}
+                                        @click=${this.#handleCreatedByMeToggle}
+                                    >
+                                        Created by me
+                                        ${this.createdByMe
+                                            ? html`<sp-icon-checkmark slot="icon"></sp-icon-checkmark>`
+                                            : nothing}
+                                    </sp-action-button>
+                                `
+                              : nothing}
                       </div>
 
                       ${this.#renderAppliedFilters()}
