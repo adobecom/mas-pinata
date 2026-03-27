@@ -1007,17 +1007,47 @@ export class MasRepository extends LitElement {
     }
 
     /**
+     * Generates a unique fragment title by appending a numeric suffix if the base title
+     * already exists among fragments in the given path.
+     * @param {string} baseTitle - The desired fragment title
+     * @param {string} searchPath - The DAM path to search within
+     * @returns {Promise<string>} A unique title
+     */
+    async generateUniqueTitle(baseTitle, searchPath) {
+        const titles = new Set();
+        const cursor = this.aem.sites.cf.fragments.search(
+            { path: searchPath, query: baseTitle },
+            50,
+        );
+        for await (const items of cursor) {
+            for (const item of items) {
+                if (item.title) titles.add(item.title);
+            }
+        }
+        if (!titles.has(baseTitle)) return baseTitle;
+        for (let attempt = 1; attempt <= 20; attempt++) {
+            const candidate = `${baseTitle}-${attempt}`;
+            if (!titles.has(candidate)) return candidate;
+        }
+        throw new Error(
+            `Could not generate a unique title for "${baseTitle}" after 20 attempts.`,
+        );
+    }
+
+    /**
      * @returns {Promise<boolean>} Whether or not it was successful
      */
     async copyFragment(updatedTitle, osi, tags = []) {
         try {
             this.operation.set(OPERATIONS.CLONE);
+            const baseTitle = updatedTitle || this.fragmentInEdit.title;
+            const uniqueTitle = await this.generateUniqueTitle(baseTitle, this.parentPath);
             const result = await this.aem.sites.cf.fragments.copy(this.fragmentInEdit);
             let savedResult = result;
-            const needsSave = (updatedTitle && updatedTitle !== result.title) || osi;
+            const needsSave = (uniqueTitle !== result.title) || osi;
             if (needsSave) {
-                if (updatedTitle && updatedTitle !== result.title) {
-                    result.title = updatedTitle;
+                if (uniqueTitle !== result.title) {
+                    result.title = uniqueTitle;
                 }
                 result.fields.forEach((field) => {
                     if (osi && field.name === 'osi') {
