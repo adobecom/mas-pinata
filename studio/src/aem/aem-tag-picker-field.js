@@ -120,20 +120,7 @@ class AemTagPickerField extends LitElement {
             padding: 8px;
         }
 
-        #footer {
-            padding: 8px;
-            height: 40px;
-            align-items: center;
-            display: flex;
-            gap: 8px;
-            justify-content: end;
-        }
-
-        #footer span {
-            flex: 1;
-        }
-
-        sp-action-button {
+sp-action-button {
             display: flex;
             flex-direction: row-reverse;
         }
@@ -642,7 +629,9 @@ class AemTagPickerField extends LitElement {
             if (changed) this.#notifyChange();
             return;
         }
-        this.tempValue = [...this.#asValueArray()];
+        const changed = !this.#hasSameSelections(this.tempValue, this.#asValueArray());
+        this.value = [...this.tempValue];
+        if (changed) this.#notifyChange();
     }
 
     #handleSearchInput(event) {
@@ -686,15 +675,7 @@ class AemTagPickerField extends LitElement {
                         },
                     )}
                 </div>
-                ${this.isCheckboxTagsMode
-                    ? nothing
-                    : html`<div id="footer">
-                          <span> ${this.selectedText} </span>
-                          <sp-button size="s" @click=${this.resetSelection} variant="secondary" treatment="outline">
-                              Reset
-                          </sp-button>
-                          <sp-button size="s" @click=${this.applySelection}> Apply </sp-button>
-                      </div>`}
+                ${nothing}
             </div>
         `;
     }
