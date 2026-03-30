@@ -19,7 +19,7 @@ import '../src/merch-card-collection.js';
 
 import { withWcs } from './mocks/wcs.js';
 import { withAem } from './mocks/aem.js';
-import '../src/mas.js';
+import '../src/merch-card.js';
 
 const searchParams = new URLSearchParams(document.location.search);
 
