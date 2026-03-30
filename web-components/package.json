@@ -10,6 +10,8 @@
         "build:dev": "npm run build:bundle sourcemap no-minify",
         "build:docs": "./docs/src/build-docs.sh",
         "build:bundle": "node ./build.mjs",
+        "build:merch-card": "node ./build.mjs merch-card",
+        "build:merch-card-collection": "node ./build.mjs merch-card-collection",
         "build:bundle:dev": "npm run build:bundle sourcemap",
         "watch": "node ./watch.mjs",
         "dev": "node ./watch.mjs --serve",

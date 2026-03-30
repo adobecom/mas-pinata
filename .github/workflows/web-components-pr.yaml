@@ -11,8 +11,31 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
-    build-and-test:
-        name: Build and Test Web Components
+    changes:
+        name: Detect changed files
+        runs-on: ubuntu-latest
+        outputs:
+            merch-card: ${{ steps.filter.outputs.merch-card }}
+            merch-card-collection: ${{ steps.filter.outputs.merch-card-collection }}
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Filter paths
+              uses: dorny/paths-filter@v3
+              id: filter
+              with:
+                  filters: |
+                      merch-card:
+                        - 'web-components/src/merch-card.js'
+                        - 'web-components/src/merch-card.css.js'
+                      merch-card-collection:
+                        - 'web-components/src/merch-card-collection.js'
+
+    build-merch-card:
+        name: Build merch-card
+        needs: changes
+        if: needs.changes.outputs.merch-card == 'true'
         runs-on: ubuntu-latest
         timeout-minutes: 15
         defaults:
@@ -38,7 +61,7 @@ jobs:
               working-directory: .
 
             - name: Run build
-              run: npm run build
+              run: npm run build:merch-card
 
             - name: Check for uncommitted changes
               run: |
@@ -46,7 +69,50 @@ jobs:
                     echo "❌ Build generated changes that are not committed:"
                     git status --porcelain
                     echo ""
-                    echo "Please run 'npm run build' locally and commit the generated files."
+                    echo "Please run 'npm run build:merch-card' locally and commit the generated files."
+                    exit 1
+                  else
+                    echo "✅ No uncommitted changes after build"
+                  fi
+
+    build-merch-card-collection:
+        name: Build merch-card-collection
+        needs: changes
+        if: needs.changes.outputs.merch-card-collection == 'true'
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        defaults:
+            run:
+                working-directory: web-components
+        strategy:
+            matrix:
+                node-version: [22.x]
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: 'npm'
+                  cache-dependency-path: package-lock.json
+
+            - name: Install dependencies
+              run: npm ci
+              working-directory: .
+
+            - name: Run build
+              run: npm run build:merch-card-collection
+
+            - name: Check for uncommitted changes
+              run: |
+                  if [ -n "$(git status --porcelain)" ]; then
+                    echo "❌ Build generated changes that are not committed:"
+                    git status --porcelain
+                    echo ""
+                    echo "Please run 'npm run build:merch-card-collection' locally and commit the generated files."
                     exit 1
                   else
                     echo "✅ No uncommitted changes after build"

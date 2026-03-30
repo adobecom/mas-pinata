@@ -15,68 +15,95 @@ const defaults = {
 // Read the price-literals.js file content
 const priceLiteralsContent = readFileSync('./price-literals.json', 'utf-8');
 
-// commerce.js
-const { metafile } = await build({
-    ...defaults,
-    alias: {
-        react: 'test/mocks/react.js',
-    },
-    entryPoints: ['./src/commerce.js'],
-    outfile: `${outfolder}/commerce.js`,
-    metafile: true,
-    platform: 'browser',
-    banner: {
-        js: `window.masPriceLiterals = ${priceLiteralsContent}.data;`,
-    },
-});
-writeFileSync(`commerce.json`, JSON.stringify(metafile));
+const componentArg = process.argv.find(
+    (arg) => arg === 'merch-card' || arg === 'merch-card-collection',
+);
 
-// mas.js
-await build({
-    ...defaults,
-    entryPoints: ['./src/mas.js'],
-    outfile: './dist/mas.js',
-    plugins: [],
-    banner: {
-        js: `window.masPriceLiterals = ${priceLiteralsContent}.data;`,
-    },
-});
+if (!componentArg) {
+    // commerce.js
+    const { metafile } = await build({
+        ...defaults,
+        alias: {
+            react: 'test/mocks/react.js',
+        },
+        entryPoints: ['./src/commerce.js'],
+        outfile: `${outfolder}/commerce.js`,
+        metafile: true,
+        platform: 'browser',
+        banner: {
+            js: `window.masPriceLiterals = ${priceLiteralsContent}.data;`,
+        },
+    });
+    writeFileSync(`commerce.json`, JSON.stringify(metafile));
+
+    // mas.js
+    await build({
+        ...defaults,
+        entryPoints: ['./src/mas.js'],
+        outfile: './dist/mas.js',
+        plugins: [],
+        banner: {
+            js: `window.masPriceLiterals = ${priceLiteralsContent}.data;`,
+        },
+    });
+}
 
 // web components
-Promise.all([
-    build({
-        ...defaults,
-        stdin: { contents: '' },
-        inject: ['./src/merch-offer.js', './src/merch-offer-select.js'],
-        plugins: [rewriteImportsToLibsFolder()],
-        outfile: `${outfolder}/merch-offer-select.js`,
-    }),
-    build({
-        ...defaults,
-        entryPoints: ['./src/merch-card-collection.js'],
-        plugins: [rewriteImportsToLibsFolder()],
-        outfile: `${outfolder}/merch-card-collection.js`,
-    }),
-    build({
-        ...defaults,
-        entryPoints: ['./src/sidenav/merch-sidenav.js'],
-        outfile: `${outfolder}/merch-sidenav.js`,
-        plugins: [rewriteImportsToLibsFolder()],
-    }),
-    build({
-        ...defaults,
-        entryPoints: ['./src/mas-field.js'],
-        outfile: `${outfolder}/mas-field.js`,
-    }),
-    buildLitComponent('merch-card'),
-    buildLitComponent('merch-icon'),
-    buildLitComponent('merch-quantity-select'),
-    buildLitComponent('merch-secure-transaction'),
-    buildLitComponent('merch-stock'),
-    buildLitComponent('merch-whats-included'),
-    buildLitComponent('merch-mnemonic-list'),
-    buildLitComponent('mas-mnemonic'),
-]).catch(() => process.exit(1));
+const webComponentBuilds = [];
+
+if (!componentArg || componentArg === 'merch-card-collection') {
+    webComponentBuilds.push(
+        build({
+            ...defaults,
+            stdin: { contents: '' },
+            inject: ['./src/merch-offer.js', './src/merch-offer-select.js'],
+            plugins: [rewriteImportsToLibsFolder()],
+            outfile: `${outfolder}/merch-offer-select.js`,
+        }),
+        build({
+            ...defaults,
+            entryPoints: ['./src/merch-card-collection.js'],
+            plugins: [rewriteImportsToLibsFolder()],
+            outfile: `${outfolder}/merch-card-collection.js`,
+        }),
+    );
+}
+
+if (!componentArg) {
+    webComponentBuilds.push(
+        build({
+            ...defaults,
+            entryPoints: ['./src/sidenav/merch-sidenav.js'],
+            outfile: `${outfolder}/merch-sidenav.js`,
+            plugins: [rewriteImportsToLibsFolder()],
+        }),
+        build({
+            ...defaults,
+            entryPoints: ['./src/mas-field.js'],
+            outfile: `${outfolder}/mas-field.js`,
+        }),
+    );
+}
+
+if (!componentArg || componentArg === 'merch-card') {
+    webComponentBuilds.push(
+        buildLitComponent('merch-card'),
+    );
+}
+
+if (!componentArg) {
+    webComponentBuilds.push(
+        buildLitComponent('merch-icon'),
+        buildLitComponent('merch-quantity-select'),
+        buildLitComponent('merch-secure-transaction'),
+        buildLitComponent('merch-stock'),
+        buildLitComponent('merch-whats-included'),
+        buildLitComponent('merch-mnemonic-list'),
+        buildLitComponent('mas-mnemonic'),
+    );
+}
+
+Promise.all(webComponentBuilds).catch(() => process.exit(1));
 
 async function buildLitComponent(name) {
     const { metafile } = await build({
