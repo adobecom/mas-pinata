@@ -5,6 +5,7 @@ class MasSideNavItem extends LitElement {
         label: { type: String },
         selected: { type: Boolean },
         disabled: { type: Boolean },
+        href: { type: String },
     };
 
     static styles = css`
@@ -82,6 +83,12 @@ class MasSideNavItem extends LitElement {
         :host(.side-nav-support) {
             position: relative;
         }
+
+        a.nav-anchor {
+            display: contents;
+            text-decoration: none;
+            color: inherit;
+        }
     `;
 
     constructor() {
@@ -100,6 +107,7 @@ class MasSideNavItem extends LitElement {
     }
 
     handleClick(event) {
+        if (this.href) return; // anchor handles navigation
         if (this.disabled) {
             event.stopPropagation();
             event.preventDefault();
@@ -113,13 +121,41 @@ class MasSideNavItem extends LitElement {
         );
     }
 
+    #handleAnchorClick(event) {
+        if (this.disabled) {
+            event.preventDefault();
+            return;
+        }
+        // Middle-click or modifier key: let browser open in new tab natively
+        if (event.button === 1 || event.ctrlKey || event.metaKey || event.shiftKey) {
+            return;
+        }
+        // Left-click: prevent full navigation, use SPA router via nav-click
+        event.preventDefault();
+        this.dispatchEvent(
+            new CustomEvent('nav-click', {
+                bubbles: true,
+                composed: true,
+            }),
+        );
+    }
+
     render() {
-        return html`
+        const content = html`
             <div class="icon-container">
                 <slot name="icon"></slot>
             </div>
             <div class="label">${this.label}</div>
         `;
+        if (this.href) {
+            return html`<a
+                class="nav-anchor"
+                href="${this.href}"
+                @click="${this.#handleAnchorClick}"
+                >${content}</a
+            >`;
+        }
+        return content;
     }
 }
 
