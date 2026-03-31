@@ -47,7 +47,7 @@ const VARIANTS_WITH_HEIGHT_SYNC = [
     'simplified-pricing-express',
 ];
 
-const VARIANTS_WITH_WIDTH_BADGE_SYNC = ['segment', 'product'];
+const VARIANTS_WITH_WIDTH_BADGE_SYNC = ['segment', 'product', 'plans', 'plans-v2'];
 
 function priceOptionsProvider(element, options) {
     const card = element.closest(MERCH_CARD);
@@ -87,7 +87,7 @@ const intersectionObserver = new IntersectionObserver((entries) => {
             }
 
             const cardWidth = card.getBoundingClientRect().width;
-            const badgeEl = card.querySelector('[slot="badge"]');
+            const badgeEl = card.querySelector('[slot="badge"]') || card.shadowRoot?.querySelector('#badge');
             const badgeWidth = badgeEl?.getBoundingClientRect().width || 0;
             if (cardWidth === 0 || badgeWidth === 0) {
                 intersectionObserver.unobserve(card);
