@@ -97,6 +97,7 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
         });
 
         await test.step('step-2: Wait for table to load and open dropdown', async () => {
+            await page.context().grantPermissions(['clipboard-read']);
             await placeholders.waitForTableToLoad();
             const firstRow = placeholders.placeholderRows.first();
             await firstRow.locator('.action-menu-button').click();
