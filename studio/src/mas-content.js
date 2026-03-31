@@ -30,6 +30,7 @@ class MasContent extends LitElement {
     selection = new StoreController(this, Store.selection);
     search = new StoreController(this, Store.search);
     filters = new StoreController(this, Store.filters);
+    sort = new StoreController(this, Store.sort);
 
     connectedCallback() {
         super.connectedCallback();
@@ -108,6 +109,30 @@ class MasContent extends LitElement {
         Store.selection.set(Array.from(event.target.selectedSet));
     }
 
+    #handleSort({ detail: { sortKey, sortDirection } }) {
+        Store.sort.set({ sortBy: sortKey, sortDirection });
+    }
+
+    /** @param {import('./reactivity/fragment-store.js').FragmentStore[]} fragmentStores */
+    #sortedFragmentStores(fragmentStores) {
+        const { sortBy, sortDirection } = this.sort.value;
+        const sorted = [...fragmentStores].sort((a, b) => {
+            let cmp = 0;
+            if (sortBy === 'title') {
+                cmp = (a.get().title ?? '').localeCompare(b.get().title ?? '');
+            } else if (sortBy === 'modified') {
+                const aAt = a.get().modified?.at ?? '';
+                const bAt = b.get().modified?.at ?? '';
+                if (!aAt && !bAt) cmp = 0;
+                else if (!aAt) cmp = 1;
+                else if (!bAt) cmp = -1;
+                else cmp = aAt < bAt ? -1 : aAt > bAt ? 1 : 0;
+            }
+            return sortDirection === 'desc' ? -cmp : cmp;
+        });
+        return sorted;
+    }
+
     /** @param {import('./reactivity/fragment-store.js').FragmentStore[]} fragmentStores */
     /** Non-country mas:pzn tag ids selected in the filter panel (narrow the Personalization group only). */
     #getSelectedPersonalizationTagIds() {
@@ -163,11 +188,12 @@ class MasContent extends LitElement {
 
     get tableView() {
         const fragmentStores = this.fragments.value.filter((fragmentStore) => fragmentStore.get() !== null);
+        const sortedStores = this.#sortedFragmentStores(fragmentStores);
         const personalizationOn = Store.filters.get().personalizationFilterEnabled === true;
         const body = personalizationOn
-            ? this.#renderTableBodyGrouped(fragmentStores)
+            ? this.#renderTableBodyGrouped(sortedStores)
             : repeat(
-                  fragmentStores,
+                  sortedStores,
                   (fragmentStore) => fragmentStore.get().path,
                   (fragmentStore) => html`<mas-fragment .fragmentStore=${fragmentStore} view="table"></mas-fragment>`,
               );
@@ -182,10 +208,23 @@ class MasContent extends LitElement {
             <sp-table-head>
                 <sp-table-head-cell class="expand-cell"></sp-table-head-cell>
                 <sp-table-head-cell sortable class="name">Path</sp-table-head-cell>
-                <sp-table-head-cell sortable class="title">Fragment Title</sp-table-head-cell>
+                <sp-table-head-cell
+                    sortable
+                    sort-key="title"
+                    sort-direction=${this.sort.value.sortBy === 'title' ? this.sort.value.sortDirection : 'asc'}
+                    @sorted=${this.#handleSort}
+                    class="title"
+                >Fragment Title</sp-table-head-cell>
                 <sp-table-head-cell sortable class="offer-id">Offer ID</sp-table-head-cell>
                 <sp-table-head-cell sortable class="offer-type">Offer Type</sp-table-head-cell>
                 <sp-table-head-cell sortable class="last-modified-by">Last Modified By</sp-table-head-cell>
+                <sp-table-head-cell
+                    sortable
+                    sort-key="modified"
+                    sort-direction=${this.sort.value.sortBy === 'modified' ? this.sort.value.sortDirection : 'asc'}
+                    @sorted=${this.#handleSort}
+                    class="last-modified"
+                >Last Modified</sp-table-head-cell>
                 <sp-table-head-cell sortable class="price">Price</sp-table-head-cell>
                 <sp-table-head-cell sortable class="status">Status</sp-table-head-cell>
                 <sp-table-head-cell class="actions">Actions</sp-table-head-cell>
