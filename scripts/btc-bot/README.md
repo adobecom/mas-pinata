@@ -25,7 +25,7 @@ No npm install step is needed — the bot has zero external dependencies.
 
 ## Configuration
 
-All configuration is read from environment variables (or an optional `.env` file in the working directory).
+All configuration is read from environment variables (or an optional `.env` file in the `scripts/btc-bot/` directory).
 
 | Variable | Default | Description |
 |---|---|---|

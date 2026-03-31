@@ -8,7 +8,7 @@ import { resolve } from 'path';
 
 function loadDotEnv() {
     try {
-        const envPath = resolve(process.cwd(), '.env');
+        const envPath = resolve(new URL('.', import.meta.url).pathname, '.env');
         const lines = readFileSync(envPath, 'utf8').split('\n');
         for (const line of lines) {
             const trimmed = line.trim();
