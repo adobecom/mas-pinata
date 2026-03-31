@@ -137,6 +137,49 @@ describe('aem.js', () => {
 
             expect(querybuilderCalled).to.equal(false);
         });
+
+        it('should deduplicate fragments already returned by fullText search', async () => {
+            const fragA = { id: 'frag-a', path: '/content/dam/path-a', title: 'Frag A' };
+            const fragB = { id: 'frag-b', path: '/content/dam/path-b', title: 'Frag B' };
+
+            window.fetch = async (url) => {
+                // CF search returns fragA
+                if (url.includes('/search')) {
+                    return {
+                        ok: true,
+                        json: async () => ({ items: [fragA] }),
+                    };
+                }
+                // querybuilder returns both paths (path-a overlaps, path-b is new)
+                if (url.includes('querybuilder.json')) {
+                    return {
+                        ok: true,
+                        json: async () => ({
+                            hits: [
+                                { path: '/content/dam/path-a' },
+                                { path: '/content/dam/path-b' },
+                            ],
+                        }),
+                    };
+                }
+                // getFragmentByPath for path-b returns fragB
+                if (url.includes('path-b')) {
+                    return {
+                        ok: true,
+                        json: async () => ({ items: [fragB] }),
+                    };
+                }
+                return { ok: false };
+            };
+
+            const actual = [];
+            for await (const items of aem.searchFragment({ path: '/content/dam', query: 'Frag' })) {
+                actual.push(...items);
+            }
+
+            // fragA comes from fullText; only fragB should come from title search
+            expect(actual).to.deep.equal([fragA, fragB]);
+        });
     });
 
     describe('method: getFragmentTranslations', () => {

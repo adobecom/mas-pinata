@@ -170,7 +170,10 @@ class AEM {
                 const titleFragments = await Promise.all(
                     newPaths.map((p) => this.getFragmentByPath(p).catch(() => null)),
                 );
-                const validTitleFragments = titleFragments.filter(Boolean);
+                let validTitleFragments = titleFragments.filter(Boolean);
+                if (tags.length > 0) {
+                    validTitleFragments = validTitleFragments.filter(filterByTags(tags));
+                }
                 if (validTitleFragments.length > 0) {
                     yield validTitleFragments;
                 }
