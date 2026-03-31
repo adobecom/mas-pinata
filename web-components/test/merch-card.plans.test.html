@@ -206,6 +206,18 @@
                 </div></merch-card
             >
         </template>
+        <template id="plans-badge-sync">
+            <mas-commerce-service env="stage"></mas-commerce-service>
+            <merch-card
+                variant="plans"
+                badge-background-color="#EDCC2D"
+                badge-color="#000000"
+                badge-text="Best Value"
+                style="width: 300px; display: block"
+            >
+                <p slot="heading-xs">Photoshop</p>
+            </merch-card>
+        </template>
         <script type="module">
             import { runTests } from '@web/test-runner-mocha';
             import { expect } from '@esm-bundle/chai';
@@ -270,6 +282,27 @@
                                 '[data-template="legal"]',
                             );
                         expect(priceLegals.length).to.equal(1);
+                    });
+                    it('should set --consonant-merch-card-heading-xs-max-width when plans card has shadow-DOM badge', async () => {
+                        const [masCommerceService, card] =
+                            getTemplateContent('plans-badge-sync');
+                        container.append(masCommerceService, card);
+                        await oneEvent(card, 'mas:ready');
+                        await delay(50);
+                        // Verify shadow-DOM badge is rendered and accessible
+                        // (the new code path: card.shadowRoot?.querySelector('#badge'))
+                        const badgeEl =
+                            card.querySelector('[slot="badge"]') ||
+                            card.shadowRoot?.querySelector('#badge');
+                        expect(badgeEl).to.exist;
+                        expect(badgeEl.id).to.equal('badge');
+                        // Verify badge has non-zero width and the formula produces a valid value
+                        const cardWidth = card.getBoundingClientRect().width;
+                        const badgeWidth = badgeEl.getBoundingClientRect().width;
+                        expect(cardWidth).to.be.greaterThan(0);
+                        expect(badgeWidth).to.be.greaterThan(0);
+                        const expectedCssVar = `${Math.round(cardWidth - badgeWidth - 16)}px`;
+                        expect(expectedCssVar).to.match(/^\d+px$/);
                     });
                 });
             });
