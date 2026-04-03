@@ -42,9 +42,7 @@ test.describe('Merch Mnemonic List CSS test suite', () => {
         });
 
         await test.step('step-3: Verify description slot font-size uses --type-heading-xs-size (18px)', async () => {
-            expect(
-                await webUtil.verifyCSS(mnemonicPage.description, mnemonicPage.cssProp.description),
-            ).toBeTruthy();
+            expect(await webUtil.verifyCSS(mnemonicPage.description, mnemonicPage.cssProp.description)).toBeTruthy();
         });
     });
 });
