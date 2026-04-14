@@ -4,7 +4,7 @@
   "github_repo": "antonio-rmrz/mas",
   "default_branch": "main",
   "r2_bucket": "agentic-mas",
-  "branch_naming": "mas",
+  "branch_naming": "jira",
   "artifacts": {
     "specs": "r2",
     "docs": "r2",
@@ -18,18 +18,14 @@
   "depends_on": [],
   "test_urls": {
     "envs": {
-      "@mas_live":    "https://main--mas--adobecom.aem.live",
-      "@mas_stage":   "https://stage--mas--adobecom.aem.live",
-      "@mas_preview": "https://main--mas--adobecom.aem.page",
+      "@mas_live":    "https://main--mas-pinata--adobecom.aem.live",
+      "@mas_preview": "https://main--mas-pinata--adobecom.aem.page",
       "@milo_live":   "https://main--milo--adobecom.aem.live",
       "@cc_live":     "https://main--cc--adobecom.aem.live",
       "@adobe_prod":  "https://www.adobe.com",
       "@adobe_stage": "https://www.stage.adobe.com"
     },
-    "self_host_template":  "{branch}--mas--adobecom.aem.live",
-    "baseline_branch":     "main",
-    "libs_param":          "maslibs",
-    "libs_value_template": "{branch}--mas--adobecom",
-    "default_path":        "/"
+    "libs_param":   "maslibs",
+    "default_path": "/"
   }
 }
