@@ -1,7 +1,8 @@
 {
   "name": "mas",
   "app_name": "mas",
-  "github_repo": "antonio-rmrz/mas",
+  "github_repo": "adobecom/mas-pinata",
+  "github_app_installation_id": "118879229",
   "default_branch": "main",
   "r2_bucket": "agentic-mas",
   "branch_naming": "jira",
