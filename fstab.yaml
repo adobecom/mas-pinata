@@ -1,4 +1,4 @@
 mountpoints:
     /:
-        url: https://content.da.live/adobecom/mas/
+        url: https://content.da.live/adobecom/mas-pinata/
         type: markup

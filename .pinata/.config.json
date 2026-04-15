@@ -1,45 +1,49 @@
 {
-  "name": "mas",
-  "app_name": "mas",
-  "github_repo": "adobecom/mas-pinata",
-  "github_app_installation_id": "122955748",
-  "default_branch": "main",
-  "r2_bucket": "agentic-mas",
-  "branch_naming": "jira",
-  "branch_naming_prefixes": ["MWPW"],
-  "artifacts": {
-    "specs": "r2",
-    "docs": "r2",
-    "kpis": "harness"
-  },
-  "services": [
-    { "name": "aem",    "env_var": "AEM_PORT",    "default": 3000 },
-    { "name": "studio", "env_var": "STUDIO_PORT",  "default": 3100 },
-    { "name": "wc",     "env_var": "WC_PORT",      "default": 3200 }
-  ],
-  "depends_on": [],
-  "test_urls": {
-    "envs": {
-      "@mas_live":        "https://main--mas-pinata--adobecom.aem.live",
-      "@mas_preview":     "https://main--mas-pinata--adobecom.aem.page",
-      "@mas_studio_live": "https://main--mas-pinata--adobecom.aem.live/studio.html",
-      "@milo_live":       "https://main--milo--adobecom.aem.live",
-      "@cc_live":         "https://main--cc--adobecom.aem.live",
-      "@adobe_prod":      "https://www.adobe.com",
-      "@adobe_stage":     "https://www.stage.adobe.com"
+    "source_app": "mas",
+    "name": "mas",
+    "app_name": "mas",
+    "github_repo": "adobecom/mas-pinata",
+    "github_app_installation_id": "118879229",
+    "default_branch": "main",
+    "branch_naming": "jira",
+    "branch_naming_prefixes": ["MWPW"],
+    "r2_bucket": "pinata-mas",
+    "artifacts": {
+        "specs": "r2",
+        "docs": "r2",
+        "kpis": "harness"
     },
-    "libs_param":   "maslibs",
-    "default_path": "/"
-  },
-  "verify": {
-    "command": "npm run build:bundle",
-    "after": ["build", "fix", "patch"],
-    "cwd": ".",
-    "timeout_seconds": 600,
-    "max_attempts": 1,
-    "on_failure": {
-      "draft_pr": true,
-      "exit_nonzero": false
+    "services": [
+        { "name": "aem", "env_var": "AEM_PORT", "default": 3000 },
+        { "name": "studio", "env_var": "STUDIO_PORT", "default": 3100 },
+        { "name": "wc", "env_var": "WC_PORT", "default": 3200 }
+    ],
+    "libs_service": "aem",
+    "libs_param": "maslibs",
+    "libs_param_value": "local",
+    "depends_on": [],
+    "test_urls": {
+        "envs": {
+            "@mas_live": "https://main--mas-pinata--adobecom.aem.live",
+            "@mas_preview": "https://main--mas-pinata--adobecom.aem.page",
+            "@mas_studio_live": "https://main--mas-pinata--adobecom.aem.live/studio.html",
+            "@milo_live": "https://main--milo--adobecom.aem.live",
+            "@cc_live": "https://main--cc--adobecom.aem.live",
+            "@adobe_prod": "https://www.adobe.com",
+            "@adobe_stage": "https://www.stage.adobe.com"
+        },
+        "libs_param": "maslibs",
+        "default_path": "/"
+    },
+    "verify": {
+        "command": "npm run build:bundle",
+        "after": ["build", "fix", "patch"],
+        "cwd": ".",
+        "timeout_seconds": 600,
+        "max_attempts": 1,
+        "on_failure": {
+            "draft_pr": true,
+            "exit_nonzero": false
+        }
     }
-  }
 }
