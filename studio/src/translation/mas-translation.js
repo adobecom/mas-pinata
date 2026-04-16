@@ -14,6 +14,7 @@ class MasTranslation extends LitElement {
         isDialogOpen: { type: Boolean, state: true },
         confirmDialogConfig: { type: Object, state: true },
         columns: { type: Set, state: true },
+        _searchQuery: { type: String, state: true },
     };
 
     #searchCallback = null;
@@ -26,6 +27,7 @@ class MasTranslation extends LitElement {
         ]);
         this.isDialogOpen = false;
         this.confirmDialogConfig = null;
+        this._searchQuery = '';
         this.columns = new Set([
             { key: 'title', label: 'Translation Project' },
             { key: 'status', label: 'Status' },
@@ -45,6 +47,14 @@ class MasTranslation extends LitElement {
 
     get translationProjectsData() {
         return Store.translationProjects?.list?.data?.get() || [];
+    }
+
+    get filteredProjects() {
+        const query = this._searchQuery.toLowerCase();
+        if (!query) return this.translationProjectsData;
+        return this.translationProjectsData.filter(
+            (project) => project.get().title.toLowerCase().includes(query),
+        );
     }
 
     get confirmDialog() {
@@ -77,13 +87,17 @@ class MasTranslation extends LitElement {
         `;
     }
 
+    #handleSearch(event) {
+        this._searchQuery = event.target.value.trim();
+    }
+
     get translationsProjectsContent() {
         if (Store.translationProjects?.list?.loading?.get()) {
             return html`<div class="loading-container--absolute">
                 <sp-progress-circle indeterminate size="l"></sp-progress-circle>
             </div>`;
         }
-        if (this.translationProjectsData.length) {
+        if (this.filteredProjects.length) {
             return html` <sp-table emphasized .scroller=${true} class="translation-table">
                 <sp-table-head>
                     ${[...this.columns].map(
@@ -103,7 +117,7 @@ class MasTranslation extends LitElement {
                 </sp-table-head>
                 <sp-table-body>
                     ${repeat(
-                        this.translationProjectsData,
+                        this.filteredProjects,
                         (translationProject) => translationProject.get().id,
                         (translationProject) => html`
                             <sp-table-row
@@ -304,8 +318,8 @@ class MasTranslation extends LitElement {
                     </sp-button>
                 </div>
                 <div class="translation-toolbar">
-                    <sp-search size="m" placeholder="Search" disabled></sp-search>
-                    <div>${this.translationProjectsData.length} result(s)</div>
+                    <sp-search size="m" placeholder="Search" @input=${this.#handleSearch}></sp-search>
+                    <div>${this.filteredProjects.length} result(s)</div>
                 </div>
                 ${this.confirmDialog}
                 <div class="translation-content">${this.translationsProjectsContent}</div>

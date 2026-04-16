@@ -113,7 +113,7 @@ describe('MasTranslation', () => {
             const el = await fixture(html`<mas-translation></mas-translation>`);
             const search = el.shadowRoot.querySelector('sp-search');
             expect(search).to.exist;
-            expect(search.disabled).to.be.true;
+            expect(search.disabled).to.be.false;
         });
 
         it('should render result count', async () => {
@@ -659,6 +659,90 @@ describe('MasTranslation', () => {
             expect(Store.translationProjects.selectedPlaceholders.get()).to.deep.equal([]);
             expect(Store.translationProjects.targetLocales.get()).to.deep.equal([]);
             expect(Store.translationProjects.showSelected.get()).to.be.false;
+        });
+    });
+
+    describe('search filtering', () => {
+        it('should filter rows by title (case-insensitive)', async () => {
+            const mockProjects = [
+                createMockTranslationProject('1', 'Alpha Project'),
+                createMockTranslationProject('2', 'Beta Project'),
+                createMockTranslationProject('3', 'Gamma Initiative'),
+            ];
+            Store.translationProjects.list.data.value = mockProjects;
+            const el = await fixture(html`<mas-translation></mas-translation>`);
+            const search = el.shadowRoot.querySelector('sp-search');
+            search.value = 'alpha';
+            search.dispatchEvent(new Event('input', { bubbles: true }));
+            await el.updateComplete;
+            const rows = el.shadowRoot.querySelectorAll('sp-table-row');
+            expect(rows.length).to.equal(1);
+            expect(rows[0].querySelector('sp-table-cell').textContent).to.equal('Alpha Project');
+        });
+
+        it('should restore all rows when search is cleared', async () => {
+            const mockProjects = [
+                createMockTranslationProject('1', 'Alpha Project'),
+                createMockTranslationProject('2', 'Beta Project'),
+                createMockTranslationProject('3', 'Gamma Initiative'),
+            ];
+            Store.translationProjects.list.data.value = mockProjects;
+            const el = await fixture(html`<mas-translation></mas-translation>`);
+            const search = el.shadowRoot.querySelector('sp-search');
+            search.value = 'alpha';
+            search.dispatchEvent(new Event('input', { bubbles: true }));
+            await el.updateComplete;
+            search.value = '';
+            search.dispatchEvent(new Event('input', { bubbles: true }));
+            await el.updateComplete;
+            const rows = el.shadowRoot.querySelectorAll('sp-table-row');
+            expect(rows.length).to.equal(3);
+        });
+
+        it('should treat whitespace-only input as no filter', async () => {
+            const mockProjects = [
+                createMockTranslationProject('1', 'Alpha Project'),
+                createMockTranslationProject('2', 'Beta Project'),
+            ];
+            Store.translationProjects.list.data.value = mockProjects;
+            const el = await fixture(html`<mas-translation></mas-translation>`);
+            const search = el.shadowRoot.querySelector('sp-search');
+            search.value = '   ';
+            search.dispatchEvent(new Event('input', { bubbles: true }));
+            await el.updateComplete;
+            const rows = el.shadowRoot.querySelectorAll('sp-table-row');
+            expect(rows.length).to.equal(2);
+        });
+
+        it('should show 0 result(s) count when no matches', async () => {
+            const mockProjects = [
+                createMockTranslationProject('1', 'Alpha Project'),
+                createMockTranslationProject('2', 'Beta Project'),
+            ];
+            Store.translationProjects.list.data.value = mockProjects;
+            const el = await fixture(html`<mas-translation></mas-translation>`);
+            const search = el.shadowRoot.querySelector('sp-search');
+            search.value = 'zzznomatch';
+            search.dispatchEvent(new Event('input', { bubbles: true }));
+            await el.updateComplete;
+            const toolbar = el.shadowRoot.querySelector('.translation-toolbar');
+            expect(toolbar.textContent).to.include('0 result(s)');
+        });
+
+        it('should update result count to reflect filtered count', async () => {
+            const mockProjects = [
+                createMockTranslationProject('1', 'Alpha Project'),
+                createMockTranslationProject('2', 'Beta Project'),
+                createMockTranslationProject('3', 'Alpha Secondary'),
+            ];
+            Store.translationProjects.list.data.value = mockProjects;
+            const el = await fixture(html`<mas-translation></mas-translation>`);
+            const search = el.shadowRoot.querySelector('sp-search');
+            search.value = 'beta';
+            search.dispatchEvent(new Event('input', { bubbles: true }));
+            await el.updateComplete;
+            const toolbar = el.shadowRoot.querySelector('.translation-toolbar');
+            expect(toolbar.textContent).to.include('1 result(s)');
         });
     });
 
