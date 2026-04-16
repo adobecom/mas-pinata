@@ -42,6 +42,12 @@ test.describe('M@S Studio Search by Title feature test suite', () => {
             await studio.waitForCardsLoaded();
             await expect(await studio.getCard(data.cardid)).toBeVisible();
         });
+
+        await test.step('step-3: Validate card title contains the search query', async () => {
+            const card = await studio.getCard(data.cardid);
+            const titleLocator = await search.getCardTitle(card);
+            await expect(titleLocator).toContainText(data.query, { ignoreCase: true });
+        });
     });
 
     // @studio-search-by-title-partial-match - Partial title matches return the fragment
@@ -62,6 +68,12 @@ test.describe('M@S Studio Search by Title feature test suite', () => {
             await studio.waitForCardsLoaded();
             await expect(await studio.getCard(data.cardid)).toBeVisible();
         });
+
+        await test.step('step-3: Validate card title contains the partial search query', async () => {
+            const card = await studio.getCard(data.cardid);
+            const titleLocator = await search.getCardTitle(card);
+            await expect(titleLocator).toContainText(data.query, { ignoreCase: true });
+        });
     });
 
     // @studio-search-by-title-case-insensitive - Case-insensitive title match
@@ -81,6 +93,12 @@ test.describe('M@S Studio Search by Title feature test suite', () => {
             await search.submitSearch(data.query);
             await studio.waitForCardsLoaded();
             await expect(await studio.getCard(data.cardid)).toBeVisible();
+        });
+
+        await test.step('step-3: Validate card title matches query case-insensitively', async () => {
+            const card = await studio.getCard(data.cardid);
+            const titleLocator = await search.getCardTitle(card);
+            await expect(titleLocator).toContainText(data.query, { ignoreCase: true });
         });
     });
 
