@@ -240,7 +240,7 @@ class MasToolbar extends LitElement {
             >
             <sp-search
                 label="Search"
-                placeholder="Search"
+                placeholder="Search by title"
                 @submit="${this.handleSearchSubmit}"
                 @change=${this.handleChange}
                 value=${this.search.value.query}

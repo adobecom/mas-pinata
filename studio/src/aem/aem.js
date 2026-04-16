@@ -99,13 +99,7 @@ class AEM {
         const filter = {
             path,
         };
-        if (query) {
-            filter.fullText = {
-                text: encodeURIComponent(query),
-                // For info about modes: https://adobe-sites.redoc.ly/tag/Search#operation/fragments/search!path=query/filter/fullText/queryMode&t=request
-                queryMode: 'EDGES',
-            };
-        }
+
         const searchQuery = { ...defaultSearchOptions, filter };
         if (sort) {
             searchQuery.sort = sort;
@@ -153,6 +147,12 @@ class AEM {
             if (tags.length > 0) {
                 // filter items by tags
                 items = items.filter(filterByTags(tags));
+            }
+            if (query) {
+                const lowerQuery = query.toLowerCase();
+                items = items.filter(
+                    (item) => item.title?.toLowerCase().includes(lowerQuery),
+                );
             }
 
             yield items;
