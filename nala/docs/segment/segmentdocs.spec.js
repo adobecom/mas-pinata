@@ -27,4 +27,13 @@ export const features = [
         data: {},
         tags: '@mas-docs @mas-segment @commerce @smoke @regression @milo',
     },
+    {
+        tcid: '2',
+        name: '@MAS-Segment-Badge-No-Overlap',
+        path: DOCS_GALLERY_PATH.SEGMENT,
+        data: {
+            id: '5bf2044e-773c-458e-9b5f-efdb238cdcf1',
+        },
+        tags: '@mas-docs @mas-segment @mas-badge-overlap @commerce @regression',
+    },
 ];

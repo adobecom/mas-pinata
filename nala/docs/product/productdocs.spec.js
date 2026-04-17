@@ -26,4 +26,13 @@ export const features = [
         data: {},
         tags: '@mas-docs @mas-product @commerce @smoke @regression @milo',
     },
+    {
+        tcid: '2',
+        name: '@MAS-Product-Badge-No-Overlap',
+        path: DOCS_GALLERY_PATH.PRODUCT,
+        data: {
+            id: '8018a162-6c15-48b4-b44b-504c640e66d2',
+        },
+        tags: '@mas-docs @mas-product @mas-badge-overlap @commerce @regression',
+    },
 ];

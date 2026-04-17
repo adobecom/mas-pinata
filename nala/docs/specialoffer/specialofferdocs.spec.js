@@ -29,4 +29,13 @@ export const features = [
         data: {},
         tags: '@mas-docs @mas-special-offer @commerce @smoke @regression @milo',
     },
+    {
+        tcid: '2',
+        name: '@MAS-SpecialOffer-Badge-No-Overlap',
+        path: DOCS_GALLERY_PATH.SPECIALOFFER,
+        data: {
+            id: '0381d43f-2e1d-4074-a7a6-4a748bd81be7',
+        },
+        tags: '@mas-docs @mas-special-offer @mas-badge-overlap @commerce @regression',
+    },
 ];

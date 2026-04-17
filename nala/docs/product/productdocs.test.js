@@ -80,4 +80,46 @@ test.describe('Product gallery feature test suite', () => {
             }
         });
     });
+
+    test(`[Test Id - ${features[2].tcid}] ${features[2].name},${features[2].tags}`, async () => {
+        const { data } = features[2];
+
+        await test.step('step-1: Go to Product gallery page', async () => {
+            const page = workerSetup.getPage('US');
+            galleryPage = new MasProduct(page);
+            await workerSetup.verifyPageURL('US', DOCS_GALLERY_PATH.PRODUCT, expect);
+        });
+
+        await test.step('step-2: Verify badge does not overlap card title', async () => {
+            const card = galleryPage.getCard(data.id);
+            await expect(card).toBeVisible();
+            const badge = card.locator('[slot="badge"]');
+            const title = card.locator('h3');
+            await expect(badge).toBeVisible();
+            await expect(title).toBeVisible();
+            const badgeBox = await badge.boundingBox();
+            const titleBox = await title.boundingBox();
+            expect(badgeBox).not.toBeNull();
+            expect(titleBox).not.toBeNull();
+            // Badge bottom must be at or above title top — no vertical overlap
+            expect(badgeBox.y + badgeBox.height).toBeLessThanOrEqual(titleBox.y + 1);
+        });
+
+        await test.step('step-3: Verify cards without badge have no empty vertical gap at top', async () => {
+            const allCards = workerSetup.getPage('US').locator('.three-merch-cards merch-card');
+            const count = await allCards.count();
+            expect(count).toBeGreaterThan(0);
+            const cardHeights = await Promise.all(
+                [...Array(count)].map(async (_, i) => {
+                    const box = await allCards.nth(i).boundingBox();
+                    return box?.height;
+                }),
+            );
+            const validHeights = cardHeights.filter((h) => typeof h === 'number');
+            const minHeight = Math.min(...validHeights);
+            const maxHeight = Math.max(...validHeights);
+            // Cards without a badge should not introduce excessive extra vertical space (>32px more than badged cards)
+            expect(maxHeight - minHeight).toBeLessThanOrEqual(32);
+        });
+    });
 });
