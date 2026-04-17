@@ -9,6 +9,7 @@ export default class StudioPage {
         this.ost = new OSTPage(page);
         this.editor = new EditorPage(page);
 
+        this.toolbar = page.locator('mas-toolbar');
         this.quickActions = page.locator('.quick-actions');
         this.recentlyUpdated = page.locator('.recently-updated');
         this.gotoContent = page.locator('.quick-action-card[heading="Go to Content"]');

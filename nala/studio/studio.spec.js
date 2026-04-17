@@ -133,5 +133,12 @@ export default {
             },
             tags: '@mas-studio @regional-variations @grouped-variations',
         },
+        {
+            tcid: '14',
+            name: '@toolbar-sticky',
+            path: '/studio.html',
+            browserParams: '#path=nala&page=content',
+            tags: '@mas-studio',
+        },
     ],
 };

@@ -461,4 +461,47 @@ test.describe('M@S Studio feature test suite', () => {
             });
         });
     });
+
+    // @toolbar-sticky - Validate mas-toolbar is sticky and remains visible after scrolling
+    test(`${features[14].name},${features[14].tags}`, async ({ page, baseURL }) => {
+        const testPage = `${baseURL}${features[14].path}${miloLibs}${features[14].browserParams}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Go to MAS Studio content page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await expect(studio.toolbar).toBeVisible({ timeout: 15000 });
+        });
+
+        await test.step('step-2: Verify toolbar has position sticky in render view', async () => {
+            const position = await page.evaluate(() => {
+                const toolbar = document.querySelector('mas-toolbar');
+                return getComputedStyle(toolbar).position;
+            });
+            expect(position).toBe('sticky');
+        });
+
+        await test.step('step-3: Scroll down and verify toolbar stays in viewport (render view)', async () => {
+            await page.evaluate(() => {
+                const container = document.querySelector('.main-container');
+                if (container) container.scrollTop = 400;
+            });
+            await page.waitForTimeout(300);
+            const box = await studio.toolbar.boundingBox();
+            expect(box).not.toBeNull();
+            expect(box.y).toBeGreaterThanOrEqual(0);
+        });
+
+        await test.step('step-4: Switch to table view and verify toolbar stays in viewport', async () => {
+            await studio.switchToTableView();
+            await page.evaluate(() => {
+                const container = document.querySelector('.main-container');
+                if (container) container.scrollTop = 400;
+            });
+            await page.waitForTimeout(300);
+            const box = await studio.toolbar.boundingBox();
+            expect(box).not.toBeNull();
+            expect(box.y).toBeGreaterThanOrEqual(0);
+        });
+    });
 });
