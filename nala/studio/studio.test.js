@@ -489,7 +489,10 @@ test.describe('M@S Studio feature test suite', () => {
             await page.waitForFunction(() => document.querySelector('.main-container')?.scrollTop > 0);
             const box = await studio.toolbar.boundingBox();
             expect(box).not.toBeNull();
-            expect(box.y).toBeLessThan(50);
+            const containerTop = await page.evaluate(() =>
+                document.querySelector('.main-container').getBoundingClientRect().top,
+            );
+            expect(Math.abs(box.y - containerTop)).toBeLessThanOrEqual(5);
         });
 
         await test.step('step-4: Switch to table view and verify toolbar stays in viewport', async () => {
@@ -501,7 +504,10 @@ test.describe('M@S Studio feature test suite', () => {
             await page.waitForFunction(() => document.querySelector('.main-container')?.scrollTop > 0);
             const box = await studio.toolbar.boundingBox();
             expect(box).not.toBeNull();
-            expect(box.y).toBeLessThan(50);
+            const containerTop = await page.evaluate(() =>
+                document.querySelector('.main-container').getBoundingClientRect().top,
+            );
+            expect(Math.abs(box.y - containerTop)).toBeLessThanOrEqual(5);
         });
     });
 });
