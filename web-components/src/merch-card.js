@@ -47,8 +47,6 @@ const VARIANTS_WITH_HEIGHT_SYNC = [
     'simplified-pricing-express',
 ];
 
-const VARIANTS_WITH_WIDTH_BADGE_SYNC = ['segment', 'product'];
-
 function priceOptionsProvider(element, options) {
     const card = element.closest(MERCH_CARD);
     if (!card) return options;
@@ -75,29 +73,6 @@ const intersectionObserver = new IntersectionObserver((entries) => {
             intersectionObserver.unobserve(card);
             card.requestUpdate();
             return;
-        }
-        if (VARIANTS_WITH_WIDTH_BADGE_SYNC.includes(card.variant)) {
-            if (entry.boundingClientRect.width === 0) return;
-            if (
-                card.variant === 'product' &&
-                card.querySelector('merch-icon[slot="icons"]')
-            ) {
-                intersectionObserver.unobserve(card);
-                return;
-            }
-
-            const cardWidth = card.getBoundingClientRect().width;
-            const badgeEl = card.querySelector('[slot="badge"]');
-            const badgeWidth = badgeEl?.getBoundingClientRect().width || 0;
-            if (cardWidth === 0 || badgeWidth === 0) {
-                intersectionObserver.unobserve(card);
-                return;
-            }
-            card.style.setProperty(
-                '--consonant-merch-card-heading-xs-max-width',
-                `${Math.round(cardWidth - badgeWidth - 16)}px`,
-            );
-            intersectionObserver.unobserve(card);
         }
     });
 });
@@ -660,10 +635,7 @@ export class MerchCard extends LitElement {
         if (this.failed) return;
         if (this.#hydrationPromise) {
             await this.#hydrationPromise;
-            if (
-                VARIANTS_WITH_HEIGHT_SYNC.includes(this.variant) ||
-                VARIANTS_WITH_WIDTH_BADGE_SYNC.includes(this.variant)
-            ) {
+            if (VARIANTS_WITH_HEIGHT_SYNC.includes(this.variant)) {
                 intersectionObserver.observe(this);
             }
             this.#hydrationPromise = undefined;

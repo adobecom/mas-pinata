@@ -107,9 +107,7 @@ export const styles = css`
     }
 
     div[class$='-badge'] {
-        position: absolute;
-        top: 16px;
-        right: 0;
+        align-self: flex-end;
         font-size: var(--type-heading-xxs-size);
         font-weight: 500;
         max-width: 180px;
@@ -120,8 +118,6 @@ export const styles = css`
     }
 
     div[class$='-badge']:dir(rtl) {
-        left: 0;
-        right: initial;
         padding: 8px 11px;
         border-radius: 0 5px 5px 0;
     }

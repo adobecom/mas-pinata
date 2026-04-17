@@ -92,6 +92,7 @@ export class Product extends VariantLayout {
 
     renderLayout() {
         return html` ${this.badge}
+            <slot name="badge"></slot>
             <div class="body" aria-live="polite">
                 <slot name="icons"></slot>
                 <slot name="heading-xs"></slot>
@@ -106,7 +107,6 @@ export class Product extends VariantLayout {
                 <slot name="quantity-select"></slot>
                 <slot name="addon"></slot>
                 <slot name="body-lower"></slot>
-                <slot name="badge"></slot>
             </div>
             <hr />
             ${this.secureLabelFooter}`;

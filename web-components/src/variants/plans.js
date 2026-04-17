@@ -328,6 +328,7 @@ export class Plans extends VariantLayout {
 
     renderLayout() {
         return html` ${this.badge}
+            <slot name="badge"></slot>
             <div class="body">
                 ${this.icons}
                 <slot name="heading-xs"></slot>
@@ -345,7 +346,6 @@ export class Plans extends VariantLayout {
                 <slot name="quantity-select"></slot>
                 ${this.stockCheckbox}
                 <slot name="addon"></slot>
-                <slot name="badge"></slot>
             </div>
             ${this.secureLabelFooter}
             <slot></slot>`;
