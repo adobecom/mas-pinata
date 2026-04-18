@@ -304,4 +304,46 @@ test.describe('M@S Studio Translations Test Suite', () => {
             expect(allTitles.some((t) => t.includes(projectTitle))).toBe(false);
         });
     });
+
+    // 7. @translation-editor-only-mine – Only mine toggle filters fragments to current user
+    test(`${features[7].name},${features[7].tags}`, async ({ page, baseURL }) => {
+        const testPage = `${baseURL}${features[7].path}${miloLibs}${features[7].browserParams}`;
+        setTestPage(testPage);
+        await page.goto(testPage);
+        await page.waitForLoadState('domcontentloaded');
+        await expect(translationEditor.form).toBeVisible({ timeout: 15000 });
+
+        await test.step('step-1: Open Add Items dialog and navigate to Cards tab', async () => {
+            await translationEditor.addItemsButton.click();
+            await expect(translationEditor.cardsTab).toBeVisible({ timeout: 10000 });
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.selectItemsTable).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+        });
+
+        let initialCount;
+        await test.step('step-2: Record initial row count and verify toggle is enabled', async () => {
+            await expect(translationEditor.onlyMineToggle).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.onlyMineToggle).toBeEnabled({ timeout: 15000 });
+            initialCount = await translationEditor.tableRows.count();
+            expect(initialCount).toBeGreaterThan(0);
+        });
+
+        await test.step('step-3: Turn on Only mine and verify row count changes', async () => {
+            await translationEditor.onlyMineToggle.click();
+            await page.waitForTimeout(500);
+            await translationEditor.expectResultCountMatchesTableRows();
+            const filteredCount = await translationEditor.tableRows.count();
+            expect(filteredCount).not.toBe(initialCount);
+        });
+
+        await test.step('step-4: Turn off Only mine and verify full list is restored', async () => {
+            await translationEditor.onlyMineToggle.click();
+            await page.waitForTimeout(500);
+            await translationEditor.expectResultCountMatchesTableRows();
+            const restoredCount = await translationEditor.tableRows.count();
+            expect(restoredCount).toBe(initialCount);
+        });
+    });
 });

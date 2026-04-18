@@ -60,4 +60,9 @@ export const styles = css`
         flex-wrap: wrap;
         gap: 8px;
     }
+
+    .filters sp-switch.only-mine-toggle {
+        align-self: center;
+        margin-inline-start: 4px;
+    }
 `;

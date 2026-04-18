@@ -36,6 +36,7 @@ describe('MasSearchAndFilters', () => {
         Store.fragments.list.loading.set(false);
         Store.placeholders.list.loading.set(false);
         Store.placeholders.list.data.set([]);
+        Store.profile.set({});
     });
 
     afterEach(() => {
@@ -50,6 +51,7 @@ describe('MasSearchAndFilters', () => {
         Store.fragments.list.loading.set(false);
         Store.placeholders.list.loading.set(false);
         Store.placeholders.list.data.set([]);
+        Store.profile.set({});
     });
 
     describe('initialization', () => {
@@ -956,6 +958,152 @@ describe('MasSearchAndFilters', () => {
             el.searchQuery = 'photoshop';
             await el.updateComplete;
             expect(Store.translationProjects.displayCollections.get().length).to.equal(1);
+        });
+    });
+
+    describe('only mine toggle', () => {
+        const ALICE = 'alice@adobe.com';
+        const BOB = 'bob@adobe.com';
+
+        it('should initialize onlyMine to false', async () => {
+            const el = await fixture(html`<mas-search-and-filters type="cards"></mas-search-and-filters>`);
+            expect(el.onlyMine).to.be.false;
+        });
+
+        it('should not render the toggle when searchOnly is true', async () => {
+            const el = await fixture(html`<mas-search-and-filters type="cards" .searchOnly=${true}></mas-search-and-filters>`);
+            expect(el.shadowRoot.querySelector('sp-switch.only-mine-toggle')).to.be.null;
+        });
+
+        it('should render the toggle with label "Only mine" when searchOnly is false', async () => {
+            const el = await fixture(html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`);
+            const toggle = el.shadowRoot.querySelector('sp-switch.only-mine-toggle');
+            expect(toggle).to.exist;
+            expect(toggle.textContent).to.include('Only mine');
+        });
+
+        it('should disable the toggle when profile has no email', async () => {
+            Store.profile.set({});
+            const el = await fixture(html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`);
+            const toggle = el.shadowRoot.querySelector('sp-switch.only-mine-toggle');
+            expect(toggle.disabled).to.be.true;
+        });
+
+        it('should disable the toggle while loading even if profile resolved', async () => {
+            Store.profile.set({ email: ALICE });
+            Store.fragments.list.loading.set(true);
+            const el = await fixture(html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`);
+            const toggle = el.shadowRoot.querySelector('sp-switch.only-mine-toggle');
+            expect(toggle.disabled).to.be.true;
+        });
+
+        it('should enable the toggle once Store.profile resolves with an email', async () => {
+            const el = await fixture(html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`);
+            expect(el.shadowRoot.querySelector('sp-switch.only-mine-toggle').disabled).to.be.true;
+            Store.profile.set({ email: ALICE });
+            await el.updateComplete;
+            expect(el.shadowRoot.querySelector('sp-switch.only-mine-toggle').disabled).to.be.false;
+        });
+
+        it('should filter fragments by created.by when toggled on', async () => {
+            Store.profile.set({ email: ALICE });
+            Store.translationProjects.allCards.set([
+                createMockFragment({ title: 'Alice Card', created: { by: ALICE } }),
+                createMockFragment({ title: 'Bob Card', created: { by: BOB } }),
+            ]);
+            const el = await fixture(html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`);
+            el.onlyMine = true;
+            await el.updateComplete;
+            const displayed = Store.translationProjects.displayCards.get();
+            expect(displayed.length).to.equal(1);
+            expect(displayed[0].title).to.equal('Alice Card');
+        });
+
+        it('should exclude fragments with a missing created field when the toggle is on', async () => {
+            Store.profile.set({ email: ALICE });
+            Store.translationProjects.allCards.set([
+                createMockFragment({ title: 'Alice Card', created: { by: ALICE } }),
+                createMockFragment({ title: 'No Creator Card' }),
+            ]);
+            const el = await fixture(html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`);
+            el.onlyMine = true;
+            await el.updateComplete;
+            const displayed = Store.translationProjects.displayCards.get();
+            expect(displayed.length).to.equal(1);
+            expect(displayed[0].title).to.equal('Alice Card');
+        });
+
+        it('should restore the full list when the toggle is turned off', async () => {
+            Store.profile.set({ email: ALICE });
+            Store.translationProjects.allCards.set([
+                createMockFragment({ title: 'Alice Card', created: { by: ALICE } }),
+                createMockFragment({ title: 'Bob Card', created: { by: BOB } }),
+            ]);
+            const el = await fixture(html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`);
+            el.onlyMine = true;
+            await el.updateComplete;
+            expect(Store.translationProjects.displayCards.get().length).to.equal(1);
+            el.onlyMine = false;
+            await el.updateComplete;
+            expect(Store.translationProjects.displayCards.get().length).to.equal(2);
+        });
+
+        it('should reset onlyMine to false on remount', async () => {
+            const first = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            first.onlyMine = true;
+            await first.updateComplete;
+            expect(first.onlyMine).to.be.true;
+            fixtureCleanup();
+            const second = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            expect(second.onlyMine).to.be.false;
+        });
+
+        it('should combine onlyMine with other filters using AND semantics', async () => {
+            Store.profile.set({ email: ALICE });
+            Store.translationProjects.allCards.set([
+                createMockFragment({
+                    title: 'Alice Plans',
+                    created: { by: ALICE },
+                    fields: [{ name: 'variant', values: ['plans'] }],
+                }),
+                createMockFragment({
+                    title: 'Alice Catalog',
+                    created: { by: ALICE },
+                    fields: [{ name: 'variant', values: ['catalog'] }],
+                }),
+                createMockFragment({
+                    title: 'Bob Plans',
+                    created: { by: BOB },
+                    fields: [{ name: 'variant', values: ['plans'] }],
+                }),
+            ]);
+            const el = await fixture(html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`);
+            el.templateFilter = ['plans'];
+            el.onlyMine = true;
+            await el.updateComplete;
+            const displayed = Store.translationProjects.displayCards.get();
+            expect(displayed.length).to.equal(1);
+            expect(displayed[0].title).to.equal('Alice Plans');
+        });
+
+        it('should filter collections by created.by for collections type', async () => {
+            Store.profile.set({ email: ALICE });
+            Store.translationProjects.allCollections.set([
+                createMockFragment({ title: 'Alice Collection', created: { by: ALICE } }),
+                createMockFragment({ title: 'Bob Collection', created: { by: BOB } }),
+            ]);
+            const el = await fixture(
+                html`<mas-search-and-filters type="collections" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            el.onlyMine = true;
+            await el.updateComplete;
+            const displayed = Store.translationProjects.displayCollections.get();
+            expect(displayed.length).to.equal(1);
+            expect(displayed[0].title).to.equal('Alice Collection');
         });
     });
 });

@@ -69,5 +69,14 @@ export default {
             tags: '@mas-studio @translation-editor @regression',
             description: 'Translation Editor Actions: create project save, add languages overlay, add files overlay',
         },
+        {
+            tcid: '7',
+            name: '@translation-editor-only-mine',
+            path: '/studio.html',
+            browserParams: '#page=translation-editor&path=nala',
+            tags: '@mas-studio @translation-editor',
+            description:
+                'Only mine toggle filters fragments to those created by the signed-in user and restores the full list when turned off',
+        },
     ],
 };

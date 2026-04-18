@@ -55,6 +55,7 @@ export default class TranslationEditorPage {
         // Filters
         this.filterButtons = page.locator('sp-action-button.filter-trigger');
         this.filterPopover = page.locator('sp-popover.filter-popover[open]').first();
+        this.onlyMineToggle = fragmentsTab.locator('mas-search-and-filters sp-switch.only-mine-toggle');
 
         // Collections tab
         const collectionsTabPanel = page.getByRole('tabpanel', { name: 'Collections' });

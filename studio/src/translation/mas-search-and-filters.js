@@ -16,6 +16,7 @@ class MasSearchAndFilters extends LitElement {
         marketSegmentFilter: { type: Array, state: true },
         customerSegmentFilter: { type: Array, state: true },
         productFilter: { type: Array, state: true },
+        onlyMine: { type: Boolean, state: true },
         templateOptions: { type: Array },
         marketSegmentOptions: { type: Array },
         customerSegmentOptions: { type: Array },
@@ -30,6 +31,7 @@ class MasSearchAndFilters extends LitElement {
         this.marketSegmentFilter = [];
         this.customerSegmentFilter = [];
         this.productFilter = [];
+        this.onlyMine = false;
         this.templateOptions = [];
         this.marketSegmentOptions = [];
         this.customerSegmentOptions = [];
@@ -43,6 +45,7 @@ class MasSearchAndFilters extends LitElement {
             Store.translationProjects[`all${this.typeUppercased}`],
             Store.translationProjects[`display${this.typeUppercased}`],
             Store[this.type === TABLE_TYPE.PLACEHOLDERS ? 'placeholders' : 'fragments'].list.loading,
+            Store.profile,
         ]);
         const dataCallback = () => {
             if (!this.searchOnly) {
@@ -73,6 +76,10 @@ class MasSearchAndFilters extends LitElement {
         return this.type === TABLE_TYPE.PLACEHOLDERS
             ? Store.placeholders.list.loading.get()
             : Store.fragments.list.loading.get();
+    }
+
+    get currentUserEmail() {
+        return Store.profile.get()?.email || '';
     }
 
     get appliedFilters() {
@@ -135,7 +142,8 @@ class MasSearchAndFilters extends LitElement {
             changed.has('templateFilter') ||
             changed.has('marketSegmentFilter') ||
             changed.has('customerSegmentFilter') ||
-            changed.has('productFilter')
+            changed.has('productFilter') ||
+            changed.has('onlyMine')
         ) {
             this.#applyFilters();
         }
@@ -213,6 +221,10 @@ class MasSearchAndFilters extends LitElement {
         this.productFilter = [];
     }
 
+    #handleOnlyMineChange = (e) => {
+        this.onlyMine = e.target.checked;
+    };
+
     #renderAppliedFilters() {
         if (this.appliedFilters.length === 0) return nothing;
 
@@ -277,6 +289,8 @@ class MasSearchAndFilters extends LitElement {
         const hasMarket = this.marketSegmentFilter?.length > 0;
         const hasCustomer = this.customerSegmentFilter?.length > 0;
         const hasProduct = this.productFilter?.length > 0;
+        const currentUserEmail = this.currentUserEmail;
+        const hasOnlyMine = this.onlyMine && !!currentUserEmail;
 
         const result = source.filter((fragment) => {
             if (query) {
@@ -312,6 +326,9 @@ class MasSearchAndFilters extends LitElement {
             }
             if (hasProduct) {
                 if (!fragment.tags?.some((tag) => this.productFilter.includes(tag.id))) return false;
+            }
+            if (hasOnlyMine) {
+                if (fragment.created?.by !== currentUserEmail) return false;
             }
             return true;
         });
@@ -352,6 +369,14 @@ class MasSearchAndFilters extends LitElement {
                     FILTER_TYPE.CUSTOMER_SEGMENT,
                 )}
                 ${this.#renderFilterPicker('Product', this.productOptions, this.productFilter, FILTER_TYPE.PRODUCT)}
+                <sp-switch
+                    size="m"
+                    class="only-mine-toggle"
+                    ?checked=${this.onlyMine}
+                    .disabled=${this.isLoading || !this.currentUserEmail}
+                    @change=${this.#handleOnlyMineChange}
+                    >Only mine</sp-switch
+                >
             </div>
             ${this.#renderAppliedFilters()}
         `;
