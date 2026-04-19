@@ -33,7 +33,6 @@ export default class AcomLingoPage {
         await card.evaluate(
             (el, t) =>
                 new Promise((resolve, reject) => {
-                    const timer = setTimeout(() => reject(new Error('mas:ready timeout')), t);
                     el.addEventListener(
                         'mas:ready',
                         () => {
@@ -42,6 +41,17 @@ export default class AcomLingoPage {
                         },
                         { once: true },
                     );
+                    const timer = setTimeout(() => reject(new Error('mas:ready timeout')), t);
+                    const masElements = el.querySelectorAll(
+                        'span[is="inline-price"][data-wcs-osi], a[is="checkout-link"][data-wcs-osi], button[is="checkout-button"][data-wcs-osi], a[is="upt-link"]',
+                    );
+                    if (
+                        masElements.length > 0 &&
+                        Array.from(masElements).every((m) => m.classList.contains('placeholder-resolved'))
+                    ) {
+                        clearTimeout(timer);
+                        resolve();
+                    }
                 }),
             timeout,
         );
