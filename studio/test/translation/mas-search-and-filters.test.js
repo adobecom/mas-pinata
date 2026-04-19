@@ -1045,5 +1045,21 @@ describe('MasSearchAndFilters', () => {
         it('should expose FILTER_TYPE.CREATED_BY constant', () => {
             expect(FILTER_TYPE.CREATED_BY).to.equal('createdBy');
         });
+
+        it('should seed selectedCreatedByUsers from Store.profile on mount when email is present', async () => {
+            const previousProfile = Store.profile.value;
+            try {
+                Store.profile.set({ email: 'me@adobe.com', displayName: 'Me' });
+                const el = await fixture(
+                    html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+                );
+                await el.updateComplete;
+                expect(el.selectedCreatedByUsers.value.length).to.equal(1);
+                expect(el.selectedCreatedByUsers.value[0].userPrincipalName).to.equal('me@adobe.com');
+                expect(el.selectedCreatedByUsers.value[0].displayName).to.equal('Me');
+            } finally {
+                Store.profile.set(previousProfile);
+            }
+        });
     });
 });
