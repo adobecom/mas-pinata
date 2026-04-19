@@ -43,6 +43,9 @@ class MasSearchAndFilters extends LitElement {
             Store.translationProjects[`all${this.typeUppercased}`],
             Store.translationProjects[`display${this.typeUppercased}`],
             Store[this.type === TABLE_TYPE.PLACEHOLDERS ? 'placeholders' : 'fragments'].list.loading,
+            Store.translationProjects.selectedCreatedByUsers,
+            Store.users,
+            Store.profile,
         ]);
         const dataCallback = () => {
             if (!this.searchOnly) {
@@ -51,9 +54,17 @@ class MasSearchAndFilters extends LitElement {
             this.#applyFilters();
             this.requestUpdate();
         };
+        const createdByCallback = () => {
+            this.#applyFilters();
+            this.requestUpdate();
+        };
         Store.translationProjects[`all${this.typeUppercased}`].subscribe(dataCallback);
+        Store.translationProjects.selectedCreatedByUsers.subscribe(createdByCallback);
         this.dataSubscription = {
-            unsubscribe: () => Store.translationProjects[`all${this.typeUppercased}`].unsubscribe(dataCallback),
+            unsubscribe: () => {
+                Store.translationProjects[`all${this.typeUppercased}`].unsubscribe(dataCallback);
+                Store.translationProjects.selectedCreatedByUsers.unsubscribe(createdByCallback);
+            },
         };
     }
 
@@ -62,6 +73,7 @@ class MasSearchAndFilters extends LitElement {
         Store.translationProjects[`display${this.typeUppercased}`].set(
             Store.translationProjects[`all${this.typeUppercased}`].value,
         );
+        Store.translationProjects.selectedCreatedByUsers.set([]);
         this.dataSubscription?.unsubscribe();
     }
 
@@ -97,6 +109,14 @@ class MasSearchAndFilters extends LitElement {
         for (const id of this.productFilter) {
             const option = productMap.get(id);
             if (option) filters.push({ type: FILTER_TYPE.PRODUCT, id, label: option.title || option.label });
+        }
+        for (const user of Store.translationProjects.selectedCreatedByUsers.value || []) {
+            if (!user?.userPrincipalName) continue;
+            filters.push({
+                type: FILTER_TYPE.CREATED_BY,
+                id: user.userPrincipalName,
+                label: user.displayName || user.userPrincipalName,
+            });
         }
         return filters;
     }
@@ -203,6 +223,13 @@ class MasSearchAndFilters extends LitElement {
             case FILTER_TYPE.PRODUCT:
                 this.productFilter = this.productFilter.filter((filterId) => filterId !== id);
                 break;
+            case FILTER_TYPE.CREATED_BY:
+                Store.translationProjects.selectedCreatedByUsers.set(
+                    (Store.translationProjects.selectedCreatedByUsers.value || []).filter(
+                        (user) => user.userPrincipalName !== id,
+                    ),
+                );
+                break;
         }
     }
 
@@ -211,6 +238,7 @@ class MasSearchAndFilters extends LitElement {
         this.marketSegmentFilter = [];
         this.customerSegmentFilter = [];
         this.productFilter = [];
+        Store.translationProjects.selectedCreatedByUsers.set([]);
     }
 
     #renderAppliedFilters() {
@@ -277,6 +305,15 @@ class MasSearchAndFilters extends LitElement {
         const hasMarket = this.marketSegmentFilter?.length > 0;
         const hasCustomer = this.customerSegmentFilter?.length > 0;
         const hasProduct = this.productFilter?.length > 0;
+        const selectedCreatedByUsers = Store.translationProjects.selectedCreatedByUsers.value || [];
+        const hasCreatedBy = selectedCreatedByUsers.length > 0;
+        const createdByUpns = hasCreatedBy
+            ? new Set(
+                  selectedCreatedByUsers
+                      .map((user) => user.userPrincipalName?.toLowerCase())
+                      .filter(Boolean),
+              )
+            : null;
 
         const result = source.filter((fragment) => {
             if (query) {
@@ -312,6 +349,10 @@ class MasSearchAndFilters extends LitElement {
             }
             if (hasProduct) {
                 if (!fragment.tags?.some((tag) => this.productFilter.includes(tag.id))) return false;
+            }
+            if (hasCreatedBy) {
+                const createdBy = fragment.created?.by?.toLowerCase();
+                if (!createdBy || !createdByUpns.has(createdBy)) return false;
             }
             return true;
         });
@@ -352,6 +393,12 @@ class MasSearchAndFilters extends LitElement {
                     FILTER_TYPE.CUSTOMER_SEGMENT,
                 )}
                 ${this.#renderFilterPicker('Product', this.productOptions, this.productFilter, FILTER_TYPE.PRODUCT)}
+                <mas-user-picker
+                    label="Created by"
+                    .currentUser=${Store.profile}
+                    .selectedUsers=${Store.translationProjects.selectedCreatedByUsers}
+                    .users=${Store.users}
+                ></mas-user-picker>
             </div>
             ${this.#renderAppliedFilters()}
         `;
