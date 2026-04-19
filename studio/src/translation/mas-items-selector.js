@@ -74,6 +74,10 @@ class MasItemsSelector extends LitElement {
 
     #handleTabChange({ target: { selected } }) {
         this.selectedTab = selected;
+        const cardsFilters = Array.from(this.shadowRoot.querySelectorAll('mas-search-and-filters')).find(
+            (el) => el.type === TABLE_TYPE.CARDS,
+        );
+        cardsFilters?.resetCreatedByFilter?.();
     }
 
     #getTabLabel(tab) {

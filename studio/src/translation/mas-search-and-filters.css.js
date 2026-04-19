@@ -28,6 +28,11 @@ export const styles = css`
         }
     }
 
+    .created-by-picker {
+        display: inline-flex;
+        align-items: center;
+    }
+
     .filter-popover {
         padding: 12px;
     }

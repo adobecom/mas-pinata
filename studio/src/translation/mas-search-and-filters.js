@@ -5,6 +5,8 @@ import { styles } from './mas-search-and-filters.css.js';
 import Store from '../store.js';
 import { FILTER_TYPE, TABLE_TYPE } from '../constants.js';
 import ReactiveController from '../reactivity/reactive-controller.js';
+import { ReactiveStore } from '../reactivity/reactive-store.js';
+import '../fields/user-picker.js';
 
 class MasSearchAndFilters extends LitElement {
     static styles = styles;
@@ -35,6 +37,12 @@ class MasSearchAndFilters extends LitElement {
         this.customerSegmentOptions = [];
         this.productOptions = [];
         this.dataSubscription = null;
+        this.selectedCreatedByUsers = new ReactiveStore([]);
+        this.currentUser = Store.profile;
+        this.usersStore = Store.users;
+        this.createdByUsersSubscription = null;
+        this.profileSeedSubscription = null;
+        this.createdBySeeded = false;
     }
 
     connectedCallback() {
@@ -55,6 +63,43 @@ class MasSearchAndFilters extends LitElement {
         this.dataSubscription = {
             unsubscribe: () => Store.translationProjects[`all${this.typeUppercased}`].unsubscribe(dataCallback),
         };
+
+        if (!this.searchOnly && this.type === TABLE_TYPE.CARDS) {
+            this.createdByController = new ReactiveController(this, [
+                this.selectedCreatedByUsers,
+                Store.profile,
+                Store.users,
+            ]);
+            const createdByCallback = () => {
+                this.#applyFilters();
+                this.requestUpdate();
+            };
+            this.selectedCreatedByUsers.subscribe(createdByCallback);
+            this.createdByUsersSubscription = {
+                unsubscribe: () => this.selectedCreatedByUsers.unsubscribe(createdByCallback),
+            };
+
+            const trySeedCreatedBy = () => {
+                if (this.createdBySeeded) return;
+                const profile = Store.profile.value;
+                if (!profile?.email) return;
+                this.createdBySeeded = true;
+                if (this.selectedCreatedByUsers.value.length === 0) {
+                    this.selectedCreatedByUsers.set([
+                        {
+                            displayName: profile.displayName || profile.email,
+                            userPrincipalName: profile.email,
+                        },
+                    ]);
+                }
+                Store.profile.unsubscribe(trySeedCreatedBy);
+                this.profileSeedSubscription = null;
+            };
+            Store.profile.subscribe(trySeedCreatedBy);
+            this.profileSeedSubscription = {
+                unsubscribe: () => Store.profile.unsubscribe(trySeedCreatedBy),
+            };
+        }
     }
 
     disconnectedCallback() {
@@ -63,6 +108,8 @@ class MasSearchAndFilters extends LitElement {
             Store.translationProjects[`all${this.typeUppercased}`].value,
         );
         this.dataSubscription?.unsubscribe();
+        this.createdByUsersSubscription?.unsubscribe();
+        this.profileSeedSubscription?.unsubscribe();
     }
 
     get typeUppercased() {
@@ -206,15 +253,42 @@ class MasSearchAndFilters extends LitElement {
         }
     }
 
+    #handleUserDelete(e) {
+        const value = e.target.value;
+        this.selectedCreatedByUsers.set(
+            this.selectedCreatedByUsers.value.filter((user) => user.userPrincipalName !== value),
+        );
+    }
+
     #clearAllFilters() {
         this.templateFilter = [];
         this.marketSegmentFilter = [];
         this.customerSegmentFilter = [];
         this.productFilter = [];
+        this.selectedCreatedByUsers?.set([]);
+    }
+
+    resetCreatedByFilter() {
+        this.selectedCreatedByUsers?.set([]);
+    }
+
+    get createdByUsersTags() {
+        const users = this.selectedCreatedByUsers?.value || [];
+        return repeat(
+            users,
+            (user) => user.userPrincipalName,
+            (user) => html`
+                <sp-tag size="s" deletable @delete=${this.#handleUserDelete} .value=${user.userPrincipalName}>
+                    ${user.displayName}
+                    <sp-icon-user slot="icon" size="s"></sp-icon-user>
+                </sp-tag>
+            `,
+        );
     }
 
     #renderAppliedFilters() {
-        if (this.appliedFilters.length === 0) return nothing;
+        const hasCreatedBy = (this.selectedCreatedByUsers?.value?.length || 0) > 0;
+        if (this.appliedFilters.length === 0 && !hasCreatedBy) return nothing;
 
         return html`
             <div class="applied-filters">
@@ -233,6 +307,7 @@ class MasSearchAndFilters extends LitElement {
                             </sp-tag>
                         `,
                     )}
+                    ${this.createdByUsersTags}
                 </sp-tags>
                 <sp-action-button quiet @click=${this.#clearAllFilters}>Clear all</sp-action-button>
             </div>
@@ -277,6 +352,10 @@ class MasSearchAndFilters extends LitElement {
         const hasMarket = this.marketSegmentFilter?.length > 0;
         const hasCustomer = this.customerSegmentFilter?.length > 0;
         const hasProduct = this.productFilter?.length > 0;
+        const selectedCreators = (this.selectedCreatedByUsers?.value || [])
+            .map((u) => u.userPrincipalName?.toLowerCase())
+            .filter(Boolean);
+        const hasCreator = selectedCreators.length > 0;
 
         const result = source.filter((fragment) => {
             if (query) {
@@ -312,6 +391,10 @@ class MasSearchAndFilters extends LitElement {
             }
             if (hasProduct) {
                 if (!fragment.tags?.some((tag) => this.productFilter.includes(tag.id))) return false;
+            }
+            if (hasCreator) {
+                const author = (fragment.created?.by || '').toLowerCase();
+                if (!selectedCreators.includes(author)) return false;
             }
             return true;
         });
@@ -352,6 +435,13 @@ class MasSearchAndFilters extends LitElement {
                     FILTER_TYPE.CUSTOMER_SEGMENT,
                 )}
                 ${this.#renderFilterPicker('Product', this.productOptions, this.productFilter, FILTER_TYPE.PRODUCT)}
+                <mas-user-picker
+                    class="created-by-picker"
+                    label="Created by"
+                    .currentUser=${this.currentUser}
+                    .selectedUsers=${this.selectedCreatedByUsers}
+                    .users=${this.usersStore}
+                ></mas-user-picker>
             </div>
             ${this.#renderAppliedFilters()}
         `;

@@ -304,4 +304,53 @@ test.describe('M@S Studio Translations Test Suite', () => {
             expect(allTitles.some((t) => t.includes(projectTitle))).toBe(false);
         });
     });
+
+    // 7. @translation-editor-created-by-filter
+    test(`${features[7].name},${features[7].tags}`, async ({ page, baseURL }) => {
+        const testPage = `${baseURL}${features[7].path}${miloLibs}${features[7].browserParams}`;
+        setTestPage(testPage);
+        await page.goto(testPage);
+        await page.waitForLoadState('domcontentloaded');
+        await expect(translationEditor.form).toBeVisible({ timeout: 15000 });
+
+        await test.step('step-1: Open Add Items dialog on Fragments tab', async () => {
+            await translationEditor.addItemsButton.click();
+            await expect(translationEditor.cardsTab).toBeVisible({ timeout: 10000 });
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+        });
+
+        await test.step('step-2: "Created by" filter is visible on Fragments tab', async () => {
+            await expect(translationEditor.createdByFilterTrigger).toBeVisible({ timeout: 5000 });
+        });
+
+        await test.step('step-3: Switch to Collections tab, filter is absent', async () => {
+            await translationEditor.collectionsTab.click();
+            await expect(translationEditor.createdByFilterTrigger).toHaveCount(0);
+        });
+
+        await test.step('step-4: Back to Fragments, open picker, pick first user, verify chip and table refresh', async () => {
+            await translationEditor.cardsTab.click();
+            await translationEditor.createdByFilterTrigger.click();
+            await expect(translationEditor.createdByUserPicker).toBeVisible({ timeout: 5000 });
+            await translationEditor.createdByFirstUserCheckbox.click();
+            await translationEditor.createdByApplyButton.click();
+            await page.waitForTimeout(500);
+            await expect(translationEditor.createdByTags.first()).toBeVisible({ timeout: 5000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+        });
+
+        await test.step('step-5: Clear the filter by deleting the chip, table restores', async () => {
+            const firstTag = translationEditor.createdByTags.first();
+            const clearButton = firstTag.locator('button[aria-label*="clear" i], [part="clear-button"]').first();
+            if ((await clearButton.count()) > 0) {
+                await clearButton.click();
+            } else {
+                await firstTag.getByRole('button').first().click();
+            }
+            await page.waitForTimeout(500);
+            await expect(translationEditor.createdByTags).toHaveCount(0);
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 10000 });
+        });
+    });
 });

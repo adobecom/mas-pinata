@@ -52,6 +52,16 @@ export default class TranslationEditorPage {
         this.fragmentsResultCount = fragmentsTab.locator('mas-search-and-filters .result-count');
         this.appliedFilterTags = fragmentsTab.locator('mas-search-and-filters .applied-filters sp-tag');
 
+        // Created by filter (Fragments tab only)
+        this.createdByFilterTrigger = fragmentsTab.locator(
+            'mas-search-and-filters mas-user-picker sp-action-button[slot="trigger"]',
+        );
+        this.createdByUserPicker = fragmentsTab.locator('mas-search-and-filters mas-user-picker sp-popover');
+        this.createdByFirstUserCheckbox = this.createdByUserPicker.locator('sp-menu-item sp-checkbox').first();
+        this.createdByApplyButton = this.createdByUserPicker.getByRole('button', { name: 'Apply' });
+        this.createdByResetButton = this.createdByUserPicker.getByRole('button', { name: 'Reset' });
+        this.createdByTags = fragmentsTab.locator('mas-search-and-filters .applied-filters sp-tag');
+
         // Filters
         this.filterButtons = page.locator('sp-action-button.filter-trigger');
         this.filterPopover = page.locator('sp-popover.filter-popover[open]').first();
