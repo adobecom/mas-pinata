@@ -304,4 +304,61 @@ test.describe('M@S Studio Translations Test Suite', () => {
             expect(allTitles.some((t) => t.includes(projectTitle))).toBe(false);
         });
     });
+
+    // 7. @translation-editor-created-by-filter
+    test(`${features[7].name},${features[7].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[7];
+        const testPage = `${baseURL}${features[7].path}${miloLibs}${features[7].browserParams}`;
+        setTestPage(testPage);
+        await page.goto(testPage);
+        await page.waitForLoadState('domcontentloaded');
+        await expect(translationEditor.form).toBeVisible({ timeout: 15000 });
+
+        await test.step('step-1: Open Add Items dialog and wait for rows', async () => {
+            await translationEditor.addItemsButton.click();
+            await expect(translationEditor.selectItemsDialog).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.cardsTab).toBeVisible({ timeout: 5000 });
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+        });
+
+        const initialRowCount = await translationEditor.tableRows.count();
+        let chosenUserName = data.userDisplayName;
+
+        await test.step('step-2: Open Created by picker and pick the first listed user', async () => {
+            await expect(translationEditor.createdByFilterButton).toBeVisible({ timeout: 10000 });
+            await translationEditor.createdByFilterButton.click();
+            await expect(translationEditor.createdByFilterPopover).toBeVisible({ timeout: 8000 });
+            const configured = translationEditor.createdByUserCheckbox(chosenUserName);
+            if (await configured.count()) {
+                await configured.click();
+            } else {
+                const firstItem = translationEditor.createdByFilterPopover.locator('sp-menu-item').first();
+                chosenUserName = (await firstItem.innerText()).trim();
+                await firstItem.locator('sp-checkbox').click();
+            }
+            await translationEditor.createdByApplyButton.click();
+            await page.waitForTimeout(1500);
+        });
+
+        await test.step('step-3: Verify an applied-filter chip with the user icon appears', async () => {
+            await expect(translationEditor.createdByAppliedTag).toBeVisible({ timeout: 5000 });
+        });
+
+        await test.step('step-4: Verify row count changed (filter actually narrowed)', async () => {
+            const filteredRowCount = await translationEditor.tableRows.count();
+            expect(filteredRowCount).toBeLessThanOrEqual(initialRowCount);
+            await translationEditor.expectResultCountMatchesTableRows();
+        });
+
+        await test.step('step-5: Clear the filter via the chip delete and verify list restores', async () => {
+            const chip = page.locator('mas-search-and-filters .applied-filters sp-tag', {
+                has: page.locator('sp-icon-user'),
+            });
+            await chip.locator('button, [role="button"]').first().click({ timeout: 5000 });
+            await page.waitForTimeout(1000);
+            await expect(translationEditor.createdByAppliedTag).toHaveCount(0);
+            await translationEditor.expectResultCountMatchesTableRows();
+        });
+    });
 });

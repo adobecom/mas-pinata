@@ -56,6 +56,14 @@ export default class TranslationEditorPage {
         this.filterButtons = page.locator('sp-action-button.filter-trigger');
         this.filterPopover = page.locator('sp-popover.filter-popover[open]').first();
 
+        // Created by filter (user picker) inside the Select Items dialog
+        this.createdByFilterButton = page.locator('mas-search-and-filters mas-user-picker sp-action-button[slot="trigger"]');
+        this.createdByFilterPopover = page.locator('mas-search-and-filters mas-user-picker sp-popover');
+        this.createdByUserCheckbox = (displayName) =>
+            this.createdByFilterPopover.locator('sp-menu-item', { hasText: displayName }).locator('sp-checkbox');
+        this.createdByApplyButton = this.createdByFilterPopover.getByRole('button', { name: 'Apply' });
+        this.createdByAppliedTag = page.locator('mas-search-and-filters .applied-filters sp-tag sp-icon-user');
+
         // Collections tab
         const collectionsTabPanel = page.getByRole('tabpanel', { name: 'Collections' });
         this.selectItemsTableCollections = collectionsTabPanel.locator('mas-select-items-table');

@@ -351,7 +351,7 @@ export class MasRepository extends LitElement {
             modelIds,
             path: localizedPath,
             tags,
-            ...(this.page.value !== PAGE_NAMES.TRANSLATION_EDITOR && { createdBy }),
+            createdBy,
             sort: [{ on: 'modifiedOrCreated', order: 'DESC' }],
         };
 
