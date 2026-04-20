@@ -43,6 +43,9 @@ class MasSearchAndFilters extends LitElement {
             Store.translationProjects[`all${this.typeUppercased}`],
             Store.translationProjects[`display${this.typeUppercased}`],
             Store[this.type === TABLE_TYPE.PLACEHOLDERS ? 'placeholders' : 'fragments'].list.loading,
+            Store.translationProjects.createdByUsers,
+            Store.profile,
+            Store.users,
         ]);
         const dataCallback = () => {
             if (!this.searchOnly) {
@@ -203,6 +206,11 @@ class MasSearchAndFilters extends LitElement {
             case FILTER_TYPE.PRODUCT:
                 this.productFilter = this.productFilter.filter((filterId) => filterId !== id);
                 break;
+            case FILTER_TYPE.USER_CREATED_BY:
+                Store.translationProjects.createdByUsers.set(
+                    Store.translationProjects.createdByUsers.value.filter((user) => user.userPrincipalName !== id),
+                );
+                break;
         }
     }
 
@@ -211,10 +219,12 @@ class MasSearchAndFilters extends LitElement {
         this.marketSegmentFilter = [];
         this.customerSegmentFilter = [];
         this.productFilter = [];
+        Store.translationProjects.createdByUsers.set([]);
     }
 
     #renderAppliedFilters() {
-        if (this.appliedFilters.length === 0) return nothing;
+        const createdByUsers = Store.translationProjects.createdByUsers.value;
+        if (this.appliedFilters.length === 0 && createdByUsers.length === 0) return nothing;
 
         return html`
             <div class="applied-filters">
@@ -230,6 +240,21 @@ class MasSearchAndFilters extends LitElement {
                                 @delete=${this.#handleTagDelete}
                             >
                                 ${filter.label}
+                            </sp-tag>
+                        `,
+                    )}
+                    ${repeat(
+                        createdByUsers,
+                        (user) => user.userPrincipalName,
+                        (user) => html`
+                            <sp-tag
+                                size="s"
+                                deletable
+                                .value=${{ type: FILTER_TYPE.USER_CREATED_BY, id: user.userPrincipalName }}
+                                @delete=${this.#handleTagDelete}
+                            >
+                                ${user.displayName}
+                                <sp-icon-user slot="icon" size="s"></sp-icon-user>
                             </sp-tag>
                         `,
                     )}
@@ -352,6 +377,14 @@ class MasSearchAndFilters extends LitElement {
                     FILTER_TYPE.CUSTOMER_SEGMENT,
                 )}
                 ${this.#renderFilterPicker('Product', this.productOptions, this.productFilter, FILTER_TYPE.PRODUCT)}
+                ${this.type === TABLE_TYPE.CARDS
+                    ? html`<mas-user-picker
+                          label="Created by"
+                          .currentUser=${Store.profile}
+                          .selectedUsers=${Store.translationProjects.createdByUsers}
+                          .users=${Store.users}
+                      ></mas-user-picker>`
+                    : nothing}
             </div>
             ${this.#renderAppliedFilters()}
         `;

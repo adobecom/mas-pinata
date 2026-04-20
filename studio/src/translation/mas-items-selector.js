@@ -74,6 +74,9 @@ class MasItemsSelector extends LitElement {
 
     #handleTabChange({ target: { selected } }) {
         this.selectedTab = selected;
+        if (selected !== TABLE_TYPE.CARDS) {
+            Store.translationProjects.createdByUsers.set([]);
+        }
     }
 
     #getTabLabel(tab) {

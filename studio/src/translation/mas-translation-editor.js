@@ -498,6 +498,7 @@ class MasTranslationEditor extends LitElement {
                 searchAndFilters.productFilter = [];
             }
         }
+        Store.translationProjects.createdByUsers.set([]);
         Store.translationProjects.displayCards.set(Store.translationProjects.allCards.get());
         Store.translationProjects.displayCollections.set(Store.translationProjects.allCollections.get());
         Store.translationProjects.displayPlaceholders.set(Store.translationProjects.allPlaceholders.get());

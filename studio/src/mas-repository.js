@@ -115,7 +115,11 @@ export class MasRepository extends LitElement {
         this.filters = new StoreController(this, Store.filters);
         this.page = new StoreController(this, Store.page);
         this.foldersLoaded = new StoreController(this, Store.folders.loaded);
-        this.reactiveController = new ReactiveController(this, [Store.profile, Store.createdByUsers]);
+        this.reactiveController = new ReactiveController(this, [
+            Store.profile,
+            Store.createdByUsers,
+            Store.translationProjects.createdByUsers,
+        ]);
         this.recentlyUpdatedLimit = new StoreController(this, Store.fragments.recentlyUpdated.limit);
         this.handleSearch = debounce(this.handleSearch.bind(this), 50);
     }
@@ -189,6 +193,9 @@ export class MasRepository extends LitElement {
             case PAGE_NAMES.CONTENT:
                 this.searchFragments();
                 this.loadPreviewPlaceholders();
+                break;
+            case PAGE_NAMES.TRANSLATION_EDITOR:
+                this.searchFragments();
                 break;
             case PAGE_NAMES.WELCOME:
                 this.loadRecentlyUpdatedFragments();
@@ -286,7 +293,9 @@ export class MasRepository extends LitElement {
         const currentTags = dataStore.getMeta('tags');
         const tagsString = this.filters.value.tags || '';
         const currentCreatedBy = dataStore.getMeta('createdBy');
-        const createdBy = Store.createdByUsers.get().map((user) => user.userPrincipalName);
+        const createdBySource =
+            this.page.value === PAGE_NAMES.TRANSLATION_EDITOR ? Store.translationProjects.createdByUsers : Store.createdByUsers;
+        const createdBy = createdBySource.get().map((user) => user.userPrincipalName);
         const createdByString = createdBy.join(',');
         if (
             currentData?.length > 0 &&
@@ -351,7 +360,7 @@ export class MasRepository extends LitElement {
             modelIds,
             path: localizedPath,
             tags,
-            ...(this.page.value !== PAGE_NAMES.TRANSLATION_EDITOR && { createdBy }),
+            createdBy,
             sort: [{ on: 'modifiedOrCreated', order: 'DESC' }],
         };
 
