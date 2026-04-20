@@ -5,6 +5,8 @@ import { styles } from './mas-search-and-filters.css.js';
 import Store from '../store.js';
 import { FILTER_TYPE, TABLE_TYPE } from '../constants.js';
 import ReactiveController from '../reactivity/reactive-controller.js';
+import { ReactiveStore } from '../reactivity/reactive-store.js';
+import '../fields/user-picker.js';
 
 class MasSearchAndFilters extends LitElement {
     static styles = styles;
@@ -16,11 +18,17 @@ class MasSearchAndFilters extends LitElement {
         marketSegmentFilter: { type: Array, state: true },
         customerSegmentFilter: { type: Array, state: true },
         productFilter: { type: Array, state: true },
+        createdByFilter: { type: Array, state: true },
         templateOptions: { type: Array },
         marketSegmentOptions: { type: Array },
         customerSegmentOptions: { type: Array },
         productOptions: { type: Array },
         searchOnly: { type: Boolean },
+    };
+
+    #selectedUsersStore = new ReactiveStore([]);
+    #selectedUsersCallback = (value) => {
+        this.createdByFilter = (value || []).map((u) => u.userPrincipalName);
     };
 
     constructor() {
@@ -30,6 +38,7 @@ class MasSearchAndFilters extends LitElement {
         this.marketSegmentFilter = [];
         this.customerSegmentFilter = [];
         this.productFilter = [];
+        this.createdByFilter = [];
         this.templateOptions = [];
         this.marketSegmentOptions = [];
         this.customerSegmentOptions = [];
@@ -55,6 +64,7 @@ class MasSearchAndFilters extends LitElement {
         this.dataSubscription = {
             unsubscribe: () => Store.translationProjects[`all${this.typeUppercased}`].unsubscribe(dataCallback),
         };
+        this.#selectedUsersStore.subscribe(this.#selectedUsersCallback);
     }
 
     disconnectedCallback() {
@@ -63,6 +73,7 @@ class MasSearchAndFilters extends LitElement {
             Store.translationProjects[`all${this.typeUppercased}`].value,
         );
         this.dataSubscription?.unsubscribe();
+        this.#selectedUsersStore.unsubscribe(this.#selectedUsersCallback);
     }
 
     get typeUppercased() {
@@ -81,6 +92,7 @@ class MasSearchAndFilters extends LitElement {
         const marketSegmentMap = new Map(this.marketSegmentOptions.map((opt) => [opt.id || opt.value, opt]));
         const customerSegmentMap = new Map(this.customerSegmentOptions.map((opt) => [opt.id || opt.value, opt]));
         const productMap = new Map(this.productOptions.map((opt) => [opt.id || opt.value, opt]));
+        const userMap = new Map((Store.users.value || []).map((user) => [user.userPrincipalName, user]));
 
         for (const id of this.templateFilter) {
             const option = templateMap.get(id);
@@ -97,6 +109,10 @@ class MasSearchAndFilters extends LitElement {
         for (const id of this.productFilter) {
             const option = productMap.get(id);
             if (option) filters.push({ type: FILTER_TYPE.PRODUCT, id, label: option.title || option.label });
+        }
+        for (const upn of this.createdByFilter) {
+            const user = userMap.get(upn);
+            filters.push({ type: FILTER_TYPE.CREATED_BY, id: upn, label: user?.displayName || upn });
         }
         return filters;
     }
@@ -135,7 +151,8 @@ class MasSearchAndFilters extends LitElement {
             changed.has('templateFilter') ||
             changed.has('marketSegmentFilter') ||
             changed.has('customerSegmentFilter') ||
-            changed.has('productFilter')
+            changed.has('productFilter') ||
+            changed.has('createdByFilter')
         ) {
             this.#applyFilters();
         }
@@ -203,6 +220,11 @@ class MasSearchAndFilters extends LitElement {
             case FILTER_TYPE.PRODUCT:
                 this.productFilter = this.productFilter.filter((filterId) => filterId !== id);
                 break;
+            case FILTER_TYPE.CREATED_BY:
+                this.#selectedUsersStore.set(
+                    (this.#selectedUsersStore.value || []).filter((user) => user.userPrincipalName !== id),
+                );
+                break;
         }
     }
 
@@ -211,6 +233,7 @@ class MasSearchAndFilters extends LitElement {
         this.marketSegmentFilter = [];
         this.customerSegmentFilter = [];
         this.productFilter = [];
+        this.#selectedUsersStore.set([]);
     }
 
     #renderAppliedFilters() {
@@ -277,6 +300,7 @@ class MasSearchAndFilters extends LitElement {
         const hasMarket = this.marketSegmentFilter?.length > 0;
         const hasCustomer = this.customerSegmentFilter?.length > 0;
         const hasProduct = this.productFilter?.length > 0;
+        const hasCreatedBy = this.createdByFilter?.length > 0;
 
         const result = source.filter((fragment) => {
             if (query) {
@@ -312,6 +336,10 @@ class MasSearchAndFilters extends LitElement {
             }
             if (hasProduct) {
                 if (!fragment.tags?.some((tag) => this.productFilter.includes(tag.id))) return false;
+            }
+            if (hasCreatedBy) {
+                const by = fragment.created?.by;
+                if (!by || !this.createdByFilter.includes(by)) return false;
             }
             return true;
         });
@@ -352,6 +380,12 @@ class MasSearchAndFilters extends LitElement {
                     FILTER_TYPE.CUSTOMER_SEGMENT,
                 )}
                 ${this.#renderFilterPicker('Product', this.productOptions, this.productFilter, FILTER_TYPE.PRODUCT)}
+                <mas-user-picker
+                    label="Created by"
+                    .currentUser=${Store.profile}
+                    .selectedUsers=${this.#selectedUsersStore}
+                    .users=${Store.users}
+                ></mas-user-picker>
             </div>
             ${this.#renderAppliedFilters()}
         `;

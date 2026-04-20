@@ -304,4 +304,47 @@ test.describe('M@S Studio Translations Test Suite', () => {
             expect(allTitles.some((t) => t.includes(projectTitle))).toBe(false);
         });
     });
+
+    // 7. @translation-editor-created-by-filter – Created by filter narrows the list
+    test(`${features[7].name},${features[7].tags}`, async ({ page, baseURL }) => {
+        const testPage = `${baseURL}${features[7].path}${miloLibs}${features[7].browserParams}`;
+        setTestPage(testPage);
+        await page.goto(testPage);
+        await page.waitForLoadState('domcontentloaded');
+        await expect(translationEditor.form).toBeVisible({ timeout: 15000 });
+
+        await test.step('step-1: Open Add Items dialog and navigate to Cards tab', async () => {
+            await translationEditor.addItemsButton.click();
+            await expect(translationEditor.cardsTab).toBeVisible({ timeout: 10000 });
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.selectItemsTable).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+        });
+
+        const initialRowCount = await translationEditor.tableRows.count();
+
+        let selectedUserName;
+        await test.step('step-2: Open Created by picker and select the first user', async () => {
+            await expect(translationEditor.createdByPickerTrigger).toBeVisible({ timeout: 10000 });
+            await translationEditor.createdByPickerTrigger.click();
+            await expect(translationEditor.createdByPickerPopover).toBeVisible({ timeout: 8000 });
+            await expect(translationEditor.createdByPickerMenuItems.first()).toBeVisible({ timeout: 10000 });
+            const firstItem = translationEditor.createdByPickerMenuItems.first();
+            selectedUserName = (await firstItem.textContent())?.trim();
+            expect(selectedUserName && selectedUserName.length > 0).toBe(true);
+            await firstItem.click();
+            await translationEditor.createdByPickerApplyButton.click();
+            await page.waitForTimeout(500);
+        });
+
+        await test.step('step-3: Verify applied tag and narrowed row count', async () => {
+            await expect(
+                translationEditor.appliedFilterTags.filter({ hasText: selectedUserName }),
+            ).toHaveCount(1, { timeout: 10000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+            const filteredRowCount = await translationEditor.tableRows.count();
+            expect(filteredRowCount).toBeLessThanOrEqual(initialRowCount);
+        });
+    });
 });

@@ -56,6 +56,15 @@ export default class TranslationEditorPage {
         this.filterButtons = page.locator('sp-action-button.filter-trigger');
         this.filterPopover = page.locator('sp-popover.filter-popover[open]').first();
 
+        // Created by picker
+        this.createdByPickerTrigger = fragmentsTab
+            .locator('mas-search-and-filters mas-user-picker sp-action-button[slot="trigger"]')
+            .first();
+        this.createdByPickerPopover = fragmentsTab.locator('mas-search-and-filters mas-user-picker sp-popover[open]').first();
+        this.createdByPickerMenuItems = this.createdByPickerPopover.locator('sp-menu sp-menu-item');
+        this.createdByPickerApplyButton = this.createdByPickerPopover.getByRole('button', { name: 'Apply' });
+        this.createdByPickerResetButton = this.createdByPickerPopover.getByRole('button', { name: 'Reset' });
+
         // Collections tab
         const collectionsTabPanel = page.getByRole('tabpanel', { name: 'Collections' });
         this.selectItemsTableCollections = collectionsTabPanel.locator('mas-select-items-table');
