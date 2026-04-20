@@ -69,5 +69,14 @@ export default {
             tags: '@mas-studio @translation-editor @regression',
             description: 'Translation Editor Actions: create project save, add languages overlay, add files overlay',
         },
+        {
+            tcid: '7',
+            name: '@translation-editor-created-by-filter',
+            path: '/studio.html',
+            browserParams: '#page=translation-editor&path=nala',
+            tags: '@mas-studio @translation-editor @cards',
+            description:
+                'Created by picker on Fragments tab: visible only on Fragments, apply/remove chip, reset on tab switch, reset on dialog re-open',
+        },
     ],
 };

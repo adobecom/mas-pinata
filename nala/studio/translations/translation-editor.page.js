@@ -51,6 +51,18 @@ export default class TranslationEditorPage {
         );
         this.fragmentsResultCount = fragmentsTab.locator('mas-search-and-filters .result-count');
         this.appliedFilterTags = fragmentsTab.locator('mas-search-and-filters .applied-filters sp-tag');
+        this.clearAllFiltersButton = fragmentsTab
+            .locator('mas-search-and-filters .applied-filters sp-action-button')
+            .filter({ hasText: 'Clear all' });
+
+        // Created by user picker (Fragments tab only)
+        this.userPicker = fragmentsTab.locator('mas-search-and-filters mas-user-picker');
+        this.userPickerTrigger = this.userPicker.locator('sp-action-button[slot="trigger"]');
+        this.userPickerPopover = this.userPicker.locator('sp-popover');
+        this.userPickerMenuItems = this.userPickerPopover.locator('sp-menu-item');
+        this.userPickerApplyButton = this.userPickerPopover.locator('sp-button').filter({ hasText: 'Apply' });
+        this.userPickerResetButton = this.userPickerPopover.locator('sp-button').filter({ hasText: 'Reset' });
+        this.createdByChip = fragmentsTab.locator('mas-search-and-filters .applied-filters sp-tag:has(sp-icon-user)');
 
         // Filters
         this.filterButtons = page.locator('sp-action-button.filter-trigger');

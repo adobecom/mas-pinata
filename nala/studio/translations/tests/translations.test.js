@@ -304,4 +304,103 @@ test.describe('M@S Studio Translations Test Suite', () => {
             expect(allTitles.some((t) => t.includes(projectTitle))).toBe(false);
         });
     });
+
+    // 7. @translation-editor-created-by-filter – Created by picker on Fragments tab
+    test(`${features[7].name},${features[7].tags}`, async ({ page, baseURL }) => {
+        const testPage = `${baseURL}${features[7].path}${miloLibs}${features[7].browserParams}`;
+        setTestPage(testPage);
+        await page.goto(testPage);
+        await page.waitForLoadState('domcontentloaded');
+        await expect(translationEditor.form).toBeVisible({ timeout: 15000 });
+
+        await test.step('step-1: Open Add Items dialog and land on Fragments tab', async () => {
+            await translationEditor.addItemsButton.click();
+            await expect(translationEditor.selectItemsDialog).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.cardsTab).toBeVisible({ timeout: 10000 });
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.selectItemsTable).toBeVisible({ timeout: 15000 });
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+        });
+
+        await test.step('step-2: Created by picker is visible and starts empty on Fragments tab', async () => {
+            await expect(translationEditor.userPicker).toBeVisible();
+            await expect(translationEditor.userPickerTrigger).toContainText('Created by');
+            await expect(translationEditor.createdByChip).toHaveCount(0);
+        });
+
+        await test.step('step-3: Collections tab hides Created by picker', async () => {
+            await translationEditor.collectionsTab.click();
+            await expect(translationEditor.tableRowsCollections.first()).toBeVisible({ timeout: 15000 });
+            await expect(translationEditor.userPicker).toHaveCount(0);
+        });
+
+        await test.step('step-4: Placeholders tab hides Created by picker', async () => {
+            await translationEditor.placeholdersTab.click();
+            await expect(translationEditor.tableRowsPlaceholders.first()).toBeVisible({ timeout: 15000 });
+            await expect(translationEditor.userPicker).toHaveCount(0);
+        });
+
+        await test.step('step-5: Back on Fragments the picker is visible with no chip (reset on tab switch)', async () => {
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await expect(translationEditor.userPicker).toBeVisible();
+            await expect(translationEditor.createdByChip).toHaveCount(0);
+        });
+
+        await test.step('step-6: Open picker, select first user, apply -> chip appears', async () => {
+            await translationEditor.userPickerTrigger.click();
+            await expect(translationEditor.userPickerPopover).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.userPickerMenuItems.first()).toBeVisible({ timeout: 15000 });
+            const userCount = await translationEditor.userPickerMenuItems.count();
+            expect(userCount).toBeGreaterThan(0);
+            await translationEditor.userPickerMenuItems.first().click();
+            await translationEditor.userPickerApplyButton.click();
+            await expect(translationEditor.userPickerPopover).not.toBeVisible({ timeout: 5000 });
+            await expect(translationEditor.createdByChip).toHaveCount(1, { timeout: 15000 });
+        });
+
+        await test.step('step-7: Switch to Collections tab -> picker/chip are gone; switch back -> still no chip (tab-switch reset)', async () => {
+            await translationEditor.collectionsTab.click();
+            await expect(translationEditor.tableRowsCollections.first()).toBeVisible({ timeout: 15000 });
+            await expect(translationEditor.userPicker).toHaveCount(0);
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await expect(translationEditor.userPicker).toBeVisible();
+            await expect(translationEditor.createdByChip).toHaveCount(0);
+        });
+
+        await test.step('step-8: Re-apply user filter, then Clear all -> chip removed', async () => {
+            await translationEditor.userPickerTrigger.click();
+            await expect(translationEditor.userPickerPopover).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.userPickerMenuItems.first()).toBeVisible({ timeout: 15000 });
+            await translationEditor.userPickerMenuItems.first().click();
+            await translationEditor.userPickerApplyButton.click();
+            await expect(translationEditor.userPickerPopover).not.toBeVisible({ timeout: 5000 });
+            await expect(translationEditor.createdByChip).toHaveCount(1, { timeout: 15000 });
+
+            await expect(translationEditor.clearAllFiltersButton).toBeVisible();
+            await translationEditor.clearAllFiltersButton.click();
+            await expect(translationEditor.createdByChip).toHaveCount(0, { timeout: 10000 });
+        });
+
+        await test.step('step-9: Apply user, close dialog, re-open -> picker starts empty (reset on dialog re-open)', async () => {
+            await translationEditor.userPickerTrigger.click();
+            await expect(translationEditor.userPickerPopover).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.userPickerMenuItems.first()).toBeVisible({ timeout: 15000 });
+            await translationEditor.userPickerMenuItems.first().click();
+            await translationEditor.userPickerApplyButton.click();
+            await expect(translationEditor.userPickerPopover).not.toBeVisible({ timeout: 5000 });
+            await expect(translationEditor.createdByChip).toHaveCount(1, { timeout: 15000 });
+
+            await translationEditor.selectItemsDialog.getByRole('button', { name: 'Cancel' }).click();
+            await expect(translationEditor.selectItemsDialog).not.toBeVisible({ timeout: 10000 });
+
+            await translationEditor.addItemsButton.click();
+            await expect(translationEditor.selectItemsDialog).toBeVisible({ timeout: 10000 });
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await expect(translationEditor.userPicker).toBeVisible();
+            await expect(translationEditor.createdByChip).toHaveCount(0);
+        });
+    });
 });
