@@ -9,6 +9,7 @@ export default class COMFriesPage {
             '[slot="cta"] a.spectrum-Button, [slot="cta"] button, div[slot="cta"] button, div[slot="cta"] a',
         );
         this.icon = page.locator('merch-icon[slot="icons"]');
+        this.mnemonicIcons = page.locator('merch-icon[slot="icons"]');
         this.trialBadge = page.locator('div[slot="trial-badge"] merch-badge');
         this.badge = page.locator('div[slot="badge"] merch-badge');
 

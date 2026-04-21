@@ -10232,12 +10232,12 @@ merch-card[variant="ccd-slice"] [slot='body-s'] a.spectrum-Link {
 `;var Vn={mnemonics:{size:"s"},title:{tag:"h3",slot:"heading-xxs",maxCount:250,withSuffix:!0},description:{tag:"div",slot:"body-s",maxCount:2e3,withSuffix:!1},badge:{tag:"div",slot:"badge",default:"spectrum-yellow-300"},trialBadge:{tag:"div",slot:"trial-badge",default:"spectrum-green-800"},prices:{tag:"p",slot:"price"},ctas:{slot:"cta",size:"M"},addonConfirmation:{tag:"div",slot:"addon-confirmation"},borderColor:{attribute:"border-color",specialValues:{gray:"--spectrum-gray-300"}}},mr=class extends A{getGlobalCSS(){return yl}get aemFragmentMapping(){return Vn}renderLayout(){return g`
             <div class="content">
                 <div class="header">
-                    <slot name="icons"></slot>
                     <slot name="heading-xxs"></slot>
                     <slot name="trial-badge"></slot>
                 </div>
                 <slot name="badge"></slot>
                 <slot name="body-s"></slot>
+                <slot name="icons"></slot>
                 <div class="footer">
                     <div class="cta">
                         <slot name="cta"></slot>
@@ -10291,6 +10291,15 @@ merch-card[variant="ccd-slice"] [slot='body-s'] a.spectrum-Link {
             gap: var(--consonant-merch-spacing-xxs);
             padding-bottom: 15px;
             padding-top: 5px;
+        }
+
+        :host([variant='fries']) slot[name='icons'] {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
         }
 
         :host([variant='fries']) .footer {
