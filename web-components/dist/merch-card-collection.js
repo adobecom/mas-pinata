@@ -2999,6 +2999,10 @@ merch-card-collection:has([slot="subtitle"]) merch-card {
         :host([variant^='plans']) .body {
             min-width: var(--merch-card-plans-min-width);
             padding: var(--merch-card-plans-padding);
+            padding-block-start: calc(
+                var(--merch-card-plans-padding) +
+                    var(--consonant-merch-card-badge-height, 0px)
+            );
         }
 
         :host([variant='plans'][size]) .body {
@@ -3784,6 +3788,10 @@ merch-card[variant="plans-v2"][size="wide"] footer [slot="heading-m"] {
             min-width: var(--merch-card-plans-v2-min-width);
             padding: var(--merch-card-plans-v2-padding);
             padding-bottom: 0;
+            padding-block-start: calc(
+                var(--merch-card-plans-v2-padding) +
+                    var(--consonant-merch-card-badge-height, 0px)
+            );
             flex: 0 0 auto;
             gap: 12px;
             min-height: var(--merch-card-plans-v2-body-min-height, auto);
