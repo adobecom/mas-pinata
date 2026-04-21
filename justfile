@@ -86,9 +86,7 @@ pinata-auth:
     # Pull IMS_EMAIL / IMS_PASS from .env (tenant-local). The harness copies
     # credentials from apps/mas/.env into every worktree's .env at setup.
     if [[ -f .env ]]; then
-        set -a
-        source .env
-        set +a
+        set -a; source .env; set +a
     fi
     if [[ -z "${IMS_EMAIL:-}" || -z "${IMS_PASS:-}" ]]; then
         echo "[pinata-auth] error: IMS_EMAIL and IMS_PASS must be set in .env" >&2
@@ -101,66 +99,134 @@ pinata-auth:
 
     SESSION=pinata-mas-auth
     CACHE_DIR="${HOME}/.cache/pinata-mas-browser"
-    mkdir -p "$CACHE_DIR" .pinata
+    mkdir -p "$CACHE_DIR"
 
-    # Reuse persisted IMS cookies when available so repeated runs skip the login form.
+    # Selector helpers — agent-browser treats comma-separated CSS as one
+    # selector, so we try alternates one at a time and return on first hit.
+    # IMS's button text selectors (text=Continue, find role button …) don't
+    # match due to nested generic/button wrappers; the data-id attributes
+    # IMS renders (EmailPage-ContinueButton, PasswordPage-ContinueButton,
+    # PP-PasskeyEnroll-skip-btn) are the stable hook.
+    click_any() {
+        local desc=$1; shift
+        for sel in "$@"; do
+            if agent-browser click "$sel" --session "$SESSION" 2>&1 | grep -q '^✓'; then
+                return 0
+            fi
+        done
+        echo "[pinata-auth] could not click $desc (tried: $*)" >&2
+        return 1
+    }
+    fill_any() {
+        local desc=$1 value=$2; shift 2
+        for sel in "$@"; do
+            if agent-browser fill "$sel" "$value" --session "$SESSION" 2>&1 | grep -q '^✓'; then
+                return 0
+            fi
+        done
+        echo "[pinata-auth] could not fill $desc" >&2
+        return 1
+    }
+    is_signed_in() {
+        local s
+        s=$(agent-browser eval "Boolean(window.adobeIMS?.initialized && window.adobeIMS.isSignedInUser())" --session "$SESSION" 2>/dev/null | tail -1)
+        [[ "$s" == "true" ]]
+    }
+
+    # Persistent profile = IMS cookies survive across runs so repeated calls
+    # skip the login form entirely.
     agent-browser open "https://mas.adobe.com/studio.html" \
-        --session "$SESSION" --profile "$CACHE_DIR"
+        --session "$SESSION" --profile "$CACHE_DIR" >/dev/null
 
-    # Wait up to 20s for either (a) the app to boot (already signed in) OR
-    # (b) the IMS email input to appear (fresh login required).
+    # Wait up to 20s for one of: app boot, email input, password input.
     echo "[pinata-auth] waiting for IMS page or app boot..."
-    if agent-browser wait --fn "(window.adobeIMS?.initialized && window.adobeIMS.isSignedInUser()) || !!document.querySelector('input[type=email], input[name=username]')" --timeout 20000 --session "$SESSION" 2>/dev/null; then
-        :
-    fi
+    agent-browser wait --fn "
+        (window.adobeIMS?.initialized && window.adobeIMS.isSignedInUser()) ||
+        !!document.querySelector('input[name=username]') ||
+        !!document.querySelector('input[name=password]')
+    " --timeout 20000 --session "$SESSION" 2>/dev/null || true
 
-    # If we need to log in, the email input is present.
-    IS_SIGNED_IN=$(agent-browser eval "Boolean(window.adobeIMS?.initialized && window.adobeIMS.isSignedInUser())" --session "$SESSION" 2>/dev/null || echo "false")
-
-    if [[ "$IS_SIGNED_IN" != "true" ]]; then
+    if ! is_signed_in; then
         echo "[pinata-auth] logging in as $IMS_EMAIL"
-        agent-browser fill 'input[type=email], input[name=username]' "$IMS_EMAIL" --session "$SESSION"
-        agent-browser click 'button[type=submit], text=Continue' --session "$SESSION"
-        # Wait for password field to appear
-        agent-browser wait 'input[type=password], input[name=password]' --timeout 15000 --session "$SESSION"
-        agent-browser fill 'input[type=password], input[name=password]' "$IMS_PASS" --session "$SESSION"
-        agent-browser click 'button[type=submit], text=Continue' --session "$SESSION"
-        # Wait for return to mas.adobe.com studio app
-        echo "[pinata-auth] waiting for IMS callback → mas.adobe.com..."
-        agent-browser wait --fn "window.adobeIMS?.initialized && window.adobeIMS.isSignedInUser()" --timeout 30000 --session "$SESSION"
+
+        # Email step — skip if the email input isn't on the page (e.g. we
+        # already progressed via cookie to the password page).
+        if agent-browser get box 'input[name=username]' --session "$SESSION" 2>&1 | grep -q '^x:'; then
+            fill_any "email" "$IMS_EMAIL" 'input[name=username]'
+            click_any "email Continue" \
+                '[data-id="EmailPage-ContinueButton"]' \
+                '[data-id="EmailPageV2-ContinueButton"]' \
+                'form button[type=submit]'
+        fi
+
+        # Password step.
+        agent-browser wait 'input[name=password]' --timeout 15000 --session "$SESSION" >/dev/null
+        fill_any "password" "$IMS_PASS" 'input[name=password]' '#PasswordPage-PasswordField'
+        click_any "password Continue" \
+            '[data-id="PasswordPage-ContinueButton"]' \
+            'form button[type=submit]'
+
+        # Post-login: poll up to 30s for signed-in state, skipping any
+        # interstitials (passkey enrollment, two-factor opt-in, …) along the
+        # way. All Adobe progressive-profile screens share the `PP-` data-id
+        # prefix and a `-skip-btn` suffix.
+        echo "[pinata-auth] handling post-login interstitials..."
+        for _ in $(seq 1 30); do
+            if is_signed_in; then break; fi
+            # Try known skip buttons — silent on miss.
+            for sel in '[data-id="PP-PasskeyEnroll-skip-btn"]' \
+                       '[data-id^="PP-"][data-id$="-skip-btn"]'; do
+                if agent-browser click "$sel" --session "$SESSION" >/dev/null 2>&1; then
+                    echo "[pinata-auth] skipped interstitial: $sel"
+                fi
+            done
+            sleep 1
+        done
+
+        if ! is_signed_in; then
+            echo "[pinata-auth] login did not complete — current URL:" >&2
+            agent-browser get url --session "$SESSION" >&2 || true
+            agent-browser close --session "$SESSION" >/dev/null 2>&1 || true
+            exit 1
+        fi
     else
         echo "[pinata-auth] IMS session already valid — skipping login"
     fi
 
-    # Kick off async profile fetch and wait for it to resolve on window.
+    # Extract token + profile. getProfile() is async, so stash on window and
+    # poll before synchronously pulling everything out.
     agent-browser eval "window.adobeIMS.getProfile().then(p => { window._pinataProfile = p; }).catch(e => { window._pinataProfileError = String(e); })" --session "$SESSION" >/dev/null
-    agent-browser wait --fn "window._pinataProfile !== undefined || window._pinataProfileError !== undefined" --timeout 15000 --session "$SESSION"
+    agent-browser wait --fn "window._pinataProfile !== undefined || window._pinataProfileError !== undefined" --timeout 15000 --session "$SESSION" >/dev/null
 
-    # Extract token + profile synchronously.
     RAW=$(agent-browser eval "JSON.stringify({
         token: window.adobeIMS.getAccessToken().token,
         profile: window._pinataProfile || null,
         expire: (window.adobeIMS.getAccessToken().expire?.valueOf?.() || (Date.now() + 3600000))
-    })" --session "$SESSION")
-
-    # agent-browser eval returns the result as its stdout. Some versions wrap
-    # strings in extra quotes; strip one layer if present and validate JSON.
-    if [[ "$RAW" == \"*\" ]]; then
-        RAW="${RAW:1:-1}"
-        RAW="${RAW//\\\"/\"}"
-    fi
-
-    # Sanity-check: must be a JSON object with a non-empty token.
-    if ! echo "$RAW" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(!d.token) process.exit(1)" 2>/dev/null; then
-        echo "[pinata-auth] error: could not extract a valid IMS access token" >&2
-        echo "[pinata-auth] raw eval output: $RAW" >&2
-        agent-browser close --session "$SESSION" || true
-        exit 1
-    fi
+    })" --session "$SESSION" 2>&1 | tail -1)
 
     CACHE_FILE="${HOME}/.cache/pinata-mas/auth-cache.json"
     mkdir -p "$(dirname "$CACHE_FILE")"
-    echo "$RAW" > "$CACHE_FILE"
+
+    # agent-browser eval returns the result as a JSON-encoded string (outer
+    # quotes, inner quotes escaped). Unwrap with node rather than fragile
+    # bash substring ops (macOS ships bash 3.2 which lacks :-1 slicing).
+    # Node also validates that the inner payload has a non-empty token and
+    # writes the cache in one step — failure anywhere exits non-zero.
+    if ! printf '%s' "$RAW" | node -e "
+        const raw = require('fs').readFileSync(0, 'utf8').trim();
+        let inner = raw;
+        try { const parsed = JSON.parse(raw); if (typeof parsed === 'string') inner = parsed; } catch {}
+        let d;
+        try { d = JSON.parse(inner); } catch (e) { console.error('[pinata-auth] not JSON after unwrap:', e.message); process.exit(1); }
+        if (!d || !d.token) { console.error('[pinata-auth] unwrapped payload has no token'); process.exit(1); }
+        require('fs').writeFileSync('$CACHE_FILE', JSON.stringify(d));
+    "; then
+        echo "[pinata-auth] error: could not extract a valid IMS access token" >&2
+        echo "[pinata-auth] raw eval output: $RAW" >&2
+        agent-browser close --session "$SESSION" >/dev/null 2>&1 || true
+        exit 1
+    fi
+
     chmod 600 "$CACHE_FILE"
-    agent-browser close --session "$SESSION" || true
+    agent-browser close --session "$SESSION" >/dev/null 2>&1 || true
     echo "[pinata-auth] wrote $CACHE_FILE"
