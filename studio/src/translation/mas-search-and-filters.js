@@ -5,6 +5,8 @@ import { styles } from './mas-search-and-filters.css.js';
 import Store from '../store.js';
 import { FILTER_TYPE, TABLE_TYPE } from '../constants.js';
 import ReactiveController from '../reactivity/reactive-controller.js';
+import { loadUsers } from '../users.js';
+import '../fields/user-picker.js';
 
 class MasSearchAndFilters extends LitElement {
     static styles = styles;
@@ -43,6 +45,9 @@ class MasSearchAndFilters extends LitElement {
             Store.translationProjects[`all${this.typeUppercased}`],
             Store.translationProjects[`display${this.typeUppercased}`],
             Store[this.type === TABLE_TYPE.PLACEHOLDERS ? 'placeholders' : 'fragments'].list.loading,
+            Store.profile,
+            Store.createdByUsers,
+            Store.users,
         ]);
         const dataCallback = () => {
             if (!this.searchOnly) {
@@ -55,6 +60,7 @@ class MasSearchAndFilters extends LitElement {
         this.dataSubscription = {
             unsubscribe: () => Store.translationProjects[`all${this.typeUppercased}`].unsubscribe(dataCallback),
         };
+        this.#ensureUsersLoaded();
     }
 
     disconnectedCallback() {
@@ -63,6 +69,15 @@ class MasSearchAndFilters extends LitElement {
             Store.translationProjects[`all${this.typeUppercased}`].value,
         );
         this.dataSubscription?.unsubscribe();
+        // shared with main fragment table — intentional (Option B)
+    }
+
+    async #ensureUsersLoaded() {
+        if (Store.users.getMeta('loaded')) return;
+        if (Store.users.value && Store.users.value.length > 0) return;
+        const users = await loadUsers();
+        Store.users.set(users);
+        Store.users.setMeta('loaded', true);
     }
 
     get typeUppercased() {
@@ -206,15 +221,34 @@ class MasSearchAndFilters extends LitElement {
         }
     }
 
+    #handleUserDelete(e) {
+        const value = e.target.value;
+        Store.createdByUsers.set(Store.createdByUsers.value.filter((user) => user.userPrincipalName !== value));
+    }
+
     #clearAllFilters() {
         this.templateFilter = [];
         this.marketSegmentFilter = [];
         this.customerSegmentFilter = [];
         this.productFilter = [];
+        Store.createdByUsers.set([]);
+    }
+
+    get #createdByUsersTags() {
+        return repeat(
+            Store.createdByUsers.value,
+            (user) => user.userPrincipalName,
+            (user) => html`
+                <sp-tag size="s" deletable @delete=${this.#handleUserDelete} .value=${user.userPrincipalName}>
+                    ${user.displayName}
+                    <sp-icon-user slot="icon" size="s"></sp-icon-user>
+                </sp-tag>
+            `,
+        );
     }
 
     #renderAppliedFilters() {
-        if (this.appliedFilters.length === 0) return nothing;
+        if (this.appliedFilters.length === 0 && Store.createdByUsers.value.length === 0) return nothing;
 
         return html`
             <div class="applied-filters">
@@ -233,6 +267,7 @@ class MasSearchAndFilters extends LitElement {
                             </sp-tag>
                         `,
                     )}
+                    ${this.#createdByUsersTags}
                 </sp-tags>
                 <sp-action-button quiet @click=${this.#clearAllFilters}>Clear all</sp-action-button>
             </div>
@@ -352,6 +387,12 @@ class MasSearchAndFilters extends LitElement {
                     FILTER_TYPE.CUSTOMER_SEGMENT,
                 )}
                 ${this.#renderFilterPicker('Product', this.productOptions, this.productFilter, FILTER_TYPE.PRODUCT)}
+                <mas-user-picker
+                    label="Created by"
+                    .currentUser=${Store.profile}
+                    .selectedUsers=${Store.createdByUsers}
+                    .users=${Store.users}
+                ></mas-user-picker>
             </div>
             ${this.#renderAppliedFilters()}
         `;

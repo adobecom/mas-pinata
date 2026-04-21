@@ -69,5 +69,14 @@ export default {
             tags: '@mas-studio @translation-editor @regression',
             description: 'Translation Editor Actions: create project save, add languages overlay, add files overlay',
         },
+        {
+            tcid: '7',
+            name: '@translation-editor-created-by-filter',
+            path: '/studio.html',
+            browserParams: '#page=translation-editor&path=nala',
+            tags: '@mas-studio @translation-editor @nopr',
+            description:
+                'Created by filter: open Add Items, apply Created by user filter, verify items list narrows, clear filter, list restored',
+        },
     ],
 };

@@ -28,6 +28,12 @@ export const styles = css`
         }
     }
 
+    mas-user-picker sp-action-button[slot='trigger'] {
+        border: 1px solid var(--spectrum-gray-300);
+        border-radius: 12px;
+        justify-content: start;
+    }
+
     .filter-popover {
         padding: 12px;
     }

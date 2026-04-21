@@ -304,4 +304,52 @@ test.describe('M@S Studio Translations Test Suite', () => {
             expect(allTitles.some((t) => t.includes(projectTitle))).toBe(false);
         });
     });
+
+    // 7. @translation-editor-created-by-filter – Created by user filter narrows items list
+    test(`${features[7].name},${features[7].tags}`, async ({ page, baseURL }) => {
+        const testPage = `${baseURL}${features[7].path}${miloLibs}${features[7].browserParams}`;
+        setTestPage(testPage);
+        let initialRowCount = 0;
+
+        await test.step('step-1: Navigate to translation editor and open Add Items dialog', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await expect(translationEditor.form).toBeVisible({ timeout: 15000 });
+            await translationEditor.addItemsButton.click();
+            await expect(translationEditor.cardsTab).toBeVisible({ timeout: 10000 });
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.selectItemsTable).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+            initialRowCount = await translationEditor.tableRows.count();
+            expect(initialRowCount).toBeGreaterThan(0);
+        });
+
+        await test.step('step-2: Open Created by picker and apply first user', async () => {
+            await expect(translationEditor.createdByFilterButton).toBeVisible({ timeout: 10000 });
+            await translationEditor.createdByFilterButton.click();
+            await expect(translationEditor.createdByPopover).toBeVisible({ timeout: 8000 });
+            await expect(translationEditor.createdByFirstCheckbox).toBeVisible({ timeout: 8000 });
+            await translationEditor.createdByFirstCheckbox.click();
+            await translationEditor.createdByApply.click();
+            await page.waitForTimeout(1500);
+        });
+
+        await test.step('step-3: Verify items list narrows and applied tag is visible', async () => {
+            await expect(translationEditor.createdByAppliedTag.first()).toBeVisible({ timeout: 10000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+            const filteredCount = await translationEditor.tableRows.count();
+            expect(filteredCount).toBeLessThanOrEqual(initialRowCount);
+        });
+
+        await test.step('step-4: Delete the user chip and verify list restores', async () => {
+            const tag = translationEditor.createdByAppliedTag.first();
+            await tag.locator('button[aria-label="Clear"], sp-clear-button, sp-icon-close').first().click();
+            await page.waitForTimeout(1500);
+            await expect(translationEditor.createdByAppliedTag).toHaveCount(0, { timeout: 10000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+            const restoredCount = await translationEditor.tableRows.count();
+            expect(restoredCount).toBe(initialRowCount);
+        });
+    });
 });
