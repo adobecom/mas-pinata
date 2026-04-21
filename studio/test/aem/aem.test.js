@@ -69,7 +69,7 @@ describe('aem.js', () => {
                 }
             };
 
-            const result = await aem.searchFragment('some-query');
+            const result = await aem.searchFragment({ path: '/some-path', query: 'some-query' });
 
             const actual = [];
 
