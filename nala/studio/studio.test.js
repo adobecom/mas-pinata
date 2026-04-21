@@ -461,4 +461,28 @@ test.describe('M@S Studio feature test suite', () => {
             });
         });
     });
+
+    // @studio-search-by-fragment-title - Search by a Fragment Title substring (MWPW-190535)
+    test(`${features[14].name},${features[14].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[14];
+        const testPage = `${baseURL}${features[14].path}${miloLibs}${features[14].browserParams}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Go to MAS Studio test page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+        });
+
+        await test.step('step-2: Search by Fragment Title substring', async () => {
+            await expect(await studio.searchInput).toBeVisible();
+            await studio.waitForCardsLoaded();
+            await studio.searchInput.fill(data.titleQuery);
+            await page.keyboard.press('Enter');
+            await studio.waitForCardsLoaded();
+
+            const searchResult = studio.renderView.locator('merch-card');
+            await expect(searchResult).toHaveCount(1);
+            await expect(await studio.getCard(data.cardid)).toBeVisible();
+        });
+    });
 });

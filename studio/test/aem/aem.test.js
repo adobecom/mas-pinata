@@ -34,6 +34,11 @@ describe('aem.js', () => {
     });
 
     describe('method: searchFragment', () => {
+        const parseSearchQuery = (url) => {
+            const params = new URLSearchParams(url.split('?')[1]);
+            return JSON.parse(params.get('query'));
+        };
+
         it('should fetch content fragments with multiple calls', async () => {
             window.fetch = async (url) => {
                 if (url.includes('cursor1')) {
@@ -76,6 +81,46 @@ describe('aem.js', () => {
                 { id: 1, fields: [{ name: 'variant', value: 'v1' }] },
                 { id: 2, fields: [{ name: 'variant', value: 'v2' }] },
             ]);
+        });
+
+        it('should scope fullText to Fragment Title plus content fields when a query is provided', async () => {
+            let capturedUrl;
+            window.fetch = async (url) => {
+                capturedUrl = url;
+                return {
+                    ok: true,
+                    json: async () => ({ items: [] }),
+                };
+            };
+
+            const result = aem.searchFragment({ path: '/x', query: 'Embedded Print' });
+            for await (const _ of result) {
+                // drain the generator so the request is issued
+            }
+
+            const searchQuery = parseSearchQuery(capturedUrl);
+            expect(searchQuery.filter.fullText.text).to.equal(encodeURIComponent('Embedded Print'));
+            expect(searchQuery.filter.fullText.queryMode).to.equal('EDGES');
+            expect(searchQuery.filter.fullText.queryFields).to.deep.equal(['title', 'description', 'elements/*']);
+        });
+
+        it('should omit fullText when no query is provided', async () => {
+            let capturedUrl;
+            window.fetch = async (url) => {
+                capturedUrl = url;
+                return {
+                    ok: true,
+                    json: async () => ({ items: [] }),
+                };
+            };
+
+            const result = aem.searchFragment({ path: '/x' });
+            for await (const _ of result) {
+                // drain the generator so the request is issued
+            }
+
+            const searchQuery = parseSearchQuery(capturedUrl);
+            expect(searchQuery.filter.fullText).to.be.undefined;
         });
     });
 

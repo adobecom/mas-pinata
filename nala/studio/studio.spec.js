@@ -133,5 +133,18 @@ export default {
             },
             tags: '@mas-studio @regional-variations @grouped-variations',
         },
+        {
+            tcid: '14',
+            name: '@studio-search-by-fragment-title',
+            path: '/studio.html',
+            data: {
+                cardid: '48a759ce-3c9a-4158-9bc3-b21ffa07e8e4',
+                // Partial Fragment Title substring that uniquely matches the
+                // nala CCD Suggested card above. See MWPW-190535 / #257.
+                titleQuery: 'NALA Suggested',
+            },
+            browserParams: '#path=nala&page=content',
+            tags: '@mas-studio',
+        },
     ],
 };

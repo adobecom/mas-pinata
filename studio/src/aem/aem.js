@@ -11,6 +11,12 @@ const defaultSearchOptions = {
     sort: [{ on: 'created', order: 'ASC' }],
 };
 
+// AEM CF Search fullText scope: authors search by Fragment Title alongside
+// the content-field values that were searched before (MWPW-190535 / #257).
+// AEM replaces its default content-field scope when queryFields is set, so
+// the content-field wildcard must be listed here too.
+const FULLTEXT_QUERY_FIELDS = ['title', 'description', 'elements/*'];
+
 const filterByTags = (tags) => (item) => {
     if (!tags.length) return true;
     if (!item.tags || !item.tags.length) return false;
@@ -104,6 +110,7 @@ class AEM {
                 text: encodeURIComponent(query),
                 // For info about modes: https://adobe-sites.redoc.ly/tag/Search#operation/fragments/search!path=query/filter/fullText/queryMode&t=request
                 queryMode: 'EDGES',
+                queryFields: FULLTEXT_QUERY_FIELDS,
             };
         }
         const searchQuery = { ...defaultSearchOptions, filter };
