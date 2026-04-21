@@ -3,6 +3,19 @@ import COMFriesSpec from '../specs/fries_edit_and_discard.spec.js';
 
 const { features } = COMFriesSpec;
 
+/*
+ * Fries is the intentional Nala canary for the gradient-border feature class
+ * covering Fries, Special Offers, Mini Compare Chart (desktop + MWEB), and Catalog.
+ * All five variants share the same editor wiring (#updateAvailableColors /
+ * #renderColorPicker in studio/src/editors/merch-card-editor.js) and the same
+ * runtime logic (processBorderColor in web-components/src/hydrate.js plus the
+ * var(--gradient-*) tokens in web-components/src/global.css.js), so a regression
+ * in the shared path surfaces on the Fries fragment first.
+ * Original feature plan: .pinata/specs/issue-260-pnt-caede5f4-sdlc_planner-gradient-border-color-options.md
+ * Any divergence from the shared wiring (e.g. a variant-specific CSS rule
+ * overriding --consonant-merch-card-border-color) must add its own Nala test
+ * next to that variant's page object.
+ */
 test.describe('M@S Studio Commerce Fries card test suite', () => {
     // @studio-fries-edit-discard-trial-badge - Validate edit trial badge for fries card in mas studio
     test(`${features[0].name},${features[0].tags}`, async ({ page, baseURL }) => {
@@ -171,6 +184,11 @@ test.describe('M@S Studio Commerce Fries card test suite', () => {
             await expect(await editor.borderColor).toContainText(data.purpleBlue.label);
             await expect(friesCard).toHaveAttribute('border-color', data.purpleBlue.value);
             await expect(friesCard).toHaveAttribute('gradient-border', 'true');
+            const purpleBlueBg = await friesCard.evaluate((el) => getComputedStyle(el).backgroundImage);
+            expect(purpleBlueBg).toContain('linear-gradient');
+            for (const stop of data.purpleBlue.cssStops) {
+                expect(purpleBlueBg).toContain(stop);
+            }
         });
 
         await test.step('step-4: Switch to Gradient Firefly Spectrum border color', async () => {
@@ -186,6 +204,11 @@ test.describe('M@S Studio Commerce Fries card test suite', () => {
             await expect(await editor.borderColor).toContainText(data.fireflySpectrum.label);
             await expect(friesCard).toHaveAttribute('border-color', data.fireflySpectrum.value);
             await expect(friesCard).toHaveAttribute('gradient-border', 'true');
+            const fireflyBg = await friesCard.evaluate((el) => getComputedStyle(el).backgroundImage);
+            expect(fireflyBg).toContain('linear-gradient');
+            for (const stop of data.fireflySpectrum.cssStops) {
+                expect(fireflyBg).toContain(stop);
+            }
         });
 
         await test.step('step-6: Close the editor and verify discard is triggered', async () => {

@@ -2284,14 +2284,18 @@ class MerchCardEditor extends LitElement {
         }
 
         const showAllSpectrum = this.currentVariantMapping?.showAllSpectrumColors;
-        const options = isBackground
-            ? ['Default', 'Transparent', ...colorArray]
-            : [
-                  'Default',
-                  'Transparent',
-                  ...(isBorder && !showAllSpectrum ? Object.keys(variantSpecialValues) : []),
-                  ...colorArray,
-              ];
+        const options = Array.from(
+            new Set(
+                isBackground
+                    ? ['Default', 'Transparent', ...colorArray]
+                    : [
+                          'Default',
+                          'Transparent',
+                          ...(isBorder && !showAllSpectrum ? Object.keys(variantSpecialValues) : []),
+                          ...colorArray,
+                      ],
+            ),
+        );
 
         const handleChange = (e) => {
             const value = e.target.value;

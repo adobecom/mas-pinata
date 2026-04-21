@@ -60,10 +60,12 @@ export default {
                 purpleBlue: {
                     label: 'Gradient Purple Blue',
                     value: 'gradient-purple-blue',
+                    cssStops: ['rgb(181, 57, 200)', 'rgb(113, 85, 250)', 'rgb(59, 99, 251)'],
                 },
                 fireflySpectrum: {
                     label: 'Gradient Firefly Spectrum',
                     value: 'gradient-firefly-spectrum',
+                    cssStops: ['rgb(215, 50, 32)', 'rgb(217, 35, 97)', 'rgb(113, 85, 250)'],
                 },
             },
             browserParams: '#page=fragment-editor&path=nala&fragmentId=',
