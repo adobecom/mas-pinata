@@ -277,7 +277,12 @@ var ir=Object.defineProperty;var nr=a=>{throw TypeError(a)};var Fa=(a,t,e)=>t in
     :host([badge-text]) ::slotted([slot='heading-m']) {
         padding-block-start: max(
             0px,
-            calc(var(--badge-height, 32px) - var(--consonant-merch-spacing-xs, 16px))
+            calc(
+                var(--badge-height, 32px) - var(
+                        --consonant-merch-spacing-xs,
+                        16px
+                    )
+            )
         );
     }
 

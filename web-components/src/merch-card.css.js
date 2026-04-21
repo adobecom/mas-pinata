@@ -131,7 +131,12 @@ export const styles = css`
     :host([badge-text]) ::slotted([slot='heading-m']) {
         padding-block-start: max(
             0px,
-            calc(var(--badge-height, 32px) - var(--consonant-merch-spacing-xs, 16px))
+            calc(
+                var(--badge-height, 32px) - var(
+                        --consonant-merch-spacing-xs,
+                        16px
+                    )
+            )
         );
     }
 
