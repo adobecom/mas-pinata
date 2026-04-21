@@ -97,4 +97,28 @@ describe('MasFragmentTable', () => {
             expect(event.stopPropagation.called).to.be.true;
         });
     });
+
+    describe('formattedModifiedAt', () => {
+        it("renders 'Apr 18, 2026' in the .last-modified cell for modified.at '2026-04-18T10:00:00Z'", async () => {
+            const fragmentStore = createFragmentStore({
+                modified: { at: '2026-04-18T10:00:00Z', by: 'me' },
+            });
+            const el = await fixture(
+                html`<mas-fragment-table .fragmentStore=${fragmentStore}></mas-fragment-table>`,
+            );
+            const cell = el.querySelector('sp-table-cell.last-modified');
+            expect(cell).to.exist;
+            expect(cell.textContent.trim()).to.equal('Apr 18, 2026');
+        });
+
+        it('renders an empty .last-modified cell when modified.at is missing', async () => {
+            const fragmentStore = createFragmentStore();
+            const el = await fixture(
+                html`<mas-fragment-table .fragmentStore=${fragmentStore}></mas-fragment-table>`,
+            );
+            const cell = el.querySelector('sp-table-cell.last-modified');
+            expect(cell).to.exist;
+            expect(cell.textContent.trim()).to.equal('');
+        });
+    });
 });

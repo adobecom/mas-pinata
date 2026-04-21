@@ -91,4 +91,25 @@ describe('store', () => {
             expect(storeFragments[0]).to.equal(store3);
         });
     });
+
+    describe('Store.sort', () => {
+        let originalPage;
+        let originalSort;
+
+        beforeEach(() => {
+            originalPage = Store.page.get();
+            originalSort = Store.sort.get();
+        });
+
+        afterEach(() => {
+            Store.page.set(originalPage);
+            Store.sort.set(originalSort);
+        });
+
+        it('resets to the content default when page is set to content', () => {
+            Store.sort.set({ sortBy: 'title', sortDirection: 'asc' });
+            Store.page.set('content');
+            expect(Store.sort.get()).to.deep.equal({ sortBy: 'modifiedAt', sortDirection: 'desc' });
+        });
+    });
 });

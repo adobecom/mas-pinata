@@ -197,17 +197,26 @@ function landscapeValidator(value) {
     return [WCS_LANDSCAPE_DRAFT, WCS_LANDSCAPE_PUBLISHED].includes(value) ? value : WCS_LANDSCAPE_PUBLISHED;
 }
 
+// Content page defaults to newest-first when sorted by modifiedAt;
+// every other (page, field) combination defaults to ascending.
+function defaultSortDirectionFor(page, sortBy) {
+    if (page === PAGE_NAMES.CONTENT && sortBy === 'modifiedAt') return 'desc';
+    return 'asc';
+}
+
 function sortValidator(value) {
     const page = Store.page.get();
     const defaultSortBy = SORT_COLUMNS[page]?.[0];
-    if (!value) return { sortBy: defaultSortBy, sortDirection: 'asc' };
+    if (!value) return { sortBy: defaultSortBy, sortDirection: defaultSortDirectionFor(page, defaultSortBy) };
     const result = { ...value };
     if (!result.sortBy) result.sortBy = defaultSortBy;
     else {
         const isValidField = (SORT_COLUMNS[page] || []).includes(result.sortBy);
         if (!isValidField) result.sortBy = defaultSortBy;
     }
-    if (result.sortDirection !== 'asc' && result.sortDirection !== 'desc') result.sortDirection = 'asc';
+    if (result.sortDirection !== 'asc' && result.sortDirection !== 'desc') {
+        result.sortDirection = defaultSortDirectionFor(page, result.sortBy);
+    }
     return result;
 }
 // This validator accesses the store object, so it can't be passed in the
@@ -258,7 +267,8 @@ export default Store;
 
 // Reset sort on page change
 Store.page.subscribe((value) => {
-    Store.sort.set({ sortBy: SORT_COLUMNS[value]?.[0], sortDirection: 'asc' });
+    const sortBy = SORT_COLUMNS[value]?.[0];
+    Store.sort.set({ sortBy, sortDirection: defaultSortDirectionFor(value, sortBy) });
 });
 
 Store.placeholders.preview.subscribe(() => {
@@ -299,5 +309,6 @@ Store.filters.subscribe(() => {
 Store.search.subscribe((value, oldValue) => {
     if (Store.page.get() !== PAGE_NAMES.CONTENT) return;
     if (value?.path === oldValue?.path) return;
-    Store.sort.set({ sortBy: SORT_COLUMNS[PAGE_NAMES.CONTENT]?.[0], sortDirection: 'asc' });
+    const sortBy = SORT_COLUMNS[PAGE_NAMES.CONTENT]?.[0];
+    Store.sort.set({ sortBy, sortDirection: defaultSortDirectionFor(PAGE_NAMES.CONTENT, sortBy) });
 });

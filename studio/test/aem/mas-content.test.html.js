@@ -7,6 +7,8 @@ import { nothing } from 'lit';
 import Store from '../../src/store.js';
 import { FragmentStore } from '../../src/reactivity/fragment-store.js';
 import { cardSkeleton } from '../../src/mas-content.js';
+import { MasRepository } from '../../src/mas-repository.js';
+import { PAGE_NAMES } from '../../src/constants.js';
 import '../../src/mas-repository.js';
 import '../../src/mas-content.js';
 
@@ -126,6 +128,92 @@ runTests(async () => {
 
             expect(el.querySelector('.content-empty-state')).to.not.exist;
             expect(el.querySelector('mas-fragment')).to.exist;
+        });
+    });
+
+    describe('mas-repository searchFragments sort', () => {
+        let sandbox;
+        let originalSort;
+        let originalProfile;
+        let originalPage;
+        let originalFragmentsData;
+        let originalPathMeta;
+        let originalQueryMeta;
+        let originalLocaleMeta;
+        let originalTagsMeta;
+        let originalCreatedByMeta;
+        let originalSortMeta;
+        let originalPersonalizationMeta;
+
+        beforeEach(() => {
+            sandbox = sinon.createSandbox();
+            originalSort = structuredClone(Store.sort.get());
+            originalProfile = Store.profile.value;
+            originalPage = Store.page.get();
+            originalFragmentsData = Store.fragments.list.data.get();
+            originalPathMeta = Store.fragments.list.data.getMeta('path');
+            originalQueryMeta = Store.fragments.list.data.getMeta('query');
+            originalLocaleMeta = Store.fragments.list.data.getMeta('locale');
+            originalTagsMeta = Store.fragments.list.data.getMeta('tags');
+            originalCreatedByMeta = Store.fragments.list.data.getMeta('createdBy');
+            originalSortMeta = Store.fragments.list.data.getMeta('sort');
+            originalPersonalizationMeta = Store.fragments.list.data.getMeta('personalizationFilterEnabled');
+        });
+
+        afterEach(() => {
+            sandbox.restore();
+            Store.sort.set(originalSort);
+            Store.profile.set(originalProfile);
+            Store.page.set(originalPage);
+            Store.fragments.list.data.set(originalFragmentsData);
+            if (originalPathMeta === null) Store.fragments.list.data.removeMeta('path');
+            else Store.fragments.list.data.setMeta('path', originalPathMeta);
+            if (originalQueryMeta === null) Store.fragments.list.data.removeMeta('query');
+            else Store.fragments.list.data.setMeta('query', originalQueryMeta);
+            if (originalLocaleMeta === null) Store.fragments.list.data.removeMeta('locale');
+            else Store.fragments.list.data.setMeta('locale', originalLocaleMeta);
+            if (originalTagsMeta === null) Store.fragments.list.data.removeMeta('tags');
+            else Store.fragments.list.data.setMeta('tags', originalTagsMeta);
+            if (originalCreatedByMeta === null) Store.fragments.list.data.removeMeta('createdBy');
+            else Store.fragments.list.data.setMeta('createdBy', originalCreatedByMeta);
+            if (originalSortMeta === null) Store.fragments.list.data.removeMeta('sort');
+            else Store.fragments.list.data.setMeta('sort', originalSortMeta);
+            if (originalPersonalizationMeta === null) Store.fragments.list.data.removeMeta('personalizationFilterEnabled');
+            else Store.fragments.list.data.setMeta('personalizationFilterEnabled', originalPersonalizationMeta);
+        });
+
+        it("calls aem.sites.cf.fragments.search with sort [{on: 'title', order: 'ASC'}] when Store.sort is { sortBy: 'title', sortDirection: 'asc' }", async () => {
+            const repository = new MasRepository();
+            repository.bucket = 'test-bucket';
+            repository.baseUrl = 'https://test.example.com';
+            repository.page = { value: PAGE_NAMES.CONTENT };
+            repository.search = { value: { path: 'sandbox', query: '' } };
+            repository.filters = { value: { locale: 'en_US', tags: '' } };
+
+            const doneCursor = { next: async () => ({ done: true }) };
+            const searchStub = sandbox.stub().resolves(doneCursor);
+            repository.aem = {
+                sites: { cf: { fragments: { search: searchStub, getById: sandbox.stub() } } },
+                folders: { list: sandbox.stub(), create: sandbox.stub() },
+            };
+
+            Store.profile.set({ name: 'test-user' });
+            // Store.page must be CONTENT so sortValidator accepts 'title' as a valid sortBy.
+            Store.page.set(PAGE_NAMES.CONTENT);
+            Store.sort.set({ sortBy: 'title', sortDirection: 'asc' });
+            Store.fragments.list.data.set([]);
+            Store.fragments.list.data.removeMeta('path');
+            Store.fragments.list.data.removeMeta('query');
+            Store.fragments.list.data.removeMeta('locale');
+            Store.fragments.list.data.removeMeta('tags');
+            Store.fragments.list.data.removeMeta('createdBy');
+            Store.fragments.list.data.removeMeta('sort');
+
+            await repository.searchFragments();
+
+            expect(searchStub.calledOnce).to.be.true;
+            const [options] = searchStub.firstCall.args;
+            expect(options.sort).to.deep.equal([{ on: 'title', order: 'ASC' }]);
         });
     });
 
