@@ -67,6 +67,19 @@ function registerPriceOptionsProvider(masCommerceService) {
     masCommerceService.providers.price(priceOptionsProvider);
 }
 
+const badgeResizeObserver = new ResizeObserver((entries) => {
+    entries.forEach((entry) => {
+        const card = entry.target.closest(MERCH_CARD);
+        if (!card) return;
+        const height = Math.ceil(entry.target.offsetHeight);
+        if (height > 0) {
+            card.style.setProperty('--badge-height', `${height}px`);
+        } else {
+            card.style.removeProperty('--badge-height');
+        }
+    });
+});
+
 const intersectionObserver = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
         const card = entry.target;
@@ -212,6 +225,7 @@ export class MerchCard extends LitElement {
     #durationMarkName;
     #internalId; // internal unique card identifier
     #log;
+    #observedBadge;
     #service;
     #startMarkName;
     #resolveHydration;
@@ -281,6 +295,14 @@ export class MerchCard extends LitElement {
         } catch (e) {
             this.#fail(`Error in postCardUpdateHook: ${e.message}`, {}, false);
         }
+        if (
+            changedProperties.has('badgeText') ||
+            changedProperties.has('badgeBackgroundColor') ||
+            changedProperties.has('variant') ||
+            (this.#observedBadge && !this.#observedBadge.isConnected)
+        ) {
+            this.#observeBadge();
+        }
     }
 
     get theme() {
@@ -320,6 +342,29 @@ export class MerchCard extends LitElement {
 
     get badgeElement() {
         return this.shadowRoot.getElementById('badge');
+    }
+
+    #observeBadge() {
+        const badgeEl =
+            this.badgeElement ?? this.querySelector('[slot="badge"]');
+        if (!badgeEl) {
+            if (this.#observedBadge) this.#unobserveBadge();
+            return;
+        }
+        if (this.#observedBadge === badgeEl) return;
+        if (this.#observedBadge) {
+            badgeResizeObserver.unobserve(this.#observedBadge);
+        }
+        this.#observedBadge = badgeEl;
+        badgeResizeObserver.observe(badgeEl);
+    }
+
+    #unobserveBadge() {
+        if (this.#observedBadge) {
+            badgeResizeObserver.unobserve(this.#observedBadge);
+            this.#observedBadge = undefined;
+        }
+        this.style.removeProperty('--badge-height');
     }
 
     get headingmMSlot() {
@@ -578,6 +623,8 @@ export class MerchCard extends LitElement {
             this.variantLayout.connectedCallbackHook();
         }
 
+        this.#observeBadge();
+
         if (!this.aemFragment) {
             setTimeout(() => this.checkReady(), 0);
         }
@@ -586,6 +633,7 @@ export class MerchCard extends LitElement {
     disconnectedCallback() {
         super.disconnectedCallback();
         this.variantLayout?.disconnectedCallbackHook();
+        this.#unobserveBadge();
 
         this.removeEventListener(
             EVENT_MERCH_QUANTITY_SELECTOR_CHANGE,

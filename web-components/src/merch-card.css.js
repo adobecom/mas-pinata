@@ -54,7 +54,7 @@ export const styles = css`
     }
 
     .top-section.badge {
-        min-height: 32px;
+        min-height: max(32px, var(--badge-height, 32px));
     }
 
     .body {
@@ -65,6 +65,9 @@ export const styles = css`
         height: 100%;
         gap: var(--consonant-merch-spacing-xxs);
         padding: var(--consonant-merch-spacing-xs);
+        padding-top: calc(
+            var(--consonant-merch-spacing-xs) + var(--badge-height, 0px)
+        );
     }
 
     footer {
@@ -117,6 +120,8 @@ export const styles = css`
         text-align: center;
         padding: 8px 11px;
         border-radius: 5px 0 0 5px;
+        white-space: normal;
+        word-break: break-word;
     }
 
     div[class$='-badge']:dir(rtl) {
