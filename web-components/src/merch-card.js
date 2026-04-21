@@ -67,6 +67,17 @@ function registerPriceOptionsProvider(masCommerceService) {
     masCommerceService.providers.price(priceOptionsProvider);
 }
 
+const badgeResizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+        const badge = entry.target;
+        const card =
+            badge.closest?.(MERCH_CARD) ?? badge.getRootNode()?.host;
+        if (!card) continue;
+        const height = Math.round(badge.offsetHeight);
+        card.style.setProperty('--badge-height', `${height}px`);
+    }
+});
+
 const intersectionObserver = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
         const card = entry.target;
@@ -212,6 +223,7 @@ export class MerchCard extends LitElement {
     #durationMarkName;
     #internalId; // internal unique card identifier
     #log;
+    #observedBadge;
     #service;
     #startMarkName;
     #resolveHydration;
@@ -320,6 +332,28 @@ export class MerchCard extends LitElement {
 
     get badgeElement() {
         return this.shadowRoot.getElementById('badge');
+    }
+
+    #getBadgeElement() {
+        return (
+            this.badgeElement ||
+            this.querySelector(':scope > [slot="badge"]')
+        );
+    }
+
+    #observeBadge() {
+        const badge = this.#getBadgeElement();
+        if (badge === this.#observedBadge) return;
+        if (this.#observedBadge) {
+            badgeResizeObserver.unobserve(this.#observedBadge);
+            this.#observedBadge = undefined;
+        }
+        if (badge) {
+            badgeResizeObserver.observe(badge);
+            this.#observedBadge = badge;
+        } else {
+            this.style.setProperty('--badge-height', '0px');
+        }
     }
 
     get headingmMSlot() {
@@ -599,6 +633,10 @@ export class MerchCard extends LitElement {
             EVENT_MERCH_ADDON_AND_QUANTITY_UPDATE,
             this.handleAddonAndQuantityUpdate,
         );
+        if (this.#observedBadge) {
+            badgeResizeObserver.unobserve(this.#observedBadge);
+            this.#observedBadge = undefined;
+        }
     }
 
     // custom methods
@@ -618,6 +656,7 @@ export class MerchCard extends LitElement {
                         });
                     }
                     hydrate(fragment, this);
+                    this.#observeBadge();
                 } catch (e) {
                     this.#fail(`hydration has failed: ${e.message}`);
                 } finally {
@@ -666,6 +705,7 @@ export class MerchCard extends LitElement {
             ) {
                 intersectionObserver.observe(this);
             }
+            this.#observeBadge();
             this.#hydrationPromise = undefined;
         }
         if (this.variantLayoutPromise) {
