@@ -20,10 +20,17 @@ export const FRIES_AEM_FRAGMENT_MAPPING = {
     prices: { tag: 'p', slot: 'price' },
     ctas: { slot: 'cta', size: 'M' },
     addonConfirmation: { tag: 'div', slot: 'addon-confirmation' },
+    allowedBorderColors: [
+        'spectrum-yellow-300-special-offers',
+        'spectrum-gray-300-special-offers',
+        'spectrum-green-900-special-offers',
+    ],
     borderColor: {
         attribute: 'border-color',
         specialValues: {
             gray: '--spectrum-gray-300',
+            'gradient-purple-blue': 'var(--gradient-purple-blue)',
+            'gradient-firefly-spectrum': 'var(--gradient-firefly-spectrum)',
         },
     },
 };
@@ -72,14 +79,22 @@ export class FriesCard extends VariantLayout {
             --consonant-merch-card-border-width: 1px;
             max-width: var(--merch-card-fries-max-width);
             min-height: var(--merch-card-fries-min-height);
-            background-color: var(
-                --merch-card-custom-background-color,
-                var(--spectrum-gray-300)
-            );
+            background:
+                linear-gradient(
+                        var(
+                            --merch-card-custom-background-color,
+                            var(--spectrum-gray-300)
+                        ),
+                        var(
+                            --merch-card-custom-background-color,
+                            var(--spectrum-gray-300)
+                        )
+                    )
+                    padding-box,
+                var(--consonant-merch-card-border-color, transparent) border-box;
             color: var(--consonant-merch-card-heading-xxxs-color);
             border-radius: 4px;
-            border: 1px solid
-                var(--consonant-merch-card-border-color, transparent);
+            border: 1px solid transparent;
             display: flex;
             flex-direction: row;
             overflow: hidden;
@@ -87,6 +102,16 @@ export class FriesCard extends VariantLayout {
             gap: 16px;
             justify-content: space-between;
             box-sizing: border-box !important;
+        }
+
+        :host([variant='fries'][border-color='gradient-purple-blue']) {
+            --consonant-merch-card-border-color: var(--gradient-purple-blue);
+        }
+
+        :host([variant='fries'][border-color='gradient-firefly-spectrum']) {
+            --consonant-merch-card-border-color: var(
+                --gradient-firefly-spectrum
+            );
         }
 
         :host([variant='fries']) .content {

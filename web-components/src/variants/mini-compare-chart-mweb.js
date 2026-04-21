@@ -38,6 +38,7 @@ export const MINI_COMPARE_CHART_MWEB_AEM_FRAGMENT_MAPPING = {
         'spectrum-green-900-plans',
         'spectrum-red-700-plans',
         'gradient-purple-blue',
+        'gradient-firefly-spectrum',
     ],
     borderColor: { attribute: 'border-color' },
     size: ['wide', 'super-wide'],
@@ -540,10 +541,14 @@ export class MiniCompareChartMweb extends VariantLayout {
         :host(
             [variant='mini-compare-chart-mweb'][border-color='gradient-purple-blue']
         ) {
-            --consonant-merch-card-border-color: linear-gradient(
-                135deg,
-                #9256dc,
-                #1473e6
+            --consonant-merch-card-border-color: var(--gradient-purple-blue);
+        }
+
+        :host(
+            [variant='mini-compare-chart-mweb'][border-color='gradient-firefly-spectrum']
+        ) {
+            --consonant-merch-card-border-color: var(
+                --gradient-firefly-spectrum
             );
         }
 

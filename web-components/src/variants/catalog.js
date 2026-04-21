@@ -7,6 +7,14 @@ import { CSS } from './catalog.css.js';
 export const CATALOG_AEM_FRAGMENT_MAPPING = {
     cardName: { attribute: 'name' },
     badge: true,
+    borderColor: { attribute: 'border-color' },
+    allowedBorderColors: [
+        'spectrum-yellow-300-special-offers',
+        'spectrum-gray-300-special-offers',
+        'spectrum-green-900-special-offers',
+        'gradient-purple-blue',
+        'gradient-firefly-spectrum',
+    ],
     ctas: { slot: 'footer', size: 'm' },
     description: { tag: 'div', slot: 'body-xs' },
     mnemonics: { size: 'l' },
@@ -238,6 +246,10 @@ export class Catalog extends VariantLayout {
         :host([variant='catalog']) {
             min-height: 330px;
             width: var(--consonant-merch-card-catalog-width);
+            background:
+                linear-gradient(white, white) padding-box,
+                var(--consonant-merch-card-border-color, transparent) border-box;
+            border: 1px solid transparent;
         }
 
         .body .catalog-badge {
@@ -256,6 +268,40 @@ export class Catalog extends VariantLayout {
         :host([variant='catalog']) .action-menu:dir(rtl) {
             right: initial;
             left: 16px;
+        }
+
+        :host(
+            [variant='catalog'][border-color='spectrum-yellow-300-special-offers']
+        ) {
+            --consonant-merch-card-border-color: var(
+                --spectrum-yellow-300-special-offers
+            );
+        }
+
+        :host(
+            [variant='catalog'][border-color='spectrum-gray-300-special-offers']
+        ) {
+            --consonant-merch-card-border-color: var(
+                --spectrum-gray-300-special-offers
+            );
+        }
+
+        :host(
+            [variant='catalog'][border-color='spectrum-green-900-special-offers']
+        ) {
+            --consonant-merch-card-border-color: var(
+                --spectrum-green-900-special-offers
+            );
+        }
+
+        :host([variant='catalog'][border-color='gradient-purple-blue']) {
+            --consonant-merch-card-border-color: var(--gradient-purple-blue);
+        }
+
+        :host([variant='catalog'][border-color='gradient-firefly-spectrum']) {
+            --consonant-merch-card-border-color: var(
+                --gradient-firefly-spectrum
+            );
         }
     `;
 }

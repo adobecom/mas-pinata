@@ -25,6 +25,8 @@ export const SPECIAL_OFFERS_AEM_FRAGMENT_MAPPING = {
         'spectrum-yellow-300-special-offers',
         'spectrum-gray-300-special-offers',
         'spectrum-green-900-special-offers',
+        'gradient-purple-blue',
+        'gradient-firefly-spectrum',
     ],
     borderColor: { attribute: 'border-color' },
 };
@@ -100,6 +102,18 @@ export class SpecialOffer extends VariantLayout {
             [variant='special-offers'][border-color='spectrum-green-900-special-offers']
         ) {
             border-color: var(--spectrum-green-900-special-offers);
+        }
+
+        :host([variant='special-offers'][border-color='gradient-purple-blue']) {
+            --consonant-merch-card-border-color: var(--gradient-purple-blue);
+        }
+
+        :host(
+            [variant='special-offers'][border-color='gradient-firefly-spectrum']
+        ) {
+            --consonant-merch-card-border-color: var(
+                --gradient-firefly-spectrum
+            );
         }
     `;
 }
