@@ -41,11 +41,11 @@ export default {
                 cardid: '9620f75c-96cd-4ec3-a431-275a53d8860c',
                 color: {
                     original: 'Green 800',
-                    updated: 'Yellow 300',
+                    updated: 'Red 900',
                 },
                 colorCSS: {
                     original: 'rgb(7, 147, 85)',
-                    updated: 'rgb(255, 222, 44)',
+                    updated: 'rgb(211, 21, 16)',
                 },
             },
             browserParams: '#page=fragment-editor&path=nala&fragmentId=',
