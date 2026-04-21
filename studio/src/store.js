@@ -258,7 +258,20 @@ export default Store;
 
 // Reset sort on page change
 Store.page.subscribe((value) => {
-    Store.sort.set({ sortBy: SORT_COLUMNS[value]?.[0], sortDirection: 'asc' });
+    const defaultDirection = value === PAGE_NAMES.CONTENT ? 'desc' : 'asc';
+    Store.sort.set({ sortBy: SORT_COLUMNS[value]?.[0], sortDirection: defaultDirection });
+});
+
+// Reset sort on folder/path change while on the Content page
+let previousSortPath = Store.search.value.path;
+Store.search.subscribe(() => {
+    const nextPath = Store.search.value.path;
+    if (nextPath !== previousSortPath) {
+        previousSortPath = nextPath;
+        if (Store.page.value === PAGE_NAMES.CONTENT) {
+            Store.sort.set({ sortBy: SORT_COLUMNS.content[0], sortDirection: 'desc' });
+        }
+    }
 });
 
 Store.placeholders.preview.subscribe(() => {

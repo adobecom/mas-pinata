@@ -157,6 +157,13 @@ export class MasRepository extends LitElement {
             this.dictionaryCache.clear();
             this.#searchCursor = null;
         });
+        Store.sort.subscribe(() => {
+            this.dictionaryCache.clear();
+            if (this.page.value === PAGE_NAMES.CONTENT) {
+                this.#searchCursor = null;
+                this.handleSearch();
+            }
+        });
 
         this.loadFolders();
         this.style.display = 'none';
@@ -265,6 +272,26 @@ export class MasRepository extends LitElement {
         return variants.length && !variants.includes(variant);
     }
 
+    #getContentSortOption() {
+        const { sortBy, sortDirection } = Store.sort.get();
+        const order = sortDirection === 'asc' ? 'ASC' : 'DESC';
+        if (sortBy === 'title') return [{ on: 'title', order }];
+        return [{ on: 'modifiedOrCreated', order }];
+    }
+
+    #applyNullModifiedTail(fragmentStores) {
+        const { sortBy } = Store.sort.get();
+        if (sortBy !== 'modified') return fragmentStores;
+        const withDate = [];
+        const withoutDate = [];
+        for (const fs of fragmentStores) {
+            const fragment = fs.get?.() ?? fs.value;
+            if (fragment?.modified?.at) withDate.push(fs);
+            else withoutDate.push(fs);
+        }
+        return [...withDate, ...withoutDate];
+    }
+
     async searchFragments() {
         if (!(this.page.value === PAGE_NAMES.CONTENT || this.page.value === PAGE_NAMES.TRANSLATION_EDITOR)) return;
         if (!Store.profile.value) return;
@@ -288,6 +315,8 @@ export class MasRepository extends LitElement {
         const currentCreatedBy = dataStore.getMeta('createdBy');
         const createdBy = Store.createdByUsers.get().map((user) => user.userPrincipalName);
         const createdByString = createdBy.join(',');
+        const sortString = JSON.stringify(Store.sort.get());
+        const currentSort = dataStore.getMeta('sort');
         if (
             currentData?.length > 0 &&
             currentPath === path &&
@@ -295,7 +324,8 @@ export class MasRepository extends LitElement {
             currentLocale === locale &&
             currentTags === tagsString &&
             currentCreatedBy === createdByString &&
-            metaPersonalizationOn === personalizationOn
+            metaPersonalizationOn === personalizationOn &&
+            currentSort === sortString
         ) {
             let filteredData = currentData.filter((fragmentStore) => {
                 const fragmentPath = fragmentStore?.get?.()?.path;
@@ -352,7 +382,7 @@ export class MasRepository extends LitElement {
             path: localizedPath,
             tags,
             ...(this.page.value !== PAGE_NAMES.TRANSLATION_EDITOR && { createdBy }),
-            sort: [{ on: 'modifiedOrCreated', order: 'DESC' }],
+            sort: this.#getContentSortOption(),
         };
 
         const publishedTagIndex = tags.indexOf(TAG_STATUS_PUBLISHED);
@@ -453,7 +483,7 @@ export class MasRepository extends LitElement {
                     Store.fragments.list.loading.set(false);
                     return;
                 }
-                Store.fragments.list.data.set([...this.#filterStoresByPersonalizationEnabled(fragmentStores)]);
+                Store.fragments.list.data.set(this.#applyNullModifiedTail([...this.#filterStoresByPersonalizationEnabled(fragmentStores)]));
                 Store.fragments.list.firstPageLoaded.set(true);
                 const cursorState = done ? null : { cursor, variants, surface, fragmentStores };
                 this.#searchCursor = cursorState;
@@ -476,6 +506,7 @@ export class MasRepository extends LitElement {
             dataStore.setMeta('tags', this.filters.value.tags || '');
             dataStore.setMeta('createdBy', createdByString);
             dataStore.setMeta('personalizationFilterEnabled', personalizationOn);
+            dataStore.setMeta('sort', sortString);
         } catch (error) {
             if (error.name !== 'AbortError') {
                 Store.fragments.list.loading.set(false);
@@ -550,7 +581,7 @@ export class MasRepository extends LitElement {
                 );
                 pagesLoaded++;
                 if (this.#searchCursor !== cursorSnapshot) return;
-                Store.fragments.list.data.set([...this.#filterStoresByPersonalizationEnabled(fragmentStores)]);
+                Store.fragments.list.data.set(this.#applyNullModifiedTail([...this.#filterStoresByPersonalizationEnabled(fragmentStores)]));
                 if (done) {
                     this.#searchCursor = null;
                     return;
@@ -591,7 +622,7 @@ export class MasRepository extends LitElement {
                     Store.fragments.list.hasMore.set(true);
                     return;
                 }
-                Store.fragments.list.data.set([...this.#filterStoresByPersonalizationEnabled(fragmentStores)]);
+                Store.fragments.list.data.set(this.#applyNullModifiedTail([...this.#filterStoresByPersonalizationEnabled(fragmentStores)]));
                 if (done) {
                     this.#searchCursor = null;
                     Store.fragments.list.hasMore.set(false);
@@ -626,7 +657,7 @@ export class MasRepository extends LitElement {
                 this.#abortControllers.search?.signal,
             );
             if (this.#searchCursor !== cursorSnapshot) return;
-            Store.fragments.list.data.set([...this.#filterStoresByPersonalizationEnabled(fragmentStores)]);
+            Store.fragments.list.data.set(this.#applyNullModifiedTail([...this.#filterStoresByPersonalizationEnabled(fragmentStores)]));
             if (done) {
                 this.#searchCursor = null;
                 Store.fragments.list.hasMore.set(false);

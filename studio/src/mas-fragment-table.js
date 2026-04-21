@@ -98,6 +98,16 @@ class MasFragmentTable extends LitElement {
         return generateCodeToUse(this.data, Store.search.get().path, Store.page.get()).authorPath;
     }
 
+    get lastModified() {
+        const iso = this.fragmentStore.value?.modified?.at;
+        if (!iso) return html`<span class="last-modified-empty">—</span>`;
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return html`<span class="last-modified-empty">—</span>`;
+        const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        return html`${date} at ${time}`;
+    }
+
     get price() {
         const osi = this.data.getFieldValue('osi');
         if (!osi) return '';
@@ -212,6 +222,7 @@ class MasFragmentTable extends LitElement {
                 </sp-table-cell>
                 <sp-table-cell class="offer-type">${this.offerData?.offerType}</sp-table-cell>
                 <sp-table-cell class="last-modified-by">${data.modified?.by}</sp-table-cell>
+                <sp-table-cell class="last-modified">${this.lastModified}</sp-table-cell>
                 <sp-table-cell class="price">${this.price}</sp-table-cell>
                 <sp-table-cell class="status ${data.status?.toLowerCase()}-cell"
                     ><div class="status-dot"></div>

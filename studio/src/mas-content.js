@@ -31,6 +31,7 @@ const tableSkeletonRow = () =>
         <sp-table-cell class="offer-id"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
         <sp-table-cell class="offer-type"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
         <sp-table-cell class="last-modified-by"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
+        <sp-table-cell class="last-modified"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
         <sp-table-cell class="price"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
         <sp-table-cell class="status"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
         <sp-table-cell class="actions"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
@@ -58,6 +59,11 @@ class MasContent extends LitElement {
     selection = new StoreController(this, Store.selection);
     search = new StoreController(this, Store.search);
     filters = new StoreController(this, Store.filters);
+    sort = new StoreController(this, Store.sort);
+
+    #handleSorted = ({ detail: { sortKey, sortDirection } }) => {
+        Store.sort.set({ sortBy: sortKey, sortDirection });
+    };
 
     connectedCallback() {
         super.connectedCallback();
@@ -226,6 +232,7 @@ class MasContent extends LitElement {
                     <sp-table-head-cell class="offer-id">Offer ID</sp-table-head-cell>
                     <sp-table-head-cell class="offer-type">Offer Type</sp-table-head-cell>
                     <sp-table-head-cell class="last-modified-by">Last Modified By</sp-table-head-cell>
+                    <sp-table-head-cell class="last-modified">Last Modified</sp-table-head-cell>
                     <sp-table-head-cell class="price">Price</sp-table-head-cell>
                     <sp-table-head-cell class="status">Status</sp-table-head-cell>
                     <sp-table-head-cell class="actions">Actions</sp-table-head-cell>
@@ -253,13 +260,28 @@ class MasContent extends LitElement {
             >
                 <sp-table-head>
                     <sp-table-head-cell class="expand-cell"></sp-table-head-cell>
-                    <sp-table-head-cell sortable class="name">Path</sp-table-head-cell>
-                    <sp-table-head-cell sortable class="title">Fragment Title</sp-table-head-cell>
-                    <sp-table-head-cell sortable class="offer-id">Offer ID</sp-table-head-cell>
-                    <sp-table-head-cell sortable class="offer-type">Offer Type</sp-table-head-cell>
-                    <sp-table-head-cell sortable class="last-modified-by">Last Modified By</sp-table-head-cell>
-                    <sp-table-head-cell sortable class="price">Price</sp-table-head-cell>
-                    <sp-table-head-cell sortable class="status">Status</sp-table-head-cell>
+                    <sp-table-head-cell class="name">Path</sp-table-head-cell>
+                    <sp-table-head-cell
+                        class="title"
+                        sortable
+                        sort-key="title"
+                        sort-direction=${this.sort.value.sortBy === 'title' ? this.sort.value.sortDirection : 'asc'}
+                        @sorted=${this.#handleSorted}
+                        >Fragment Title</sp-table-head-cell
+                    >
+                    <sp-table-head-cell class="offer-id">Offer ID</sp-table-head-cell>
+                    <sp-table-head-cell class="offer-type">Offer Type</sp-table-head-cell>
+                    <sp-table-head-cell class="last-modified-by">Last Modified By</sp-table-head-cell>
+                    <sp-table-head-cell
+                        class="last-modified"
+                        sortable
+                        sort-key="modified"
+                        sort-direction=${this.sort.value.sortBy === 'modified' ? this.sort.value.sortDirection : 'desc'}
+                        @sorted=${this.#handleSorted}
+                        >Last Modified</sp-table-head-cell
+                    >
+                    <sp-table-head-cell class="price">Price</sp-table-head-cell>
+                    <sp-table-head-cell class="status">Status</sp-table-head-cell>
                     <sp-table-head-cell class="actions">Actions</sp-table-head-cell>
                     <sp-table-head-cell class="preview">Preview</sp-table-head-cell>
                 </sp-table-head>
