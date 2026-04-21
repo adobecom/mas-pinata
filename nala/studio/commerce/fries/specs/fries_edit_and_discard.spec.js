@@ -51,5 +51,23 @@ export default {
             browserParams: '#page=fragment-editor&path=nala&fragmentId=',
             tags: '@mas-studio @commerce @commerce-fries @commerce-fries-edit',
         },
+        {
+            tcid: '3',
+            name: '@studio-fries-edit-discard-gradient-border',
+            path: '/studio.html',
+            data: {
+                cardid: '9620f75c-96cd-4ec3-a431-275a53d8860c',
+                purpleBlue: {
+                    label: 'Gradient Purple Blue',
+                    value: 'gradient-purple-blue',
+                },
+                fireflySpectrum: {
+                    label: 'Gradient Firefly Spectrum',
+                    value: 'gradient-firefly-spectrum',
+                },
+            },
+            browserParams: '#page=fragment-editor&path=nala&fragmentId=',
+            tags: '@mas-studio @commerce @commerce-fries @commerce-fries-edit',
+        },
     ],
 };

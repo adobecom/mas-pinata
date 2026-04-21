@@ -139,4 +139,71 @@ test.describe('M@S Studio Commerce Fries card test suite', () => {
             ).toBeTruthy();
         });
     });
+
+    // @studio-fries-edit-discard-gradient-border - Validate gradient border color options for fries card in mas studio
+    test(`${features[3].name},${features[3].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[3];
+        const testPage = `${baseURL}${features[3].path}${miloLibs}${features[3].browserParams}${data.cardid}`;
+        setTestPage(testPage);
+        const friesCard = await studio.getCard(data.cardid);
+        const originalBorderColor = await friesCard.getAttribute('border-color');
+        const originalGradientBorder = await friesCard.getAttribute('gradient-border');
+
+        await test.step('step-1: Go to MAS Studio fragment editor page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await expect(await editor.panel).toBeVisible();
+            await expect(await friesCard).toBeVisible();
+            await expect(await friesCard).toHaveAttribute('variant', 'fries');
+        });
+
+        await test.step('step-2: Select Gradient Purple Blue border color', async () => {
+            await expect(await editor.borderColor).toBeVisible();
+            await editor.borderColor.scrollIntoViewIfNeeded();
+            await editor.borderColor.click();
+            await expect(await editor.borderColor.locator('sp-menu-item').first()).toBeVisible();
+            await page.waitForSelector(`sp-menu-item[value="${data.purpleBlue.value}"]`, { state: 'visible' });
+            await page.locator(`sp-menu-item[value="${data.purpleBlue.value}"]`).first().click();
+            await page.waitForTimeout(2000);
+        });
+
+        await test.step('step-3: Validate Gradient Purple Blue applied to card', async () => {
+            await expect(await editor.borderColor).toContainText(data.purpleBlue.label);
+            await expect(friesCard).toHaveAttribute('border-color', data.purpleBlue.value);
+            await expect(friesCard).toHaveAttribute('gradient-border', 'true');
+        });
+
+        await test.step('step-4: Switch to Gradient Firefly Spectrum border color', async () => {
+            await editor.borderColor.scrollIntoViewIfNeeded();
+            await editor.borderColor.click();
+            await expect(await editor.borderColor.locator('sp-menu-item').first()).toBeVisible();
+            await page.waitForSelector(`sp-menu-item[value="${data.fireflySpectrum.value}"]`, { state: 'visible' });
+            await page.locator(`sp-menu-item[value="${data.fireflySpectrum.value}"]`).first().click();
+            await page.waitForTimeout(2000);
+        });
+
+        await test.step('step-5: Validate Gradient Firefly Spectrum applied to card', async () => {
+            await expect(await editor.borderColor).toContainText(data.fireflySpectrum.label);
+            await expect(friesCard).toHaveAttribute('border-color', data.fireflySpectrum.value);
+            await expect(friesCard).toHaveAttribute('gradient-border', 'true');
+        });
+
+        await test.step('step-6: Close the editor and verify discard is triggered', async () => {
+            await studio.discardEditorChanges(editor);
+        });
+
+        await test.step('step-7: Verify border color reverted', async () => {
+            if (originalBorderColor === null) {
+                await expect(friesCard).not.toHaveAttribute('border-color', data.purpleBlue.value);
+                await expect(friesCard).not.toHaveAttribute('border-color', data.fireflySpectrum.value);
+            } else {
+                await expect(friesCard).toHaveAttribute('border-color', originalBorderColor);
+            }
+            if (originalGradientBorder === null) {
+                await expect(friesCard).not.toHaveAttribute('gradient-border', 'true');
+            } else {
+                await expect(friesCard).toHaveAttribute('gradient-border', originalGradientBorder);
+            }
+        });
+    });
 });
