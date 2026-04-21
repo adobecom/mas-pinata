@@ -54,7 +54,7 @@ export const styles = css`
     }
 
     .top-section.badge {
-        min-height: 32px;
+        min-height: max(32px, var(--consonant-merch-card-badge-height, 32px));
     }
 
     .body {
@@ -65,6 +65,7 @@ export const styles = css`
         height: 100%;
         gap: var(--consonant-merch-spacing-xxs);
         padding: var(--consonant-merch-spacing-xs);
+        padding-block-start: var(--consonant-merch-card-badge-height, 0);
     }
 
     footer {
@@ -113,7 +114,7 @@ export const styles = css`
         font-size: var(--type-heading-xxs-size);
         font-weight: 500;
         max-width: 180px;
-        line-height: 16px;
+        white-space: normal;
         text-align: center;
         padding: 8px 11px;
         border-radius: 5px 0 0 5px;

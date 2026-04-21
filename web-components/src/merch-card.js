@@ -214,6 +214,7 @@ export class MerchCard extends LitElement {
     #log;
     #service;
     #startMarkName;
+    #badgeResizeObserver;
     #resolveHydration;
     #hydrationPromise = new Promise((resolve) => {
         this.#resolveHydration = resolve;
@@ -245,6 +246,7 @@ export class MerchCard extends LitElement {
     firstUpdated() {
         this.variantLayout = getVariantLayout(this);
         this.variantLayout?.connectedCallbackHook();
+        this.#observeBadge();
     }
 
     willUpdate(changedProperties) {
@@ -252,7 +254,31 @@ export class MerchCard extends LitElement {
             this.variantLayout?.disconnectedCallbackHook();
             this.variantLayout = getVariantLayout(this);
             this.variantLayout?.connectedCallbackHook();
+            this.#badgeResizeObserver?.disconnect();
+            this.#badgeResizeObserver = undefined;
         }
+    }
+
+    #observeBadge() {
+        this.#badgeResizeObserver?.disconnect();
+        this.#badgeResizeObserver = undefined;
+        const badgeEl =
+            this.querySelector('[slot="badge"]') ??
+            this.shadowRoot?.getElementById('badge');
+        if (!badgeEl) return;
+        const observer = new ResizeObserver((entries) => {
+            const entry = entries[entries.length - 1];
+            const height =
+                entry?.borderBoxSize?.[0]?.blockSize ??
+                entry?.contentRect?.height ??
+                0;
+            this.style.setProperty(
+                '--consonant-merch-card-badge-height',
+                `${Math.ceil(height)}px`,
+            );
+        });
+        observer.observe(badgeEl);
+        this.#badgeResizeObserver = observer;
     }
 
     updated(changedProperties) {
@@ -586,6 +612,8 @@ export class MerchCard extends LitElement {
     disconnectedCallback() {
         super.disconnectedCallback();
         this.variantLayout?.disconnectedCallbackHook();
+        this.#badgeResizeObserver?.disconnect();
+        this.#badgeResizeObserver = undefined;
 
         this.removeEventListener(
             EVENT_MERCH_QUANTITY_SELECTOR_CHANGE,
@@ -624,6 +652,7 @@ export class MerchCard extends LitElement {
                     this.#resolveHydration?.();
                     this.#resolveHydration = undefined;
                 }
+                this.#observeBadge();
                 this.checkReady();
             }
         }

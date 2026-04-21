@@ -552,6 +552,10 @@ export class PlansV2 extends VariantLayout {
             min-width: var(--merch-card-plans-v2-min-width);
             padding: var(--merch-card-plans-v2-padding);
             padding-bottom: 0;
+            padding-block-start: calc(
+                var(--merch-card-plans-v2-padding) +
+                    var(--consonant-merch-card-badge-height, 0px)
+            );
             flex: 0 0 auto;
             gap: 12px;
             min-height: var(--merch-card-plans-v2-body-min-height, auto);

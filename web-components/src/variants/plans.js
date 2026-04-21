@@ -403,6 +403,10 @@ export class Plans extends VariantLayout {
         :host([variant^='plans']) .body {
             min-width: var(--merch-card-plans-min-width);
             padding: var(--merch-card-plans-padding);
+            padding-block-start: calc(
+                var(--merch-card-plans-padding) +
+                    var(--consonant-merch-card-badge-height, 0px)
+            );
         }
 
         :host([variant='plans'][size]) .body {
