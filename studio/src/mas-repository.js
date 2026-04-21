@@ -382,7 +382,9 @@ export class MasRepository extends LitElement {
             path: localizedPath,
             tags,
             ...(this.page.value !== PAGE_NAMES.TRANSLATION_EDITOR && { createdBy }),
-            sort: this.#getContentSortOption(),
+            sort: this.page.value === PAGE_NAMES.CONTENT
+                ? this.#getContentSortOption()
+                : [{ on: 'modifiedOrCreated', order: 'DESC' }],
         };
 
         const publishedTagIndex = tags.indexOf(TAG_STATUS_PUBLISHED);
