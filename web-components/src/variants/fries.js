@@ -26,10 +26,7 @@ export const FRIES_AEM_FRAGMENT_MAPPING = {
             gray: '--spectrum-gray-300',
         },
     },
-    allowedBorderColors: [
-        'gradient-purple-blue',
-        'gradient-firefly-spectrum',
-    ],
+    allowedBorderColors: ['gradient-purple-blue', 'gradient-firefly-spectrum'],
     showAllSpectrumColors: true,
 };
 
@@ -79,8 +76,14 @@ export class FriesCard extends VariantLayout {
             min-height: var(--merch-card-fries-min-height);
             background:
                 linear-gradient(
-                        var(--merch-card-custom-background-color, var(--spectrum-gray-300)),
-                        var(--merch-card-custom-background-color, var(--spectrum-gray-300))
+                        var(
+                            --merch-card-custom-background-color,
+                            var(--spectrum-gray-300)
+                        ),
+                        var(
+                            --merch-card-custom-background-color,
+                            var(--spectrum-gray-300)
+                        )
                     )
                     padding-box,
                 var(--consonant-merch-card-border-color, transparent) border-box;
