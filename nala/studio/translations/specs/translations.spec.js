@@ -69,5 +69,14 @@ export default {
             tags: '@mas-studio @translation-editor @regression',
             description: 'Translation Editor Actions: create project save, add languages overlay, add files overlay',
         },
+        {
+            tcid: '7',
+            name: '@translation-editor-created-by-filter',
+            path: '/studio.html',
+            browserParams: '#page=translation-editor&path=nala',
+            tags: '@mas-studio @translation-editor @nopr',
+            description:
+                'Created by filter on Select Items dialog filters cards to selected users, then clears back to full list and resets on dialog reopen',
+        },
     ],
 };

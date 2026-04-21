@@ -281,6 +281,85 @@ test.describe('M@S Studio Translations Test Suite', () => {
         await expect(page.getByRole('tab', { name: 'Grouped variation' }).first()).toBeVisible({ timeout: 5000 });
     });
 
+    // 7. @translation-editor-created-by-filter
+    test(`${features[7].name},${features[7].tags}`, async ({ page, baseURL }) => {
+        const testPage = `${baseURL}${features[7].path}${miloLibs}${features[7].browserParams}`;
+        setTestPage(testPage);
+        await page.goto(testPage);
+        await page.waitForLoadState('domcontentloaded');
+        await expect(translationEditor.form).toBeVisible({ timeout: 15000 });
+
+        let initialCount;
+
+        await test.step('step-1: Open Add Items dialog and navigate to Cards tab', async () => {
+            await translationEditor.addItemsButton.click();
+            await expect(translationEditor.selectItemsDialog).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.cardsTab).toBeVisible({ timeout: 10000 });
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.selectItemsTable).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+            const text = await translationEditor.fragmentsResultCount.textContent();
+            const m = text?.match(/(\d+)/);
+            initialCount = m ? parseInt(m[1], 10) : 0;
+            expect(initialCount).toBeGreaterThan(0);
+        });
+
+        await test.step('step-2: Open Created by picker and apply the first user', async () => {
+            await expect(translationEditor.createdByTrigger).toBeVisible({ timeout: 10000 });
+            await translationEditor.createdByTrigger.click();
+            await expect(translationEditor.createdByPopover).toBeVisible({ timeout: 8000 });
+            await expect(translationEditor.createdByMenuItems.first()).toBeVisible({ timeout: 10000 });
+            await translationEditor.createdByMenuItems.first().click();
+            await translationEditor.createdByApplyButton.click();
+            await page.waitForTimeout(500);
+        });
+
+        await test.step('step-3: Verify result count decreased and user chip is present', async () => {
+            await expect(translationEditor.createdByUserChips.first()).toBeVisible({ timeout: 5000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+            const text = await translationEditor.fragmentsResultCount.textContent();
+            const m = text?.match(/(\d+)/);
+            const filteredCount = m ? parseInt(m[1], 10) : 0;
+            expect(filteredCount).toBeLessThanOrEqual(initialCount);
+        });
+
+        await test.step('step-4: Delete user chip and verify result count returns to initial', async () => {
+            const chip = translationEditor.createdByUserChips.first();
+            await chip.evaluate((el) => el.dispatchEvent(new CustomEvent('delete', { bubbles: true, composed: true })));
+            await page.waitForTimeout(500);
+            await expect(translationEditor.createdByUserChips).toHaveCount(0, { timeout: 5000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+            const text = await translationEditor.fragmentsResultCount.textContent();
+            const m = text?.match(/(\d+)/);
+            const restoredCount = m ? parseInt(m[1], 10) : 0;
+            expect(restoredCount).toEqual(initialCount);
+        });
+
+        await test.step('step-5: Reopen dialog and verify filter was reset', async () => {
+            await translationEditor.createdByTrigger.click();
+            await expect(translationEditor.createdByPopover).toBeVisible({ timeout: 8000 });
+            await translationEditor.createdByMenuItems.first().click();
+            await translationEditor.createdByApplyButton.click();
+            await page.waitForTimeout(500);
+            await expect(translationEditor.createdByUserChips.first()).toBeVisible({ timeout: 5000 });
+
+            await translationEditor.selectItemsDialog.getByRole('button', { name: 'Cancel' }).click();
+            await expect(translationEditor.selectItemsDialog).not.toBeVisible({ timeout: 10000 });
+
+            await translationEditor.addItemsButton.click();
+            await expect(translationEditor.selectItemsDialog).toBeVisible({ timeout: 10000 });
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await expect(translationEditor.createdByUserChips).toHaveCount(0, { timeout: 5000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+            const text = await translationEditor.fragmentsResultCount.textContent();
+            const m = text?.match(/(\d+)/);
+            const reopenedCount = m ? parseInt(m[1], 10) : 0;
+            expect(reopenedCount).toEqual(initialCount);
+        });
+    });
+
     // 6. @translation-editor-actions
     test(`${features[6].name},${features[6].tags}`, async ({ page, baseURL }) => {
         const testPage = `${baseURL}${features[6].path}${miloLibs}${features[6].browserParams}`;

@@ -35,6 +35,7 @@ class MasSearchAndFilters extends LitElement {
         this.customerSegmentOptions = [];
         this.productOptions = [];
         this.dataSubscription = null;
+        this.createdByUsersSubscription = null;
     }
 
     connectedCallback() {
@@ -43,6 +44,9 @@ class MasSearchAndFilters extends LitElement {
             Store.translationProjects[`all${this.typeUppercased}`],
             Store.translationProjects[`display${this.typeUppercased}`],
             Store[this.type === TABLE_TYPE.PLACEHOLDERS ? 'placeholders' : 'fragments'].list.loading,
+            Store.translationProjects.createdByUsers,
+            Store.profile,
+            Store.users,
         ]);
         const dataCallback = () => {
             if (!this.searchOnly) {
@@ -55,6 +59,15 @@ class MasSearchAndFilters extends LitElement {
         this.dataSubscription = {
             unsubscribe: () => Store.translationProjects[`all${this.typeUppercased}`].unsubscribe(dataCallback),
         };
+
+        const createdByCallback = () => {
+            this.#applyFilters();
+            this.requestUpdate();
+        };
+        Store.translationProjects.createdByUsers.subscribe(createdByCallback);
+        this.createdByUsersSubscription = {
+            unsubscribe: () => Store.translationProjects.createdByUsers.unsubscribe(createdByCallback),
+        };
     }
 
     disconnectedCallback() {
@@ -62,7 +75,9 @@ class MasSearchAndFilters extends LitElement {
         Store.translationProjects[`display${this.typeUppercased}`].set(
             Store.translationProjects[`all${this.typeUppercased}`].value,
         );
+        Store.translationProjects.createdByUsers.set([]);
         this.dataSubscription?.unsubscribe();
+        this.createdByUsersSubscription?.unsubscribe();
     }
 
     get typeUppercased() {
@@ -97,6 +112,13 @@ class MasSearchAndFilters extends LitElement {
         for (const id of this.productFilter) {
             const option = productMap.get(id);
             if (option) filters.push({ type: FILTER_TYPE.PRODUCT, id, label: option.title || option.label });
+        }
+        for (const user of Store.translationProjects.createdByUsers.value || []) {
+            filters.push({
+                type: FILTER_TYPE.CREATED_BY,
+                id: user.userPrincipalName,
+                label: user.displayName,
+            });
         }
         return filters;
     }
@@ -203,6 +225,13 @@ class MasSearchAndFilters extends LitElement {
             case FILTER_TYPE.PRODUCT:
                 this.productFilter = this.productFilter.filter((filterId) => filterId !== id);
                 break;
+            case FILTER_TYPE.CREATED_BY:
+                Store.translationProjects.createdByUsers.set(
+                    (Store.translationProjects.createdByUsers.value || []).filter(
+                        (user) => user.userPrincipalName !== id,
+                    ),
+                );
+                break;
         }
     }
 
@@ -211,6 +240,7 @@ class MasSearchAndFilters extends LitElement {
         this.marketSegmentFilter = [];
         this.customerSegmentFilter = [];
         this.productFilter = [];
+        Store.translationProjects.createdByUsers.set([]);
     }
 
     #renderAppliedFilters() {
@@ -230,6 +260,9 @@ class MasSearchAndFilters extends LitElement {
                                 @delete=${this.#handleTagDelete}
                             >
                                 ${filter.label}
+                                ${filter.type === FILTER_TYPE.CREATED_BY
+                                    ? html`<sp-icon-user slot="icon" size="s"></sp-icon-user>`
+                                    : nothing}
                             </sp-tag>
                         `,
                     )}
@@ -277,6 +310,8 @@ class MasSearchAndFilters extends LitElement {
         const hasMarket = this.marketSegmentFilter?.length > 0;
         const hasCustomer = this.customerSegmentFilter?.length > 0;
         const hasProduct = this.productFilter?.length > 0;
+        const selectedCreators = Store.translationProjects.createdByUsers.value || [];
+        const hasCreator = this.type === TABLE_TYPE.CARDS && selectedCreators.length > 0;
 
         const result = source.filter((fragment) => {
             if (query) {
@@ -312,6 +347,14 @@ class MasSearchAndFilters extends LitElement {
             }
             if (hasProduct) {
                 if (!fragment.tags?.some((tag) => this.productFilter.includes(tag.id))) return false;
+            }
+            if (hasCreator) {
+                const creatorBy = fragment.created?.by;
+                if (!creatorBy) return false;
+                const match = selectedCreators.some(
+                    (u) => u.userPrincipalName?.toLowerCase() === creatorBy.toLowerCase(),
+                );
+                if (!match) return false;
             }
             return true;
         });
@@ -352,6 +395,16 @@ class MasSearchAndFilters extends LitElement {
                     FILTER_TYPE.CUSTOMER_SEGMENT,
                 )}
                 ${this.#renderFilterPicker('Product', this.productOptions, this.productFilter, FILTER_TYPE.PRODUCT)}
+                ${this.type === TABLE_TYPE.CARDS
+                    ? html`
+                          <mas-user-picker
+                              label="Created by"
+                              .currentUser=${Store.profile}
+                              .selectedUsers=${Store.translationProjects.createdByUsers}
+                              .users=${Store.users}
+                          ></mas-user-picker>
+                      `
+                    : nothing}
             </div>
             ${this.#renderAppliedFilters()}
         `;

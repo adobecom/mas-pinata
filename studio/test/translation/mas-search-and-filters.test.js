@@ -5,6 +5,7 @@ import sinon from 'sinon';
 import Store from '../../src/store.js';
 import { TABLE_TYPE, FILTER_TYPE } from '../../src/constants.js';
 import '../../src/swc.js';
+import '../../src/fields/user-picker.js';
 import '../../src/translation/mas-search-and-filters.js';
 
 describe('MasSearchAndFilters', () => {
@@ -33,6 +34,7 @@ describe('MasSearchAndFilters', () => {
         Store.translationProjects.displayCollections.set([]);
         Store.translationProjects.allPlaceholders.set([]);
         Store.translationProjects.displayPlaceholders.set([]);
+        Store.translationProjects.createdByUsers.set([]);
         Store.fragments.list.loading.set(false);
         Store.placeholders.list.loading.set(false);
         Store.placeholders.list.data.set([]);
@@ -47,6 +49,7 @@ describe('MasSearchAndFilters', () => {
         Store.translationProjects.displayCollections.set([]);
         Store.translationProjects.allPlaceholders.set([]);
         Store.translationProjects.displayPlaceholders.set([]);
+        Store.translationProjects.createdByUsers.set([]);
         Store.fragments.list.loading.set(false);
         Store.placeholders.list.loading.set(false);
         Store.placeholders.list.data.set([]);
@@ -956,6 +959,177 @@ describe('MasSearchAndFilters', () => {
             el.searchQuery = 'photoshop';
             await el.updateComplete;
             expect(Store.translationProjects.displayCollections.get().length).to.equal(1);
+        });
+    });
+
+    describe('created-by filter', () => {
+        const alice = { userPrincipalName: 'alice@adobe.com', displayName: 'Alice' };
+        const bob = { userPrincipalName: 'bob@adobe.com', displayName: 'Bob' };
+
+        it('should render mas-user-picker only when type is cards and not searchOnly', async () => {
+            const cardsEl = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            expect(cardsEl.shadowRoot.querySelector('mas-user-picker')).to.exist;
+
+            const searchOnlyEl = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${true}></mas-search-and-filters>`,
+            );
+            expect(searchOnlyEl.shadowRoot.querySelector('mas-user-picker')).to.be.null;
+
+            const collectionsEl = await fixture(
+                html`<mas-search-and-filters type="collections" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            expect(collectionsEl.shadowRoot.querySelector('mas-user-picker')).to.be.null;
+
+            const placeholdersEl = await fixture(
+                html`<mas-search-and-filters type="placeholders" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            expect(placeholdersEl.shadowRoot.querySelector('mas-user-picker')).to.be.null;
+        });
+
+        it('should filter displayCards to fragments whose created.by matches selected users', async () => {
+            Store.translationProjects.allCards.set([
+                createMockFragment({ title: 'Alice Card', created: { by: 'alice@adobe.com' } }),
+                createMockFragment({ title: 'Bob Card', created: { by: 'bob@adobe.com' } }),
+                createMockFragment({ title: 'Carol Card', created: { by: 'carol@adobe.com' } }),
+            ]);
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            Store.translationProjects.createdByUsers.set([alice]);
+            await el.updateComplete;
+            const results = Store.translationProjects.displayCards.get();
+            expect(results.length).to.equal(1);
+            expect(results[0].title).to.equal('Alice Card');
+        });
+
+        it('should match created.by case-insensitively', async () => {
+            Store.translationProjects.allCards.set([
+                createMockFragment({ title: 'Upper', created: { by: 'ALICE@ADOBE.COM' } }),
+                createMockFragment({ title: 'Lower', created: { by: 'alice@adobe.com' } }),
+                createMockFragment({ title: 'Other', created: { by: 'bob@adobe.com' } }),
+            ]);
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            Store.translationProjects.createdByUsers.set([alice]);
+            await el.updateComplete;
+            expect(Store.translationProjects.displayCards.get().length).to.equal(2);
+        });
+
+        it('should exclude fragments without created.by when creator filter is active', async () => {
+            Store.translationProjects.allCards.set([
+                createMockFragment({ title: 'Alice Card', created: { by: 'alice@adobe.com' } }),
+                createMockFragment({ title: 'No Creator' }),
+            ]);
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            Store.translationProjects.createdByUsers.set([alice]);
+            await el.updateComplete;
+            expect(Store.translationProjects.displayCards.get().length).to.equal(1);
+        });
+
+        it('should combine creator filter with search and tag filters using AND logic', async () => {
+            Store.translationProjects.allCards.set([
+                createMockFragment({
+                    title: 'Photoshop by Alice',
+                    created: { by: 'alice@adobe.com' },
+                    tags: [{ id: 'mas:product_code/photoshop', title: 'Photoshop' }],
+                }),
+                createMockFragment({
+                    title: 'Photoshop by Bob',
+                    created: { by: 'bob@adobe.com' },
+                    tags: [{ id: 'mas:product_code/photoshop', title: 'Photoshop' }],
+                }),
+                createMockFragment({
+                    title: 'Illustrator by Alice',
+                    created: { by: 'alice@adobe.com' },
+                    tags: [{ id: 'mas:product_code/illustrator', title: 'Illustrator' }],
+                }),
+            ]);
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            el.searchQuery = 'photoshop';
+            el.productFilter = ['mas:product_code/photoshop'];
+            Store.translationProjects.createdByUsers.set([alice]);
+            await el.updateComplete;
+            const results = Store.translationProjects.displayCards.get();
+            expect(results.length).to.equal(1);
+            expect(results[0].title).to.equal('Photoshop by Alice');
+        });
+
+        it('should restore the full card list when selection is cleared', async () => {
+            Store.translationProjects.allCards.set([
+                createMockFragment({ title: 'Alice', created: { by: 'alice@adobe.com' } }),
+                createMockFragment({ title: 'Bob', created: { by: 'bob@adobe.com' } }),
+            ]);
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            Store.translationProjects.createdByUsers.set([alice]);
+            await el.updateComplete;
+            expect(Store.translationProjects.displayCards.get().length).to.equal(1);
+            Store.translationProjects.createdByUsers.set([]);
+            await el.updateComplete;
+            expect(Store.translationProjects.displayCards.get().length).to.equal(2);
+        });
+
+        it('should reset createdByUsers when Clear all is clicked', async () => {
+            Store.translationProjects.allCards.set([
+                createMockFragment({ title: 'Alice', created: { by: 'alice@adobe.com' } }),
+            ]);
+            Store.translationProjects.createdByUsers.set([alice]);
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            el.templateOptions = [{ id: 'plans', title: 'Plans' }];
+            el.templateFilter = ['plans'];
+            await el.updateComplete;
+            const clearButton = el.shadowRoot.querySelector('.applied-filters sp-action-button');
+            clearButton.click();
+            await el.updateComplete;
+            expect(Store.translationProjects.createdByUsers.get()).to.deep.equal([]);
+            expect(el.templateFilter).to.deep.equal([]);
+        });
+
+        it('should remove a user from createdByUsers on tag delete', async () => {
+            Store.translationProjects.createdByUsers.set([alice, bob]);
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            await el.updateComplete;
+            const tag = el.shadowRoot.querySelector('sp-tag');
+            tag.value = { type: FILTER_TYPE.CREATED_BY, id: 'alice@adobe.com' };
+            tag.dispatchEvent(new CustomEvent('delete', { bubbles: true }));
+            await el.updateComplete;
+            const remaining = Store.translationProjects.createdByUsers.get();
+            expect(remaining.length).to.equal(1);
+            expect(remaining[0].userPrincipalName).to.equal('bob@adobe.com');
+        });
+
+        it('should reset createdByUsers on disconnectedCallback', async () => {
+            Store.translationProjects.createdByUsers.set([alice]);
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            el.disconnectedCallback();
+            expect(Store.translationProjects.createdByUsers.get()).to.deep.equal([]);
+        });
+
+        it('should include created-by entries in appliedFilters', async () => {
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            Store.translationProjects.createdByUsers.set([alice, bob]);
+            await el.updateComplete;
+            const createdByFilters = el.appliedFilters.filter((f) => f.type === FILTER_TYPE.CREATED_BY);
+            expect(createdByFilters).to.deep.equal([
+                { type: FILTER_TYPE.CREATED_BY, id: 'alice@adobe.com', label: 'Alice' },
+                { type: FILTER_TYPE.CREATED_BY, id: 'bob@adobe.com', label: 'Bob' },
+            ]);
         });
     });
 });
