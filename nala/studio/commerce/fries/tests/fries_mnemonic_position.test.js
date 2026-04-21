@@ -23,13 +23,13 @@ test.describe('M@S Studio Commerce Fries card test suite', () => {
         });
 
         await test.step('step-3: Validate at least one mnemonic icon is slotted', async () => {
-            const iconLocator = friesCard.locator(fries.mnemonicIcons).first();
+            const iconLocator = friesCard.locator(fries.icon).first();
             await expect(iconLocator).toBeVisible();
         });
 
         await test.step('step-4: Validate mnemonic icons render below the description', async () => {
             const description = friesCard.locator(fries.description);
-            const firstIcon = friesCard.locator(fries.mnemonicIcons).first();
+            const firstIcon = friesCard.locator(fries.icon).first();
 
             await expect(description).toBeVisible();
             await expect(firstIcon).toBeVisible();
@@ -46,7 +46,7 @@ test.describe('M@S Studio Commerce Fries card test suite', () => {
 
         await test.step('step-5: Validate mnemonic icons render below the heading (not in header)', async () => {
             const heading = friesCard.locator(fries.title);
-            const firstIcon = friesCard.locator(fries.mnemonicIcons).first();
+            const firstIcon = friesCard.locator(fries.icon).first();
 
             await expect(heading).toBeVisible();
 
@@ -81,12 +81,12 @@ test.describe('M@S Studio Commerce Fries card test suite', () => {
 
         await test.step('step-7: Validate mnemonic icons stay within the fries card width', async () => {
             const cardBox = await friesCard.boundingBox();
-            const iconCount = await friesCard.locator(fries.mnemonicIcons).count();
+            const iconCount = await friesCard.locator(fries.icon).count();
 
             expect(cardBox).not.toBeNull();
 
             for (let i = 0; i < iconCount; i += 1) {
-                const iconBox = await friesCard.locator(fries.mnemonicIcons).nth(i).boundingBox();
+                const iconBox = await friesCard.locator(fries.icon).nth(i).boundingBox();
                 expect(iconBox).not.toBeNull();
                 // Each icon must render within the card's horizontal bounds (wrapping, not overflowing).
                 expect(iconBox.x).toBeGreaterThanOrEqual(cardBox.x);
