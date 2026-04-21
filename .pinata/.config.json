@@ -51,5 +51,9 @@
             "draft_pr": true,
             "exit_nonzero": false
         }
+    },
+    "review": {
+        "start_recipe": "pinata-start",
+        "stop_recipe": "pinata-stop"
     }
 }
