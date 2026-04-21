@@ -54,7 +54,7 @@ export const styles = css`
     }
 
     .top-section.badge {
-        min-height: 32px;
+        min-height: var(--badge-height, 32px);
     }
 
     .body {
@@ -115,6 +115,7 @@ export const styles = css`
         max-width: 180px;
         line-height: 16px;
         text-align: center;
+        white-space: normal;
         padding: 8px 11px;
         border-radius: 5px 0 0 5px;
     }
@@ -124,6 +125,14 @@ export const styles = css`
         right: initial;
         padding: 8px 11px;
         border-radius: 0 5px 5px 0;
+    }
+
+    :host([badge-text]) ::slotted([slot='heading-xs']),
+    :host([badge-text]) ::slotted([slot='heading-m']) {
+        padding-block-start: max(
+            0px,
+            calc(var(--badge-height, 32px) - var(--consonant-merch-spacing-xs, 16px))
+        );
     }
 
     :host([variant='mini-compare-chart']) div[class$='-badge'] {

@@ -209,6 +209,7 @@ export class MerchCard extends LitElement {
 
     static getCollectionOptions = getCollectionOptions;
 
+    #badgeResizeObserver;
     #durationMarkName;
     #internalId; // internal unique card identifier
     #log;
@@ -245,6 +246,33 @@ export class MerchCard extends LitElement {
     firstUpdated() {
         this.variantLayout = getVariantLayout(this);
         this.variantLayout?.connectedCallbackHook();
+        this.#observeBadgeHeight();
+    }
+
+    #observeBadgeHeight() {
+        const badgeEl =
+            this.shadowRoot?.getElementById('badge') ??
+            this.querySelector('merch-badge, [slot="badge"]');
+        if (!badgeEl) {
+            this.#badgeResizeObserver?.disconnect();
+            this.#badgeResizeObserver = undefined;
+            this.style.removeProperty('--badge-height');
+            return;
+        }
+        this.#badgeResizeObserver?.disconnect();
+        this.#badgeResizeObserver ??= new ResizeObserver((entries) => {
+            const entry = entries[0];
+            if (!entry) return;
+            const blockSize =
+                entry.borderBoxSize?.[0]?.blockSize ??
+                entry.target.getBoundingClientRect().height;
+            if (!blockSize) return;
+            this.style.setProperty(
+                '--badge-height',
+                `${Math.ceil(blockSize)}px`,
+            );
+        });
+        this.#badgeResizeObserver.observe(badgeEl);
     }
 
     willUpdate(changedProperties) {
@@ -281,6 +309,7 @@ export class MerchCard extends LitElement {
         } catch (e) {
             this.#fail(`Error in postCardUpdateHook: ${e.message}`, {}, false);
         }
+        this.#observeBadgeHeight();
     }
 
     get theme() {
@@ -586,6 +615,8 @@ export class MerchCard extends LitElement {
     disconnectedCallback() {
         super.disconnectedCallback();
         this.variantLayout?.disconnectedCallbackHook();
+        this.#badgeResizeObserver?.disconnect();
+        this.#badgeResizeObserver = undefined;
 
         this.removeEventListener(
             EVENT_MERCH_QUANTITY_SELECTOR_CHANGE,
