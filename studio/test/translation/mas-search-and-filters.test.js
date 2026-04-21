@@ -36,6 +36,9 @@ describe('MasSearchAndFilters', () => {
         Store.fragments.list.loading.set(false);
         Store.placeholders.list.loading.set(false);
         Store.placeholders.list.data.set([]);
+        Store.createdByUsers.set([]);
+        Store.users.set([]);
+        Store.profile.set({});
     });
 
     afterEach(() => {
@@ -50,6 +53,9 @@ describe('MasSearchAndFilters', () => {
         Store.fragments.list.loading.set(false);
         Store.placeholders.list.loading.set(false);
         Store.placeholders.list.data.set([]);
+        Store.createdByUsers.set([]);
+        Store.users.set([]);
+        Store.profile.set({});
     });
 
     describe('initialization', () => {
@@ -956,6 +962,98 @@ describe('MasSearchAndFilters', () => {
             el.searchQuery = 'photoshop';
             await el.updateComplete;
             expect(Store.translationProjects.displayCollections.get().length).to.equal(1);
+        });
+    });
+
+    describe('user picker', () => {
+        beforeEach(() => {
+            Store.users.set([{ displayName: 'Alice', userPrincipalName: 'alice@adobe.com' }]);
+            Store.profile.set({ email: 'alice@adobe.com', displayName: 'Alice' });
+        });
+
+        it('should render mas-user-picker for cards type when not searchOnly', async () => {
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            await el.updateComplete;
+            expect(el.shadowRoot.querySelector('mas-user-picker')).to.exist;
+        });
+
+        it('should not render mas-user-picker for placeholders type', async () => {
+            const el = await fixture(
+                html`<mas-search-and-filters type="placeholders" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            await el.updateComplete;
+            expect(el.shadowRoot.querySelector('mas-user-picker')).to.be.null;
+        });
+
+        it('should not render mas-user-picker for collections type', async () => {
+            const el = await fixture(
+                html`<mas-search-and-filters type="collections" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            await el.updateComplete;
+            expect(el.shadowRoot.querySelector('mas-user-picker')).to.be.null;
+        });
+
+        it('should not render mas-user-picker when searchOnly is true', async () => {
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${true}></mas-search-and-filters>`,
+            );
+            await el.updateComplete;
+            expect(el.shadowRoot.querySelector('mas-user-picker')).to.be.null;
+        });
+
+        it('should render a user chip when a user is selected', async () => {
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            Store.createdByUsers.set([{ displayName: 'Alice', userPrincipalName: 'alice@adobe.com' }]);
+            await el.updateComplete;
+            const appliedFilters = el.shadowRoot.querySelector('.applied-filters');
+            expect(appliedFilters).to.exist;
+            const tag = el.shadowRoot.querySelector('.applied-filters sp-tag');
+            expect(tag).to.exist;
+            expect(tag.textContent).to.include('Alice');
+        });
+
+        it('should remove user from Store.createdByUsers when user chip delete is dispatched', async () => {
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            Store.createdByUsers.set([
+                { displayName: 'Alice', userPrincipalName: 'alice@adobe.com' },
+                { displayName: 'Bob', userPrincipalName: 'bob@adobe.com' },
+            ]);
+            await el.updateComplete;
+            const tag = el.shadowRoot.querySelector('.applied-filters sp-tag');
+            tag.value = 'alice@adobe.com';
+            tag.dispatchEvent(new CustomEvent('delete', { bubbles: true }));
+            await el.updateComplete;
+            expect(Store.createdByUsers.value.map((u) => u.userPrincipalName)).to.deep.equal(['bob@adobe.com']);
+        });
+
+        it('should clear Store.createdByUsers when Clear all is clicked', async () => {
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            Store.createdByUsers.set([{ displayName: 'Alice', userPrincipalName: 'alice@adobe.com' }]);
+            el.templateOptions = [{ id: 'plans', title: 'Plans' }];
+            el.templateFilter = ['plans'];
+            await el.updateComplete;
+            const clearButton = el.shadowRoot.querySelector('.applied-filters sp-action-button');
+            clearButton.click();
+            await el.updateComplete;
+            expect(Store.createdByUsers.value).to.deep.equal([]);
+            expect(el.templateFilter).to.deep.equal([]);
+        });
+
+        it('should render applied-filters section when only user is selected', async () => {
+            const el = await fixture(
+                html`<mas-search-and-filters type="cards" .searchOnly=${false}></mas-search-and-filters>`,
+            );
+            Store.createdByUsers.set([{ displayName: 'Alice', userPrincipalName: 'alice@adobe.com' }]);
+            await el.updateComplete;
+            expect(el.shadowRoot.querySelector('.applied-filters')).to.exist;
         });
     });
 });

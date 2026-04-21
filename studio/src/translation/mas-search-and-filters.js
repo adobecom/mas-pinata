@@ -43,6 +43,9 @@ class MasSearchAndFilters extends LitElement {
             Store.translationProjects[`all${this.typeUppercased}`],
             Store.translationProjects[`display${this.typeUppercased}`],
             Store[this.type === TABLE_TYPE.PLACEHOLDERS ? 'placeholders' : 'fragments'].list.loading,
+            Store.profile,
+            Store.createdByUsers,
+            Store.users,
         ]);
         const dataCallback = () => {
             if (!this.searchOnly) {
@@ -211,10 +214,36 @@ class MasSearchAndFilters extends LitElement {
         this.marketSegmentFilter = [];
         this.customerSegmentFilter = [];
         this.productFilter = [];
+        if (this.type === TABLE_TYPE.CARDS) {
+            Store.createdByUsers.set([]);
+        }
+    }
+
+    #handleUserDelete(e) {
+        const value = e.target.value;
+        Store.createdByUsers.set(Store.createdByUsers.value.filter((user) => user.userPrincipalName !== value));
+    }
+
+    get createdByUsersTags() {
+        if (this.type !== TABLE_TYPE.CARDS) return nothing;
+        return repeat(
+            Store.createdByUsers.value,
+            (user) => user.userPrincipalName,
+            (user) => html`
+                <sp-tag size="s" deletable @delete=${this.#handleUserDelete} .value=${user.userPrincipalName}>
+                    ${user.displayName}
+                    <sp-icon-user slot="icon" size="s"></sp-icon-user>
+                </sp-tag>
+            `,
+        );
+    }
+
+    get #hasCreatedByUsers() {
+        return this.type === TABLE_TYPE.CARDS && Store.createdByUsers.value.length > 0;
     }
 
     #renderAppliedFilters() {
-        if (this.appliedFilters.length === 0) return nothing;
+        if (this.appliedFilters.length === 0 && !this.#hasCreatedByUsers) return nothing;
 
         return html`
             <div class="applied-filters">
@@ -233,6 +262,7 @@ class MasSearchAndFilters extends LitElement {
                             </sp-tag>
                         `,
                     )}
+                    ${this.createdByUsersTags}
                 </sp-tags>
                 <sp-action-button quiet @click=${this.#clearAllFilters}>Clear all</sp-action-button>
             </div>
@@ -352,6 +382,14 @@ class MasSearchAndFilters extends LitElement {
                     FILTER_TYPE.CUSTOMER_SEGMENT,
                 )}
                 ${this.#renderFilterPicker('Product', this.productOptions, this.productFilter, FILTER_TYPE.PRODUCT)}
+                ${this.type === TABLE_TYPE.CARDS
+                    ? html`<mas-user-picker
+                          label="Created by"
+                          .currentUser=${Store.profile}
+                          .selectedUsers=${Store.createdByUsers}
+                          .users=${Store.users}
+                      ></mas-user-picker>`
+                    : nothing}
             </div>
             ${this.#renderAppliedFilters()}
         `;

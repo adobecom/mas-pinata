@@ -210,6 +210,9 @@ export class MasRepository extends LitElement {
             case PAGE_NAMES.TRANSLATIONS:
                 this.loadTranslationProjects();
                 break;
+            case PAGE_NAMES.TRANSLATION_EDITOR:
+                this.searchFragments();
+                break;
         }
     }
 
@@ -351,7 +354,7 @@ export class MasRepository extends LitElement {
             modelIds,
             path: localizedPath,
             tags,
-            ...(this.page.value !== PAGE_NAMES.TRANSLATION_EDITOR && { createdBy }),
+            ...(createdBy.length ? { createdBy } : {}),
             sort: [{ on: 'modifiedOrCreated', order: 'DESC' }],
         };
 

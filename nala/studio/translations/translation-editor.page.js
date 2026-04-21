@@ -56,6 +56,22 @@ export default class TranslationEditorPage {
         this.filterButtons = page.locator('sp-action-button.filter-trigger');
         this.filterPopover = page.locator('sp-popover.filter-popover[open]').first();
 
+        // Created by user picker
+        this.createdByPickerTrigger = page.locator('mas-search-and-filters mas-user-picker sp-action-button[slot="trigger"]');
+        this.createdByPopover = page.locator('mas-search-and-filters mas-user-picker sp-popover');
+        this.createdBySearchInput = page.locator('mas-search-and-filters mas-user-picker sp-search input');
+        this.createdByUserCheckbox = (label) =>
+            page.locator('mas-search-and-filters mas-user-picker sp-menu-item', { hasText: label });
+        this.createdByApplyButton = page.locator('mas-search-and-filters mas-user-picker sp-popover sp-button', {
+            hasText: 'Apply',
+        });
+        this.createdByResetButton = page.locator('mas-search-and-filters mas-user-picker sp-popover sp-button', {
+            hasText: 'Reset',
+        });
+        this.createdByAppliedChips = fragmentsTab
+            .locator('mas-search-and-filters .applied-filters sp-tag')
+            .filter({ has: page.locator('sp-icon-user') });
+
         // Collections tab
         const collectionsTabPanel = page.getByRole('tabpanel', { name: 'Collections' });
         this.selectItemsTableCollections = collectionsTabPanel.locator('mas-select-items-table');
