@@ -350,7 +350,7 @@ test.describe('M@S Studio Translations Test Suite', () => {
         });
 
         await test.step('step-6: Clear filter and verify row count returns to initial', async () => {
-            await page.getByRole('button', { name: 'Clear all' }).click();
+            await translationEditor.clearAllButton.click();
             await page.waitForTimeout(500);
             await expect(translationEditor.appliedFilterTags).toHaveCount(0);
             await translationEditor.expectResultCountMatchesTableRows();
