@@ -349,8 +349,10 @@ export class Router extends EventTarget {
      * @param {ReactiveStore} store - The store to link
      * @param {string|string[]} keys - The key(s) to link
      * @param {any} defaultValue - The default value to use if the key is not in the hash
+     * @param {() => boolean} [skipSync] - Optional predicate; when it returns true, hash sync is skipped
+     *   and any already-present keys are stripped from the URL.
      */
-    linkStoreToHash(store, keys, defaultValue) {
+    linkStoreToHash(store, keys, defaultValue, skipSync) {
         const getDefaultValue = defaultValueGetter(defaultValue);
         store.set(getDefaultValue());
         const keysArray = Array.isArray(keys) ? keys : [keys];
@@ -360,16 +362,41 @@ export class Router extends EventTarget {
             store,
             keysArray,
             defaultValue,
+            skipSync,
         });
 
         const newValue = store.get();
         const isObject = typeof newValue === 'object' && newValue !== null;
         // Initial sync from hash to store
-        this.syncStoreFromHash(store, newValue, isObject, keysArray, defaultValue);
+        if (skipSync?.()) {
+            this.currentParams ??= new URLSearchParams(this.#hashValue());
+            let changed = false;
+            for (const key of keysArray) {
+                if (this.currentParams.has(key)) {
+                    this.currentParams.delete(key);
+                    changed = true;
+                }
+            }
+            if (changed) this.updateHistory();
+        } else {
+            this.syncStoreFromHash(store, newValue, isObject, keysArray, defaultValue);
+        }
 
         const self = this;
         store.subscribe((value) => {
             self.currentParams ??= new URLSearchParams(self.#hashValue());
+
+            if (skipSync?.()) {
+                let changed = false;
+                for (const key of keysArray) {
+                    if (self.currentParams.has(key)) {
+                        self.currentParams.delete(key);
+                        changed = true;
+                    }
+                }
+                if (changed) self.updateHistory();
+                return;
+            }
 
             for (const key of keysArray) {
                 const hadParamBeforeUpdate = self.currentParams.has(key);
@@ -423,7 +450,12 @@ export class Router extends EventTarget {
             locale: 'en_US',
             personalizationFilterEnabled: false,
         });
-        this.linkStoreToHash(Store.sort, ['sortBy', 'sortDirection'], getSortDefaultValue);
+        this.linkStoreToHash(
+            Store.sort,
+            ['sortBy', 'sortDirection'],
+            getSortDefaultValue,
+            () => Store.page.get() === PAGE_NAMES.CONTENT,
+        );
         this.linkStoreToHash(Store.placeholders.search, 'search');
         this.linkStoreToHash(Store.landscape, 'commerce.landscape', WCS_LANDSCAPE_PUBLISHED);
         this.linkStoreToHash(Store.version.fragmentId, 'fragmentId');
@@ -502,7 +534,8 @@ export class Router extends EventTarget {
             Store.removeRegionOverride();
 
             // Sync all linked stores from the current hash
-            this.linkedStores.forEach(({ store, keysArray, defaultValue }) => {
+            this.linkedStores.forEach(({ store, keysArray, defaultValue, skipSync }) => {
+                if (skipSync?.()) return;
                 const currentValue = store.get();
                 const isObject = typeof currentValue === 'object' && currentValue !== null;
                 this.syncStoreFromHash(store, currentValue, isObject, keysArray, defaultValue);

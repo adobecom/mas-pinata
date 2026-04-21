@@ -166,6 +166,15 @@ export const EDITABLE_FRAGMENT_MODEL_IDS = Object.values(TAG_MODEL_ID_MAPPING);
 // The first value in the array should be the default value
 export const SORT_COLUMNS = {
     placeholders: ['key', 'value', 'status', 'locale', 'updatedBy', 'updatedAt'],
+    content: ['modifiedAt', 'title'],
+};
+
+// Maps Studio's UI sort keys (SORT_COLUMNS.content) to the AEM search-API
+// field names. AEM's default ASC ordering places nulls last, so blank titles
+// sort to the end of ASC without a secondary sort clause.
+export const CONTENT_SORT_AEM_FIELDS = {
+    modifiedAt: 'modifiedOrCreated',
+    title: 'title',
 };
 
 // Variant capabilities configuration

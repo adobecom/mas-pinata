@@ -30,6 +30,7 @@ const tableSkeletonRow = () =>
         <sp-table-cell class="title"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
         <sp-table-cell class="offer-id"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
         <sp-table-cell class="offer-type"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
+        <sp-table-cell class="last-modified"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
         <sp-table-cell class="last-modified-by"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
         <sp-table-cell class="price"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
         <sp-table-cell class="status"><div class="skeleton-element skeleton-table-cell"></div></sp-table-cell>
@@ -58,6 +59,24 @@ class MasContent extends LitElement {
     selection = new StoreController(this, Store.selection);
     search = new StoreController(this, Store.search);
     filters = new StoreController(this, Store.filters);
+    sort = new StoreController(this, Store.sort);
+
+    get activeSortBy() {
+        return this.sort.value?.sortBy;
+    }
+
+    get activeSortDirection() {
+        return this.sort.value?.sortDirection;
+    }
+
+    updateContentSort(field) {
+        const current = Store.sort.get();
+        if (current.sortBy === field) {
+            Store.sort.set({ ...current, sortDirection: current.sortDirection === 'asc' ? 'desc' : 'asc' });
+        } else {
+            Store.sort.set({ sortBy: field, sortDirection: 'asc' });
+        }
+    }
 
     connectedCallback() {
         super.connectedCallback();
@@ -217,14 +236,29 @@ class MasContent extends LitElement {
     }
 
     get tableView() {
+        const titleSortDirection = this.activeSortBy === 'title' ? this.activeSortDirection : nothing;
+        const modifiedAtSortDirection = this.activeSortBy === 'modifiedAt' ? this.activeSortDirection : nothing;
         if (!this.firstPageLoaded.value) {
             return html`<sp-table emphasized scroller>
                 <sp-table-head>
                     <sp-table-head-cell class="expand-cell"></sp-table-head-cell>
                     <sp-table-head-cell class="name">Path</sp-table-head-cell>
-                    <sp-table-head-cell class="title">Fragment Title</sp-table-head-cell>
+                    <sp-table-head-cell
+                        sortable
+                        class="title"
+                        sort-direction=${titleSortDirection}
+                        @click=${() => this.updateContentSort('title')}
+                        >Fragment Title</sp-table-head-cell
+                    >
                     <sp-table-head-cell class="offer-id">Offer ID</sp-table-head-cell>
                     <sp-table-head-cell class="offer-type">Offer Type</sp-table-head-cell>
+                    <sp-table-head-cell
+                        sortable
+                        class="last-modified"
+                        sort-direction=${modifiedAtSortDirection}
+                        @click=${() => this.updateContentSort('modifiedAt')}
+                        >Last Modified</sp-table-head-cell
+                    >
                     <sp-table-head-cell class="last-modified-by">Last Modified By</sp-table-head-cell>
                     <sp-table-head-cell class="price">Price</sp-table-head-cell>
                     <sp-table-head-cell class="status">Status</sp-table-head-cell>
@@ -254,9 +288,22 @@ class MasContent extends LitElement {
                 <sp-table-head>
                     <sp-table-head-cell class="expand-cell"></sp-table-head-cell>
                     <sp-table-head-cell sortable class="name">Path</sp-table-head-cell>
-                    <sp-table-head-cell sortable class="title">Fragment Title</sp-table-head-cell>
+                    <sp-table-head-cell
+                        sortable
+                        class="title"
+                        sort-direction=${titleSortDirection}
+                        @click=${() => this.updateContentSort('title')}
+                        >Fragment Title</sp-table-head-cell
+                    >
                     <sp-table-head-cell sortable class="offer-id">Offer ID</sp-table-head-cell>
                     <sp-table-head-cell sortable class="offer-type">Offer Type</sp-table-head-cell>
+                    <sp-table-head-cell
+                        sortable
+                        class="last-modified"
+                        sort-direction=${modifiedAtSortDirection}
+                        @click=${() => this.updateContentSort('modifiedAt')}
+                        >Last Modified</sp-table-head-cell
+                    >
                     <sp-table-head-cell sortable class="last-modified-by">Last Modified By</sp-table-head-cell>
                     <sp-table-head-cell sortable class="price">Price</sp-table-head-cell>
                     <sp-table-head-cell sortable class="status">Status</sp-table-head-cell>

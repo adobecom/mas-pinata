@@ -294,3 +294,10 @@ Store.filters.subscribe(() => {
         }));
     }
 });
+
+// Reset content-page sort when the user changes folders (path).
+Store.search.subscribe((value, oldValue) => {
+    if (Store.page.get() !== PAGE_NAMES.CONTENT) return;
+    if (value?.path === oldValue?.path) return;
+    Store.sort.set({ sortBy: SORT_COLUMNS[PAGE_NAMES.CONTENT]?.[0], sortDirection: 'asc' });
+});

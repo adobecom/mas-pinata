@@ -851,6 +851,10 @@ describe('MasRepository dictionary helpers', () => {
                     if (key === 'tags') return '';
                     if (key === 'createdBy') return '';
                     if (key === 'personalizationFilterEnabled') return false;
+                    if (key === 'sort') {
+                        const s = Store.sort.get();
+                        return `${s.sortBy || ''}:${s.sortDirection || ''}`;
+                    }
                     return null;
                 }),
                 set: sandbox.stub(),

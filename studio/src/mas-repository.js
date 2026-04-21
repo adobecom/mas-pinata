@@ -32,6 +32,7 @@ import {
     MAS_PRODUCT_CODE_PREFIX,
     PZN_FOLDER,
     SURFACES,
+    CONTENT_SORT_AEM_FIELDS,
 } from './constants.js';
 import { fragmentHasPersonalizationTag, isPznCountryTagId, PZN_TAG_ID_PREFIX } from './common/utils/personalization-utils.js';
 import { Placeholder } from './aem/placeholder.js';
@@ -156,6 +157,11 @@ export class MasRepository extends LitElement {
         Store.search.subscribe(() => {
             this.dictionaryCache.clear();
             this.#searchCursor = null;
+        });
+        Store.sort.subscribe(() => {
+            if (this.page.value !== PAGE_NAMES.CONTENT) return;
+            this.#searchCursor = null;
+            this.handleSearch();
         });
 
         this.loadFolders();
@@ -288,6 +294,9 @@ export class MasRepository extends LitElement {
         const currentCreatedBy = dataStore.getMeta('createdBy');
         const createdBy = Store.createdByUsers.get().map((user) => user.userPrincipalName);
         const createdByString = createdBy.join(',');
+        const sortState = Store.sort.get();
+        const sortKey = `${sortState.sortBy || ''}:${sortState.sortDirection || ''}`;
+        const currentSort = dataStore.getMeta('sort');
         if (
             currentData?.length > 0 &&
             currentPath === path &&
@@ -295,7 +304,8 @@ export class MasRepository extends LitElement {
             currentLocale === locale &&
             currentTags === tagsString &&
             currentCreatedBy === createdByString &&
-            metaPersonalizationOn === personalizationOn
+            metaPersonalizationOn === personalizationOn &&
+            currentSort === sortKey
         ) {
             let filteredData = currentData.filter((fragmentStore) => {
                 const fragmentPath = fragmentStore?.get?.()?.path;
@@ -346,13 +356,15 @@ export class MasRepository extends LitElement {
 
         const damPath = getDamPath(path);
         const localizedPath = `${damPath}/${locale}`;
+        const aemSortField = CONTENT_SORT_AEM_FIELDS[sortState.sortBy] || 'modifiedOrCreated';
+        const aemSortOrder = sortState.sortDirection === 'asc' ? 'ASC' : 'DESC';
         const localSearch = {
             ...this.search.value,
             modelIds,
             path: localizedPath,
             tags,
             ...(this.page.value !== PAGE_NAMES.TRANSLATION_EDITOR && { createdBy }),
-            sort: [{ on: 'modifiedOrCreated', order: 'DESC' }],
+            sort: [{ on: aemSortField, order: aemSortOrder }],
         };
 
         const publishedTagIndex = tags.indexOf(TAG_STATUS_PUBLISHED);
@@ -476,6 +488,7 @@ export class MasRepository extends LitElement {
             dataStore.setMeta('tags', this.filters.value.tags || '');
             dataStore.setMeta('createdBy', createdByString);
             dataStore.setMeta('personalizationFilterEnabled', personalizationOn);
+            dataStore.setMeta('sort', sortKey);
         } catch (error) {
             if (error.name !== 'AbortError') {
                 Store.fragments.list.loading.set(false);

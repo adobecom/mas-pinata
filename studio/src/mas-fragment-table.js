@@ -107,6 +107,16 @@ class MasFragmentTable extends LitElement {
         return html`<span is="inline-price" data-template="price" data-wcs-osi=${osi}></span>`;
     }
 
+    get formattedModifiedAt() {
+        const at = this.data?.modified?.at;
+        if (!at) return '';
+        try {
+            return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(at));
+        } catch {
+            return '';
+        }
+    }
+
     openCardPreview() {
         openPreview(this.fragmentStore.value.id, { left: 'min(300px, 15%)' });
     }
@@ -211,6 +221,7 @@ class MasFragmentTable extends LitElement {
                         : ''}
                 </sp-table-cell>
                 <sp-table-cell class="offer-type">${this.offerData?.offerType}</sp-table-cell>
+                <sp-table-cell class="last-modified">${this.formattedModifiedAt}</sp-table-cell>
                 <sp-table-cell class="last-modified-by">${data.modified?.by}</sp-table-cell>
                 <sp-table-cell class="price">${this.price}</sp-table-cell>
                 <sp-table-cell class="status ${data.status?.toLowerCase()}-cell"
