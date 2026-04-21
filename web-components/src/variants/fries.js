@@ -41,12 +41,12 @@ export class FriesCard extends VariantLayout {
         return html`
             <div class="content">
                 <div class="header">
-                    <slot name="icons"></slot>
                     <slot name="heading-xxs"></slot>
                     <slot name="trial-badge"></slot>
                 </div>
                 <slot name="badge"></slot>
                 <slot name="body-s"></slot>
+                <slot name="icons"></slot>
                 <div class="footer">
                     <div class="cta">
                         <slot name="cta"></slot>
@@ -103,6 +103,15 @@ export class FriesCard extends VariantLayout {
             gap: var(--consonant-merch-spacing-xxs);
             padding-bottom: 15px;
             padding-top: 5px;
+        }
+
+        :host([variant='fries']) slot[name='icons'] {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
         }
 
         :host([variant='fries']) .footer {
