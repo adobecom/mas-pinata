@@ -332,7 +332,6 @@ test.describe('M@S Studio Translations Test Suite', () => {
             await expect(translationEditor.createdByFirstCheckbox).toBeVisible({ timeout: 8000 });
             await translationEditor.createdByFirstCheckbox.click();
             await translationEditor.createdByApply.click();
-            await page.waitForTimeout(1500);
         });
 
         await test.step('step-3: Verify items list narrows and applied tag is visible', async () => {
@@ -344,8 +343,7 @@ test.describe('M@S Studio Translations Test Suite', () => {
 
         await test.step('step-4: Delete the user chip and verify list restores', async () => {
             const tag = translationEditor.createdByAppliedTag.first();
-            await tag.locator('button[aria-label="Clear"], sp-clear-button, sp-icon-close').first().click();
-            await page.waitForTimeout(1500);
+            await tag.getByRole('button', { name: /clear|delete/i }).click();
             await expect(translationEditor.createdByAppliedTag).toHaveCount(0, { timeout: 10000 });
             await translationEditor.expectResultCountMatchesTableRows();
             const restoredCount = await translationEditor.tableRows.count();
