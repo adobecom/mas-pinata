@@ -5,6 +5,7 @@ import { styles } from './mas-search-and-filters.css.js';
 import Store from '../store.js';
 import { FILTER_TYPE, TABLE_TYPE } from '../constants.js';
 import ReactiveController from '../reactivity/reactive-controller.js';
+import { ReactiveStore } from '../reactivity/reactive-store.js';
 
 class MasSearchAndFilters extends LitElement {
     static styles = styles;
@@ -16,6 +17,7 @@ class MasSearchAndFilters extends LitElement {
         marketSegmentFilter: { type: Array, state: true },
         customerSegmentFilter: { type: Array, state: true },
         productFilter: { type: Array, state: true },
+        createdByFilter: { type: Array, state: true },
         templateOptions: { type: Array },
         marketSegmentOptions: { type: Array },
         customerSegmentOptions: { type: Array },
@@ -30,11 +32,13 @@ class MasSearchAndFilters extends LitElement {
         this.marketSegmentFilter = [];
         this.customerSegmentFilter = [];
         this.productFilter = [];
+        this.createdByFilter = [];
         this.templateOptions = [];
         this.marketSegmentOptions = [];
         this.customerSegmentOptions = [];
         this.productOptions = [];
         this.dataSubscription = null;
+        this._selectedUsersStore = new ReactiveStore([]);
     }
 
     connectedCallback() {
@@ -43,6 +47,8 @@ class MasSearchAndFilters extends LitElement {
             Store.translationProjects[`all${this.typeUppercased}`],
             Store.translationProjects[`display${this.typeUppercased}`],
             Store[this.type === TABLE_TYPE.PLACEHOLDERS ? 'placeholders' : 'fragments'].list.loading,
+            Store.profile,
+            Store.users,
         ]);
         const dataCallback = () => {
             if (!this.searchOnly) {
@@ -55,6 +61,10 @@ class MasSearchAndFilters extends LitElement {
         this.dataSubscription = {
             unsubscribe: () => Store.translationProjects[`all${this.typeUppercased}`].unsubscribe(dataCallback),
         };
+        this._selectedUsersListener = () => {
+            this.createdByFilter = this._selectedUsersStore.value.map((u) => u.userPrincipalName);
+        };
+        this._selectedUsersStore.subscribe(this._selectedUsersListener);
     }
 
     disconnectedCallback() {
@@ -63,6 +73,11 @@ class MasSearchAndFilters extends LitElement {
             Store.translationProjects[`all${this.typeUppercased}`].value,
         );
         this.dataSubscription?.unsubscribe();
+        if (this._selectedUsersListener) {
+            this._selectedUsersStore.unsubscribe(this._selectedUsersListener);
+            this._selectedUsersListener = null;
+        }
+        this._selectedUsersStore.set([]);
     }
 
     get typeUppercased() {
@@ -97,6 +112,13 @@ class MasSearchAndFilters extends LitElement {
         for (const id of this.productFilter) {
             const option = productMap.get(id);
             if (option) filters.push({ type: FILTER_TYPE.PRODUCT, id, label: option.title || option.label });
+        }
+        for (const user of this._selectedUsersStore.value) {
+            filters.push({
+                type: FILTER_TYPE.CREATED_BY,
+                id: user.userPrincipalName,
+                label: user.displayName || user.userPrincipalName,
+            });
         }
         return filters;
     }
@@ -135,7 +157,8 @@ class MasSearchAndFilters extends LitElement {
             changed.has('templateFilter') ||
             changed.has('marketSegmentFilter') ||
             changed.has('customerSegmentFilter') ||
-            changed.has('productFilter')
+            changed.has('productFilter') ||
+            changed.has('createdByFilter')
         ) {
             this.#applyFilters();
         }
@@ -203,6 +226,11 @@ class MasSearchAndFilters extends LitElement {
             case FILTER_TYPE.PRODUCT:
                 this.productFilter = this.productFilter.filter((filterId) => filterId !== id);
                 break;
+            case FILTER_TYPE.CREATED_BY:
+                this._selectedUsersStore.set(
+                    this._selectedUsersStore.value.filter((u) => u.userPrincipalName !== id),
+                );
+                break;
         }
     }
 
@@ -211,6 +239,7 @@ class MasSearchAndFilters extends LitElement {
         this.marketSegmentFilter = [];
         this.customerSegmentFilter = [];
         this.productFilter = [];
+        this._selectedUsersStore.set([]);
     }
 
     #renderAppliedFilters() {
@@ -277,6 +306,7 @@ class MasSearchAndFilters extends LitElement {
         const hasMarket = this.marketSegmentFilter?.length > 0;
         const hasCustomer = this.customerSegmentFilter?.length > 0;
         const hasProduct = this.productFilter?.length > 0;
+        const hasCreatedBy = this.createdByFilter?.length > 0;
 
         const result = source.filter((fragment) => {
             if (query) {
@@ -312,6 +342,10 @@ class MasSearchAndFilters extends LitElement {
             }
             if (hasProduct) {
                 if (!fragment.tags?.some((tag) => this.productFilter.includes(tag.id))) return false;
+            }
+            if (hasCreatedBy) {
+                const by = fragment.created?.by;
+                if (!by || !this.createdByFilter.includes(by)) return false;
             }
             return true;
         });
@@ -352,6 +386,12 @@ class MasSearchAndFilters extends LitElement {
                     FILTER_TYPE.CUSTOMER_SEGMENT,
                 )}
                 ${this.#renderFilterPicker('Product', this.productOptions, this.productFilter, FILTER_TYPE.PRODUCT)}
+                <mas-user-picker
+                    label="Created by"
+                    .currentUser=${Store.profile}
+                    .selectedUsers=${this._selectedUsersStore}
+                    .users=${Store.users}
+                ></mas-user-picker>
             </div>
             ${this.#renderAppliedFilters()}
         `;

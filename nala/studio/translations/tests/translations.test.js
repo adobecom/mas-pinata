@@ -304,4 +304,57 @@ test.describe('M@S Studio Translations Test Suite', () => {
             expect(allTitles.some((t) => t.includes(projectTitle))).toBe(false);
         });
     });
+
+    // 7. @translation-editor-created-by-filter – Select Items: apply Created By filter
+    test(`${features[7].name},${features[7].tags}`, async ({ page, baseURL }) => {
+        const testPage = `${baseURL}${features[7].path}${miloLibs}${features[7].browserParams}`;
+        setTestPage(testPage);
+        await page.goto(testPage);
+        await page.waitForLoadState('domcontentloaded');
+        await expect(translationEditor.form).toBeVisible({ timeout: 15000 });
+
+        let initialRowCount;
+
+        await test.step('step-1: Open Add Items dialog and navigate to Fragments tab', async () => {
+            await translationEditor.addItemsButton.click();
+            await expect(translationEditor.cardsTab).toBeVisible({ timeout: 10000 });
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.selectItemsTable).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+        });
+
+        await test.step('step-2: Capture initial row count', async () => {
+            initialRowCount = await translationEditor.tableRows.count();
+            expect(initialRowCount).toBeGreaterThan(0);
+        });
+
+        await test.step('step-3: Open Created-by picker, verify popover', async () => {
+            await expect(translationEditor.createdByPickerButton).toBeVisible({ timeout: 10000 });
+            await translationEditor.createdByPickerButton.click();
+            await expect(translationEditor.createdByPopover).toBeVisible({ timeout: 8000 });
+            await expect(translationEditor.createdByMenuItems.first()).toBeVisible({ timeout: 10000 });
+        });
+
+        await test.step('step-4: Select first user and click Apply', async () => {
+            await translationEditor.createdByMenuItems.first().click();
+            await translationEditor.createdByApplyButton.click();
+            await expect(translationEditor.createdByPopover).not.toBeVisible({ timeout: 8000 });
+        });
+
+        await test.step('step-5: Verify chip renders and row count ≤ initial', async () => {
+            await expect(translationEditor.appliedFilterTags.first()).toBeVisible({ timeout: 8000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+            const filteredCount = await translationEditor.tableRows.count();
+            expect(filteredCount).toBeLessThanOrEqual(initialRowCount);
+        });
+
+        await test.step('step-6: Clear filter and verify row count returns to initial', async () => {
+            await page.getByRole('button', { name: 'Clear all' }).click();
+            await page.waitForTimeout(500);
+            await expect(translationEditor.appliedFilterTags).toHaveCount(0);
+            await translationEditor.expectResultCountMatchesTableRows();
+            await expect(translationEditor.tableRows).toHaveCount(initialRowCount);
+        });
+    });
 });
