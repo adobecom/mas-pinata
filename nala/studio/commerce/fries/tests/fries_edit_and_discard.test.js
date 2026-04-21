@@ -139,4 +139,96 @@ test.describe('M@S Studio Commerce Fries card test suite', () => {
             ).toBeTruthy();
         });
     });
+
+    // @studio-fries-edit-discard-border-color-gradient-purple-blue - Validate Gradient Purple Blue border color for fries card in mas studio
+    test(`${features[3].name},${features[3].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[3];
+        const testPage = `${baseURL}${features[3].path}${miloLibs}${features[3].browserParams}${data.cardid}`;
+        setTestPage(testPage);
+        const friesCard = await studio.getCard(data.cardid);
+
+        await test.step('step-1: Go to MAS Studio fragment editor page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await expect(friesCard).toBeVisible();
+            await expect(friesCard).toHaveAttribute('variant', 'fries');
+            await expect(await editor.panel).toBeVisible();
+        });
+
+        await test.step('step-2: Open the Border Color picker and verify gradient option is listed', async () => {
+            await expect(await editor.borderColor).toBeVisible();
+            await editor.borderColor.scrollIntoViewIfNeeded();
+            await editor.borderColor.click();
+            await expect(await editor.borderColor.locator('sp-menu-item').first()).toBeVisible();
+            await expect(
+                page.getByRole('option', { name: data.gradient.label, exact: true }),
+            ).toBeVisible();
+        });
+
+        await test.step('step-3: Select the gradient border color option', async () => {
+            await page.getByRole('option', { name: data.gradient.label, exact: true }).click();
+            await page.waitForTimeout(2000);
+        });
+
+        await test.step('step-4: Validate picker reflects the gradient and card renders a gradient outline', async () => {
+            await expect(await editor.borderColor).toContainText(data.gradient.label);
+            const styleAttr = await friesCard.getAttribute('style');
+            expect(styleAttr || '').toContain(data.gradient.styleProperty);
+        });
+
+        await test.step('step-5: Close the editor and verify discard is triggered', async () => {
+            await studio.discardEditorChanges(editor);
+        });
+
+        await test.step('step-6: Verify card border color is reverted after discard', async () => {
+            const styleAttr = (await friesCard.getAttribute('style')) || '';
+            expect(styleAttr).not.toContain(data.gradient.styleProperty);
+        });
+    });
+
+    // @studio-fries-edit-discard-border-color-gradient-firefly-spectrum - Validate Gradient Firefly Spectrum border color for fries card in mas studio
+    test(`${features[4].name},${features[4].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[4];
+        const testPage = `${baseURL}${features[4].path}${miloLibs}${features[4].browserParams}${data.cardid}`;
+        setTestPage(testPage);
+        const friesCard = await studio.getCard(data.cardid);
+
+        await test.step('step-1: Go to MAS Studio fragment editor page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await expect(friesCard).toBeVisible();
+            await expect(friesCard).toHaveAttribute('variant', 'fries');
+            await expect(await editor.panel).toBeVisible();
+        });
+
+        await test.step('step-2: Open the Border Color picker and verify gradient option is listed', async () => {
+            await expect(await editor.borderColor).toBeVisible();
+            await editor.borderColor.scrollIntoViewIfNeeded();
+            await editor.borderColor.click();
+            await expect(await editor.borderColor.locator('sp-menu-item').first()).toBeVisible();
+            await expect(
+                page.getByRole('option', { name: data.gradient.label, exact: true }),
+            ).toBeVisible();
+        });
+
+        await test.step('step-3: Select the gradient border color option', async () => {
+            await page.getByRole('option', { name: data.gradient.label, exact: true }).click();
+            await page.waitForTimeout(2000);
+        });
+
+        await test.step('step-4: Validate picker reflects the gradient and card renders a gradient outline', async () => {
+            await expect(await editor.borderColor).toContainText(data.gradient.label);
+            const styleAttr = await friesCard.getAttribute('style');
+            expect(styleAttr || '').toContain(data.gradient.styleProperty);
+        });
+
+        await test.step('step-5: Close the editor and verify discard is triggered', async () => {
+            await studio.discardEditorChanges(editor);
+        });
+
+        await test.step('step-6: Verify card border color is reverted after discard', async () => {
+            const styleAttr = (await friesCard.getAttribute('style')) || '';
+            expect(styleAttr).not.toContain(data.gradient.styleProperty);
+        });
+    });
 });

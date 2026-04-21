@@ -51,5 +51,35 @@ export default {
             browserParams: '#page=fragment-editor&path=nala&fragmentId=',
             tags: '@mas-studio @commerce @commerce-fries @commerce-fries-edit',
         },
+        {
+            tcid: '3',
+            name: '@studio-fries-edit-discard-border-color-gradient-purple-blue',
+            path: '/studio.html',
+            data: {
+                cardid: '9620f75c-96cd-4ec3-a431-275a53d8860c',
+                gradient: {
+                    label: 'Gradient Purple Blue',
+                    key: 'gradient-purple-blue',
+                    styleProperty: '--consonant-merch-card-border-color: var(--gradient-purple-blue)',
+                },
+            },
+            browserParams: '#page=fragment-editor&path=nala&fragmentId=',
+            tags: '@mas-studio @commerce @commerce-fries @commerce-fries-edit @commerce-fries-gradient-border',
+        },
+        {
+            tcid: '4',
+            name: '@studio-fries-edit-discard-border-color-gradient-firefly-spectrum',
+            path: '/studio.html',
+            data: {
+                cardid: '9620f75c-96cd-4ec3-a431-275a53d8860c',
+                gradient: {
+                    label: 'Gradient Firefly Spectrum',
+                    key: 'gradient-firefly-spectrum',
+                    styleProperty: '--consonant-merch-card-border-color: var(--gradient-firefly-spectrum)',
+                },
+            },
+            browserParams: '#page=fragment-editor&path=nala&fragmentId=',
+            tags: '@mas-studio @commerce @commerce-fries @commerce-fries-edit @commerce-fries-gradient-border',
+        },
     ],
 };

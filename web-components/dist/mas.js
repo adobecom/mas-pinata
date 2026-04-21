@@ -8022,6 +8022,7 @@ merch-card[variant="mini"] span.renewal-text {
     --spectrum-green-900-special-offers: #2D9D78;
     --spectrum-gray-300-special-offers: #D1D1D1;
     --gradient-purple-blue: linear-gradient(96deg, #B539C8 0%, #7155FA 66%, #3B63FB 100%);
+    --gradient-firefly-spectrum: linear-gradient(96deg, #D73220 0%, #D92361 33%, #7155FA 100%);
 
     --color-yellow-300-variation: var(--spectrum-yellow-300-plans);
     --color-green-900-variation: var(--spectrum-green-900-plans);
@@ -10229,7 +10230,7 @@ merch-card[variant="ccd-slice"] [slot='body-s'] a.spectrum-Link {
     .spectrum--darkest merch-card[variant="fries"] [slot="body-s"] {
         color: rgb(142, 142, 147);
     }
-`;var Vn={mnemonics:{size:"s"},title:{tag:"h3",slot:"heading-xxs",maxCount:250,withSuffix:!0},description:{tag:"div",slot:"body-s",maxCount:2e3,withSuffix:!1},badge:{tag:"div",slot:"badge",default:"spectrum-yellow-300"},trialBadge:{tag:"div",slot:"trial-badge",default:"spectrum-green-800"},prices:{tag:"p",slot:"price"},ctas:{slot:"cta",size:"M"},addonConfirmation:{tag:"div",slot:"addon-confirmation"},borderColor:{attribute:"border-color",specialValues:{gray:"--spectrum-gray-300"}}},mr=class extends A{getGlobalCSS(){return yl}get aemFragmentMapping(){return Vn}renderLayout(){return g`
+`;var Vn={mnemonics:{size:"s"},title:{tag:"h3",slot:"heading-xxs",maxCount:250,withSuffix:!0},description:{tag:"div",slot:"body-s",maxCount:2e3,withSuffix:!1},badge:{tag:"div",slot:"badge",default:"spectrum-yellow-300"},trialBadge:{tag:"div",slot:"trial-badge",default:"spectrum-green-800"},prices:{tag:"p",slot:"price"},ctas:{slot:"cta",size:"M"},addonConfirmation:{tag:"div",slot:"addon-confirmation"},borderColor:{attribute:"border-color",specialValues:{gray:"--spectrum-gray-300"}},allowedBorderColors:["gradient-purple-blue","gradient-firefly-spectrum"],showAllSpectrumColors:!0},mr=class extends A{getGlobalCSS(){return yl}get aemFragmentMapping(){return Vn}renderLayout(){return g`
             <div class="content">
                 <div class="header">
                     <slot name="icons"></slot>
@@ -10260,14 +10261,16 @@ merch-card[variant="ccd-slice"] [slot='body-s'] a.spectrum-Link {
             --consonant-merch-card-border-width: 1px;
             max-width: var(--merch-card-fries-max-width);
             min-height: var(--merch-card-fries-min-height);
-            background-color: var(
-                --merch-card-custom-background-color,
-                var(--spectrum-gray-300)
-            );
+            background:
+                linear-gradient(
+                        var(--merch-card-custom-background-color, var(--spectrum-gray-300)),
+                        var(--merch-card-custom-background-color, var(--spectrum-gray-300))
+                    )
+                    padding-box,
+                var(--consonant-merch-card-border-color, transparent) border-box;
             color: var(--consonant-merch-card-heading-xxxs-color);
             border-radius: 4px;
-            border: 1px solid
-                var(--consonant-merch-card-border-color, transparent);
+            border: 1px solid transparent;
             display: flex;
             flex-direction: row;
             overflow: hidden;
