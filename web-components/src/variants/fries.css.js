@@ -16,9 +16,6 @@ export const CSS = `
     }
 
     merch-card[variant='fries'] [slot="badge"] {
-        position: absolute;
-        top: 0;
-        right: 24px;
         font-weight: 700;
     }
 

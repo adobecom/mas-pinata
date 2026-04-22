@@ -576,8 +576,9 @@ export class MiniCompareChart extends VariantLayout {
 
     renderLayout() {
         if (!this.isNewVariant) {
-            return html` <div class="top-section${this.badge ? ' badge' : ''}">
-                    <slot name="icons"></slot> ${this.badge}
+            return html` ${this.badge}
+                <div class="top-section">
+                    <slot name="icons"></slot>
                 </div>
                 <slot name="heading-m"></slot>
                 ${this.card.classList.contains('bullet-list')
@@ -598,9 +599,9 @@ export class MiniCompareChart extends VariantLayout {
                 ${this.getMiniCompareFooter()}
                 <slot name="footer-rows"><slot name="body-s"></slot></slot>`;
         }
-        return html` <div class="top-section${this.badge ? ' badge' : ''}">
-                <slot name="icons"></slot> ${this.badge}
-                <slot name="badge"></slot>
+        return html` ${this.badge}
+            <div class="top-section">
+                <slot name="icons"></slot>
             </div>
             <slot name="heading-m"></slot>
             <slot name="heading-xs"></slot>

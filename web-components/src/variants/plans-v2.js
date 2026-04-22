@@ -493,7 +493,6 @@ export class PlansV2 extends VariantLayout {
                           <slot name="body-xs"></slot>
                           ${this.stockCheckbox}
                           <slot name="addon"></slot>
-                          <slot name="badge"></slot>
                           <div class="price-divider"></div>
                           <slot name="heading-m"></slot>
                       `
@@ -509,7 +508,6 @@ export class PlansV2 extends VariantLayout {
                           <slot name="body-xs"></slot>
                           ${this.stockCheckbox}
                           <slot name="addon"></slot>
-                          <slot name="badge"></slot>
                       `}
             </div>
             ${this.secureLabelFooter} ${this.shortDescriptionToggle}

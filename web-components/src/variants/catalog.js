@@ -64,9 +64,10 @@ export class Catalog extends VariantLayout {
     }
 
     renderLayout() {
-        return html` <div class="body">
+        return html` ${this.badge}
+            <div class="body">
                 <div class="top-section">
-                    <slot name="icons"></slot> ${this.badge}
+                    <slot name="icons"></slot>
                     <div
                         class="action-menu
                 ${this.slottedContent

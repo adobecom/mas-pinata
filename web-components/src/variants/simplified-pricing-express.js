@@ -1,4 +1,4 @@
-import { html, css } from 'lit';
+import { html, css, nothing } from 'lit';
 import { VariantLayout } from './variant-layout.js';
 import { CSS } from './simplified-pricing-express.css.js';
 import Media, { isDesktop, MOBILE_LANDSCAPE } from '../media.js';
@@ -222,12 +222,11 @@ export class SimplifiedPricingExpress extends VariantLayout {
 
     renderLayout() {
         return html`
-            <div
-                class="badge-wrapper"
-                style="${this.badge ? '' : 'visibility: hidden'}"
-            >
-                <slot name="badge"></slot>
-            </div>
+            ${this.badge
+                ? html`<div class="badge-wrapper">
+                      <slot name="badge"></slot>
+                  </div>`
+                : nothing}
             <div class="card-content" @click=${(e) => this.handleCardClick(e)}>
                 <div class="header">
                     <slot name="heading-xs"></slot>

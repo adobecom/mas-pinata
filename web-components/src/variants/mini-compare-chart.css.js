@@ -23,22 +23,9 @@ export const CSS = `
     border: 1px solid transparent;
   }
 
-  merch-card[variant="mini-compare-chart"] merch-badge {
-    position: absolute;
-    top: 16px;
-    inset-inline-start: auto;
-    inset-inline-end: 0;
-  }
    merch-card[variant="mini-compare-chart"] div[class$='-badge'] {
      font-size: 14px;
    }
-
-  merch-card[variant="mini-compare-chart"] div[class$='-badge']:dir(rtl) {
-    left: 0;
-    right: initial;
-    padding: 8px 11px;
-    border-radius: 0 5px 5px 0;
-  }
 
   merch-card[variant="mini-compare-chart"] [slot="heading-m"] {
     padding: 0 var(--consonant-merch-spacing-s) 0;

@@ -43,13 +43,12 @@ export class SpecialOffer extends VariantLayout {
     }
 
     renderLayout() {
-        return html`${this.cardImage}
+        return html`${this.badge} ${this.cardImage}
             <div class="body">
                 <slot name="detail-m"></slot>
                 <slot name="heading-xs"></slot>
                 <slot name="heading-xs-price"></slot>
                 <slot name="body-xs"></slot>
-                <slot name="badge"></slot>
             </div>
             ${this.evergreen
                 ? html`

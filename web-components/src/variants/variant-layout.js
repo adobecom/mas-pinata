@@ -51,34 +51,35 @@ export class VariantLayout {
     }
 
     get badge() {
-        let additionalStyles;
+        let legacyBadge = nothing;
         if (
-            !this.card.badgeBackgroundColor ||
-            !this.card.badgeColor ||
-            !this.card.badgeText
+            this.card.badgeBackgroundColor &&
+            this.card.badgeColor &&
+            this.card.badgeText
         ) {
-            return;
+            const additionalStyles = this.evergreen
+                ? `border: 1px solid ${this.card.badgeBackgroundColor}; border-right: none;`
+                : '';
+            legacyBadge = html`
+                <div
+                    id="badge"
+                    class="${this.card.variant}-badge"
+                    style="background-color: ${this.card.badgeBackgroundColor};
+                    color: ${this.card.badgeColor};
+                    ${additionalStyles}"
+                >
+                    ${this.card.badgeText}
+                </div>
+            `;
         }
-        if (this.evergreen) {
-            additionalStyles = `border: 1px solid ${this.card.badgeBackgroundColor}; border-right: none;`;
-        }
-        return html`
-            <div
-                id="badge"
-                class="${this.card.variant}-badge"
-                style="background-color: ${this.card.badgeBackgroundColor};
-                color: ${this.card.badgeColor};
-                ${additionalStyles}"
-            >
-                ${this.card.badgeText}
-            </div>
-        `;
+        return html`<div class="badge-row">
+            ${legacyBadge}<slot name="badge"></slot>
+        </div>`;
     }
 
     get cardImage() {
         return html` <div class="image">
             <slot name="bg-image"></slot>
-            ${this.badge}
         </div>`;
     }
 

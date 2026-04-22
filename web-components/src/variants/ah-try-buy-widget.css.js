@@ -9,12 +9,6 @@ export const CSS = `
         word-break: break-word;
     }
 
-    merch-card[variant="ah-try-buy-widget"] [slot="badge"] {
-        position: absolute;
-        top: 18px;
-        right: 12px;
-    }
-
     merch-card[variant="ah-try-buy-widget"] [slot="badge"] merch-badge {
         border-radius: 7px;
         font-size: 12px;

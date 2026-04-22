@@ -106,7 +106,6 @@ export class Product extends VariantLayout {
                 <slot name="quantity-select"></slot>
                 <slot name="addon"></slot>
                 <slot name="body-lower"></slot>
-                <slot name="badge"></slot>
             </div>
             <hr />
             ${this.secureLabelFooter}`;

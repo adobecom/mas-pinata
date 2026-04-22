@@ -123,7 +123,6 @@ export class Segment extends VariantLayout {
                     ? html`<slot name="promo-text"></slot
                           ><slot name="callout-content"></slot>`
                     : ''}
-                <slot name="badge"></slot>
             </div>
             <hr />
             ${this.secureLabelFooter}

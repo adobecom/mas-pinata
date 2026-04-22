@@ -47,9 +47,9 @@ export class Image extends VariantLayout {
     }
 
     renderLayout() {
-        return html`<div class="image">
+        return html`${this.badge}
+            <div class="image">
                 <slot name="bg-image"></slot>
-                <slot name="badge"></slot>
             </div>
             <div class="body">
                 <slot name="icons"></slot>
@@ -86,17 +86,5 @@ export class Image extends VariantLayout {
             border: 1px solid transparent;
         }
 
-        :host([variant='image']) ::slotted([slot='badge']) {
-            position: absolute;
-            top: 16px;
-            right: 0px;
-        }
-
-        :host-context([dir='rtl'])
-            :host([variant='image'])
-            ::slotted([slot='badge']) {
-            left: 0px;
-            right: initial;
-        }
     `;
 }

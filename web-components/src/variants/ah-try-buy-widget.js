@@ -40,6 +40,7 @@ export class AHTryBuyWidget extends VariantLayout {
 
     renderLayout() {
         return html`
+            ${this.badge}
             <div class="content">
                 <div class="header">
                     <slot name="icons"></slot>
@@ -54,7 +55,6 @@ export class AHTryBuyWidget extends VariantLayout {
                 </div>
             </div>
             <slot name="image"></slot>
-            <slot name="badge"></slot>
             <slot></slot>
         `;
     }

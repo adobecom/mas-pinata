@@ -182,5 +182,9 @@ export class CCDSuggested extends VariantLayout {
         :host([variant='ccd-suggested']) .top-section {
             align-items: center;
         }
+
+        :host([variant='ccd-suggested']) .badge-row {
+            display: contents;
+        }
     `;
 }
