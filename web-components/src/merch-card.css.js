@@ -107,12 +107,12 @@ export const styles = css`
     }
 
     .badge-row {
-        display: block;
+        display: none;
         width: 100%;
     }
 
-    :host(:not(:has([slot='badge']))) .badge-row:not(:has(#badge)) {
-        display: none;
+    :host([has-badge]) .badge-row {
+        display: block;
     }
 
     div[class$='-badge'] {

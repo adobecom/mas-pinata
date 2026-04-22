@@ -73,7 +73,10 @@ export class VariantLayout {
             `;
         }
         return html`<div class="badge-row">
-            ${legacyBadge}<slot name="badge"></slot>
+            ${legacyBadge}<slot
+                name="badge"
+                @slotchange=${() => this.card.updateHasBadgeAttribute?.()}
+            ></slot>
         </div>`;
     }
 

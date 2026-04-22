@@ -358,20 +358,16 @@ export class SimplifiedPricingExpress extends VariantLayout {
                 );
         }
 
-        :host(
-                [variant='simplified-pricing-express']:has(
-                        [slot='badge']:not(:empty)
-                    )
-            )
+        :host([variant='simplified-pricing-express'][has-badge])
             .card-content {
             border-top-left-radius: 0;
             border-top-right-radius: 0;
         }
 
         :host(
-                [variant='simplified-pricing-express']:not(
+                [variant='simplified-pricing-express'][has-badge]:not(
                         [gradient-border='true']
-                    ):has([slot='badge']:not(:empty))
+                    )
             )
             .card-content {
             border-top: 1px solid
@@ -381,11 +377,7 @@ export class SimplifiedPricingExpress extends VariantLayout {
                 );
         }
 
-        :host(
-                [variant='simplified-pricing-express']:has(
-                        [slot='badge']:not(:empty)
-                    )
-            )
+        :host([variant='simplified-pricing-express'][has-badge])
             .badge-wrapper {
             margin-bottom: -2px;
         }
@@ -449,9 +441,7 @@ export class SimplifiedPricingExpress extends VariantLayout {
         }
 
         :host(
-                [variant='simplified-pricing-express'][gradient-border='true']:has(
-                        [slot='badge']:not(:empty)
-                    )
+                [variant='simplified-pricing-express'][gradient-border='true'][has-badge]
             )
             .card-content {
             border-top-left-radius: 8px;
@@ -459,9 +449,7 @@ export class SimplifiedPricingExpress extends VariantLayout {
         }
 
         :host(
-                [variant='simplified-pricing-express'][gradient-border='true']:has(
-                        [slot='badge']:not(:empty)
-                    )
+                [variant='simplified-pricing-express'][gradient-border='true'][has-badge]
             )
             .card-content::before {
             border-top-left-radius: 6px;

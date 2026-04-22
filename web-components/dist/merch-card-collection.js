@@ -9,7 +9,10 @@ var ei=Object.defineProperty;var ti=e=>{throw TypeError(e)};var Yo=(e,t,r)=>t in
                     ${this.card.badgeText}
                 </div>
             `}return Et`<div class="badge-row">
-            ${t}<slot name="badge"></slot>
+            ${t}<slot
+                name="badge"
+                @slotchange=${()=>this.card.updateHasBadgeAttribute?.()}
+            ></slot>
         </div>`}get cardImage(){return Et` <div class="image">
             <slot name="bg-image"></slot>
         </div>`}getGlobalCSS(){return""}get theme(){return document.querySelector("sp-theme")}get evergreen(){return this.card.classList.contains("intro-pricing")}get promoBottom(){return this.card.classList.contains("promo-bottom")}get headingSelector(){return'[slot="heading-xs"]'}get secureLabel(){return this.card.secureLabel?Et`<span class="secure-transaction-label"
@@ -5436,20 +5439,16 @@ merch-card[variant="simplified-pricing-express"] [slot="cta"] a.spectrum-Button.
                 );
         }
 
-        :host(
-                [variant='simplified-pricing-express']:has(
-                        [slot='badge']:not(:empty)
-                    )
-            )
+        :host([variant='simplified-pricing-express'][has-badge])
             .card-content {
             border-top-left-radius: 0;
             border-top-right-radius: 0;
         }
 
         :host(
-                [variant='simplified-pricing-express']:not(
+                [variant='simplified-pricing-express'][has-badge]:not(
                         [gradient-border='true']
-                    ):has([slot='badge']:not(:empty))
+                    )
             )
             .card-content {
             border-top: 1px solid
@@ -5459,11 +5458,7 @@ merch-card[variant="simplified-pricing-express"] [slot="cta"] a.spectrum-Button.
                 );
         }
 
-        :host(
-                [variant='simplified-pricing-express']:has(
-                        [slot='badge']:not(:empty)
-                    )
-            )
+        :host([variant='simplified-pricing-express'][has-badge])
             .badge-wrapper {
             margin-bottom: -2px;
         }
@@ -5527,9 +5522,7 @@ merch-card[variant="simplified-pricing-express"] [slot="cta"] a.spectrum-Button.
         }
 
         :host(
-                [variant='simplified-pricing-express'][gradient-border='true']:has(
-                        [slot='badge']:not(:empty)
-                    )
+                [variant='simplified-pricing-express'][gradient-border='true'][has-badge]
             )
             .card-content {
             border-top-left-radius: 8px;
@@ -5537,9 +5530,7 @@ merch-card[variant="simplified-pricing-express"] [slot="cta"] a.spectrum-Button.
         }
 
         :host(
-                [variant='simplified-pricing-express'][gradient-border='true']:has(
-                        [slot='badge']:not(:empty)
-                    )
+                [variant='simplified-pricing-express'][gradient-border='true'][has-badge]
             )
             .card-content::before {
             border-top-left-radius: 6px;

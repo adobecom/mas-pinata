@@ -40,6 +40,37 @@ test.describe('Merch Card badge-row feature test suite', () => {
             const badgeRow = badgePage.getBadgeRow(data.id);
             await expect(badgeRow).toHaveCSS('display', 'block');
         });
+
+        await test.step('step-5: Card host reflects has-badge attribute', async () => {
+            const card = badgePage.getCard(data.id);
+            await expect(card).toHaveAttribute('has-badge', '');
+        });
+
+        await test.step('step-6: Cards without a badge do not have has-badge and have a collapsed badge row', async () => {
+            const noBadgeCards = await page.evaluate(() => {
+                const cards = Array.from(document.querySelectorAll('merch-card'));
+                return cards
+                    .filter((card) => {
+                        const hasSlotted = !!card.querySelector(':scope > [slot="badge"]');
+                        const hasLegacy = !!card.shadowRoot?.querySelector('.badge-row #badge');
+                        return !hasSlotted && !hasLegacy;
+                    })
+                    .map((card) => ({
+                        hasBadgeAttr: card.hasAttribute('has-badge'),
+                        badgeRowHeight:
+                            card.shadowRoot?.querySelector('.badge-row')?.getBoundingClientRect().height ?? null,
+                        badgeRowDisplay:
+                            card.shadowRoot?.querySelector('.badge-row') &&
+                            window.getComputedStyle(card.shadowRoot.querySelector('.badge-row')).display,
+                    }));
+            });
+
+            for (const card of noBadgeCards) {
+                expect(card.hasBadgeAttr).toBe(false);
+                expect(card.badgeRowHeight).toBe(0);
+                expect(card.badgeRowDisplay).toBe('none');
+            }
+        });
     });
 
     // @MAS-Badge-row-not-absolute — badge row uses normal flow, never position: absolute
@@ -63,9 +94,9 @@ test.describe('Merch Card badge-row feature test suite', () => {
             await expect(badgeRow).not.toHaveCSS('position', 'absolute');
         });
 
-        await test.step('step-4: Legacy badge element lives inside the badge row', async () => {
-            const legacyBadge = badgePage.getLegacyBadge(data.id);
-            await expect(legacyBadge).toBeVisible();
+        await test.step('step-4: Slotted badge element is visible on the card', async () => {
+            const slottedBadge = badgePage.getSlottedBadge(data.id);
+            await expect(slottedBadge).toBeVisible();
         });
     });
 
