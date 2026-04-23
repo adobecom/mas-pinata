@@ -31,4 +31,13 @@ export const features = [
         data: {},
         tags: '@mas-docs @mas-catalog @commerce @smoke @regression @milo',
     },
+    {
+        tcid: '2',
+        name: '@MAS-Catalog-marquee-mnemonic-list-title-font-size',
+        path: DOCS_GALLERY_PATH.CATALOG,
+        data: {
+            cssVariable: '--type-heading-xs-size',
+        },
+        tags: '@mas-docs @mas-catalog @commerce @regression @milo',
+    },
 ];

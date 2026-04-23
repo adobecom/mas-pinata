@@ -94,4 +94,45 @@ test.describe('Catalog gallery feature test suite', () => {
             }
         });
     });
+
+    test(`[Test Id - ${features[2].tcid}] ${features[2].name},${features[2].tags}`, async ({ browser, baseURL }) => {
+        // Use an isolated page so the injected marquee fixture does not pollute
+        // the worker page shared by the other catalog gallery tests.
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        try {
+            const { data } = features[2];
+            const fixturePage = new MasCatalog(page);
+
+            await test.step('step-1: Go to Catalog gallery page', async () => {
+                await page.goto(`${baseURL}${DOCS_GALLERY_PATH.CATALOG}`);
+                await page.waitForLoadState('domcontentloaded');
+            });
+
+            await test.step('step-2: Wait for catalog variant cards to hydrate so catalog global CSS is injected', async () => {
+                const card = page.locator('.three-merch-cards.catalog merch-card[variant="catalog"]').first();
+                await expect(card).toBeVisible();
+            });
+
+            await test.step('step-3: Inject catalog marquee fixture and a plain mnemonic-list control', async () => {
+                await fixturePage.injectMarqueeFixtures();
+                await expect(fixturePage.getCatalogMarqueeTitle()).toBeVisible();
+                await expect(fixturePage.getControlMnemonicTitle()).toBeVisible();
+            });
+
+            await test.step('step-4: Verify marquee product title uses XS heading token, control does not', async () => {
+                const expectedPx = await fixturePage.resolveCssVariablePx(data.cssVariable);
+                expect(expectedPx).toMatch(/^\d+(\.\d+)?px$/);
+
+                await expect(fixturePage.getCatalogMarqueeTitle()).toHaveCSS('font-size', expectedPx);
+
+                const controlPx = await fixturePage
+                    .getControlMnemonicTitle()
+                    .evaluate((el) => window.getComputedStyle(el).fontSize);
+                expect(controlPx).not.toBe(expectedPx);
+            });
+        } finally {
+            await context.close();
+        }
+    });
 });
