@@ -22,6 +22,12 @@
     "libs_param": "maslibs",
     "libs_param_value": "local",
     "depends_on": [],
+    "pipeline": {
+        "progress_tracking": {
+            "github": true,
+            "slack": true
+        }
+    },
     "test_urls": {
         "envs": {
             "@mas_live": "https://main--mas-pinata--adobecom.aem.live",
@@ -45,5 +51,9 @@
             "draft_pr": true,
             "exit_nonzero": false
         }
+    },
+    "review": {
+        "start_recipe": "pinata-start",
+        "stop_recipe": "pinata-stop"
     }
 }
