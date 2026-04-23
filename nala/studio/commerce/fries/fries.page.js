@@ -11,6 +11,8 @@ export default class COMFriesPage {
         this.icon = page.locator('merch-icon[slot="icons"]');
         this.trialBadge = page.locator('div[slot="trial-badge"] merch-badge');
         this.badge = page.locator('div[slot="badge"] merch-badge');
+        this.includedIconsRow = page.locator('[slot="included-icons"]');
+        this.includedIcon = page.locator('merch-icon[slot="included-icons"]');
 
         // fries card properties:
         this.cssProp = {

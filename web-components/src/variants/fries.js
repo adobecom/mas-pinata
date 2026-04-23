@@ -2,8 +2,10 @@ import { html, css } from 'lit';
 import { VariantLayout } from './variant-layout.js';
 import { CSS } from './fries.css.js';
 
+// includedIcons / includedIconsAlt are multi-value string fields on the Fries AEM content model — coordinate with the content platform team to add these fields before authors can use the new Studio section.
 export const FRIES_AEM_FRAGMENT_MAPPING = {
     mnemonics: { size: 's' },
+    includedIcons: true,
     title: { tag: 'h3', slot: 'heading-xxs', maxCount: 250, withSuffix: true },
     description: {
         tag: 'div',
@@ -47,6 +49,9 @@ export class FriesCard extends VariantLayout {
                 </div>
                 <slot name="badge"></slot>
                 <slot name="body-s"></slot>
+                <div class="included-icons">
+                    <slot name="included-icons"></slot>
+                </div>
                 <div class="footer">
                     <div class="cta">
                         <slot name="cta"></slot>
@@ -123,6 +128,20 @@ export class FriesCard extends VariantLayout {
             align-items: center;
             gap: 8px;
             margin-top: 15px;
+        }
+
+        :host([variant='fries']) .included-icons {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        :host([variant='fries']) ::slotted(merch-icon[slot='included-icons']) {
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
         }
     `;
 }
