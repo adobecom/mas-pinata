@@ -30,6 +30,7 @@ styles.innerHTML = `
 
     /* badge */
     --type-heading-xxs-size: 11px;
+    --type-heading-xs-size: 16px;
 
     /* headings */
     --consonant-merch-card-heading-xxxs-font-size: 14px;
