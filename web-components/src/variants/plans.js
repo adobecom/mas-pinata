@@ -345,7 +345,6 @@ export class Plans extends VariantLayout {
                 <slot name="quantity-select"></slot>
                 ${this.stockCheckbox}
                 <slot name="addon"></slot>
-                <slot name="badge"></slot>
             </div>
             ${this.secureLabelFooter}
             <slot></slot>`;

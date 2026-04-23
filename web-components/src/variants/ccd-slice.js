@@ -131,5 +131,9 @@ export class CCDSlice extends VariantLayout {
             align-items: center;
             gap: 8px;
         }
+
+        :host([variant='ccd-slice']) .badge-row {
+            display: contents;
+        }
     `;
 }

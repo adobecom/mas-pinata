@@ -1,4 +1,4 @@
-import { html, css } from 'lit';
+import { html, css, nothing } from 'lit';
 import { VariantLayout } from './variant-layout.js';
 import { CSS } from './simplified-pricing-express.css.js';
 import Media, { isDesktop, MOBILE_LANDSCAPE } from '../media.js';
@@ -222,12 +222,11 @@ export class SimplifiedPricingExpress extends VariantLayout {
 
     renderLayout() {
         return html`
-            <div
-                class="badge-wrapper"
-                style="${this.badge ? '' : 'visibility: hidden'}"
-            >
-                <slot name="badge"></slot>
-            </div>
+            ${this.badge
+                ? html`<div class="badge-wrapper">
+                      <slot name="badge"></slot>
+                  </div>`
+                : nothing}
             <div class="card-content" @click=${(e) => this.handleCardClick(e)}>
                 <div class="header">
                     <slot name="heading-xs"></slot>
@@ -359,20 +358,16 @@ export class SimplifiedPricingExpress extends VariantLayout {
                 );
         }
 
-        :host(
-                [variant='simplified-pricing-express']:has(
-                        [slot='badge']:not(:empty)
-                    )
-            )
+        :host([variant='simplified-pricing-express'][has-badge])
             .card-content {
             border-top-left-radius: 0;
             border-top-right-radius: 0;
         }
 
         :host(
-                [variant='simplified-pricing-express']:not(
+                [variant='simplified-pricing-express'][has-badge]:not(
                         [gradient-border='true']
-                    ):has([slot='badge']:not(:empty))
+                    )
             )
             .card-content {
             border-top: 1px solid
@@ -382,11 +377,7 @@ export class SimplifiedPricingExpress extends VariantLayout {
                 );
         }
 
-        :host(
-                [variant='simplified-pricing-express']:has(
-                        [slot='badge']:not(:empty)
-                    )
-            )
+        :host([variant='simplified-pricing-express'][has-badge])
             .badge-wrapper {
             margin-bottom: -2px;
         }
@@ -450,9 +441,7 @@ export class SimplifiedPricingExpress extends VariantLayout {
         }
 
         :host(
-                [variant='simplified-pricing-express'][gradient-border='true']:has(
-                        [slot='badge']:not(:empty)
-                    )
+                [variant='simplified-pricing-express'][gradient-border='true'][has-badge]
             )
             .card-content {
             border-top-left-radius: 8px;
@@ -460,9 +449,7 @@ export class SimplifiedPricingExpress extends VariantLayout {
         }
 
         :host(
-                [variant='simplified-pricing-express'][gradient-border='true']:has(
-                        [slot='badge']:not(:empty)
-                    )
+                [variant='simplified-pricing-express'][gradient-border='true'][has-badge]
             )
             .card-content::before {
             border-top-left-radius: 6px;

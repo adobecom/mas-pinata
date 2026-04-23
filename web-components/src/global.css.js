@@ -426,9 +426,6 @@ merch-card[variant='product'] [slot='badge'],
 merch-card[variant='segment'] [slot='badge'],
 merch-card[variant^='plans'] [slot='badge'],
 merch-card[variant='special-offers'] [slot='badge'] {
-    position: absolute;
-    top: 16px;
-    inset-inline-end: 0;
     line-height: 16px;
 }
 

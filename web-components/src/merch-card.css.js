@@ -106,24 +106,23 @@ export const styles = css`
         margin-right: var(--consonant-merch-spacing-xs);
     }
 
+    .badge-row {
+        display: none;
+        width: 100%;
+    }
+
+    :host([has-badge]) .badge-row {
+        display: block;
+    }
+
     div[class$='-badge'] {
-        position: absolute;
-        top: 16px;
-        right: 0;
         font-size: var(--type-heading-xxs-size);
         font-weight: 500;
         max-width: 180px;
         line-height: 16px;
         text-align: center;
         padding: 8px 11px;
-        border-radius: 5px 0 0 5px;
-    }
-
-    div[class$='-badge']:dir(rtl) {
-        left: 0;
-        right: initial;
-        padding: 8px 11px;
-        border-radius: 0 5px 5px 0;
+        border-radius: 5px;
     }
 
     :host([variant='mini-compare-chart']) div[class$='-badge'] {

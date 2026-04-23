@@ -297,7 +297,6 @@ export class MiniCompareChartMweb extends VariantLayout {
             ${this.badge}
             <div class="body">
                 ${this.icons}
-                <slot name="badge"></slot>
                 <slot name="heading-xs"></slot>
                 <slot name="subtitle"></slot>
                 <slot name="heading-m-price"></slot>

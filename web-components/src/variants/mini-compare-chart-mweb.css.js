@@ -25,17 +25,7 @@ export const CSS = `
   }
 
   merch-card[variant="mini-compare-chart-mweb"] [slot="badge"] {
-    position: absolute;
-    top: 16px;
-    inset-inline-end: 0;
     line-height: 16px;
-  }
-
-  merch-card[variant="mini-compare-chart-mweb"] div[class$='-badge']:dir(rtl) {
-    left: 0;
-    right: initial;
-    padding: 8px 11px;
-    border-radius: 0 5px 5px 0;
   }
 
   merch-card[variant="mini-compare-chart-mweb"] merch-badge {

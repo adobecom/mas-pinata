@@ -242,9 +242,20 @@ export class MerchCard extends LitElement {
 
     static getFragmentMapping = getFragmentMapping;
 
+    updateHasBadgeAttribute() {
+        const hasSlottedBadge = !!this.querySelector(':scope > [slot="badge"]');
+        const hasLegacyBadge = !!(
+            this.badgeText &&
+            this.badgeColor &&
+            this.badgeBackgroundColor
+        );
+        this.toggleAttribute('has-badge', hasSlottedBadge || hasLegacyBadge);
+    }
+
     firstUpdated() {
         this.variantLayout = getVariantLayout(this);
         this.variantLayout?.connectedCallbackHook();
+        this.updateHasBadgeAttribute();
     }
 
     willUpdate(changedProperties) {
@@ -274,6 +285,13 @@ export class MerchCard extends LitElement {
                 '--merch-card-custom-background-color',
                 this.backgroundColor ? `var(--${this.backgroundColor})` : '',
             );
+        }
+        if (
+            changedProperties.has('badgeText') ||
+            changedProperties.has('badgeColor') ||
+            changedProperties.has('badgeBackgroundColor')
+        ) {
+            this.updateHasBadgeAttribute();
         }
         try {
             this.variantLayoutPromise =

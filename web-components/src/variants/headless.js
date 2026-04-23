@@ -61,6 +61,7 @@ export class Headless extends VariantLayout {
         return CSS;
     }
 
+    /** Diagnostic editor view — badge slot is rendered inline as a labeled HEADLESS_FIELDS row, so the base class `.badge-row` wrapper is intentionally not emitted. */
     renderLayout() {
         return html`
             <div class="headless">

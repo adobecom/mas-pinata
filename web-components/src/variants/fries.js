@@ -40,12 +40,12 @@ export class FriesCard extends VariantLayout {
     renderLayout() {
         return html`
             <div class="content">
+                ${this.badge}
                 <div class="header">
                     <slot name="icons"></slot>
                     <slot name="heading-xxs"></slot>
                     <slot name="trial-badge"></slot>
                 </div>
-                <slot name="badge"></slot>
                 <slot name="body-s"></slot>
                 <div class="footer">
                     <div class="cta">
