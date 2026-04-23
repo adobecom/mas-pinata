@@ -52,7 +52,8 @@ test.describe('M@S Studio Commerce Fries included icons test suite', () => {
                 const firstOption = page.locator('mas-icon-picker-field-panel [role="listitem"], sp-menu-item').first();
                 await expect(firstOption).toBeVisible();
                 await firstOption.click();
-                await page.waitForTimeout(500);
+                await expect(firstOption).toBeHidden();
+                await expect(pickerField.locator('img, svg').first()).toBeVisible();
             }
         });
 
