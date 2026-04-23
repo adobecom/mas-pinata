@@ -148,4 +148,9 @@ merch-card[variant="catalog"] .payment-details {
 merch-card[variant="catalog"] [slot="footer"] .spectrum-Link--primary {
   font-size: 15px;
   font-weight: 700;
+}
+
+.marquee.catalog .mnemonic-list .product-list .product-item strong,
+.catalog-marquee .mnemonic-list .product-list .product-item strong {
+    font-size: var(--type-heading-xs-size);
 }`;
