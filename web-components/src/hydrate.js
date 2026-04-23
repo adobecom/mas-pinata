@@ -94,6 +94,23 @@ export function processMnemonics(fields, merchCard, mnemonicsConfig) {
     }
 }
 
+export function processIncludedIcons(fields, merchCard, mapping) {
+    if (!mapping?.includedIcons) return;
+    const icons = (fields.includedIcons || []).filter(Boolean).slice(0, 8);
+    if (!icons.length) return;
+    const alts = fields.includedIconsAlt || [];
+    icons.forEach((src, index) => {
+        const attrs = {
+            slot: 'included-icons',
+            src,
+            loading: merchCard.loading,
+            size: 's',
+        };
+        if (alts[index]) attrs.alt = alts[index];
+        merchCard.append(createTag('merch-icon', attrs));
+    });
+}
+
 function processBadge(fields, merchCard, mapping) {
     if (mapping.badge?.slot) {
         if (fields.badge?.length && !fields.badge?.startsWith('<merch-badge')) {
@@ -846,6 +863,7 @@ export async function hydrate(fragment, merchCard) {
         merchCard.setAttribute('consonant', true);
     }
     processMnemonics(fields, merchCard, mapping.mnemonics);
+    processIncludedIcons(fields, merchCard, mapping);
     processTrialBadge(fields, merchCard, mapping);
     processSize(fields, merchCard, mapping.size);
     processCardName(fields, merchCard);

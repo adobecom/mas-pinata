@@ -24,6 +24,7 @@ import { getGlobalSettingsDefaults } from '../settings/settings-store.js';
 
 const QUANTITY_MODEL = 'quantitySelect';
 const WHAT_IS_INCLUDED = 'whatsIncluded';
+const INCLUDED_ICONS = 'includedIcons';
 
 const VARIANT_RTE_MARKS = {
     [VARIANT_NAMES.MINI]: {
@@ -45,6 +46,7 @@ class MerchCardEditor extends LitElement {
 
     static SECTION_FIELDS = {
         Visuals: ['mnemonics', 'badge', 'trialBadge', 'border-color'],
+        'Included products': ['includedIcons'],
         "What's included": ['whatsIncluded', 'whatsIncludedIconPicker', 'quantitySelect'],
         'Product details': ['description', 'shortDescription', 'callout'],
         'Footer rows': ['footerRows'],
@@ -566,6 +568,17 @@ class MerchCardEditor extends LitElement {
                 return mnemonic;
             }) ?? []
         );
+    }
+
+    get includedIcons() {
+        if (!this.fragment) return [];
+        const icons = this.getEffectiveFieldValues('includedIcons') || [];
+        const alts = this.getEffectiveFieldValues('includedIconsAlt') || [];
+        return icons.filter(Boolean).map((icon, index) => ({
+            icon,
+            alt: alts[index] ?? '',
+            link: '',
+        }));
     }
 
     get fragment() {
@@ -1204,6 +1217,21 @@ class MerchCardEditor extends LitElement {
                     </mas-multifield>
                     ${this.renderFieldStatusIndicator('whatsIncluded')}
                 </sp-field-group>
+                <sp-field-group class="toggle" id="includedIcons">
+                    <div class="section-title">Included products</div>
+                    <mas-multifield
+                        button-label="Add product icon"
+                        data-field-state="${this.getFieldState('includedIcons')}"
+                        .value="${this.includedIcons}"
+                        @change="${this.#updateIncludedIcons}"
+                        @input="${this.#updateIncludedIcons}"
+                    >
+                        <template>
+                            <mas-icon-picker-field></mas-icon-picker-field>
+                        </template>
+                    </mas-multifield>
+                    ${this.renderFieldStatusIndicator('includedIcons')}
+                </sp-field-group>
                 <sp-field-group class="toggle" id="footerRows">
                     <div class="section-title">Footer rows</div>
                     <mas-multifield
@@ -1654,6 +1682,15 @@ class MerchCardEditor extends LitElement {
         const element = this.createFooterRowsElement(values);
         this.fragmentStore.updateField('footerRows', [element?.outerHTML || '']);
     }
+
+    #updateIncludedIcons = (event) => {
+        const items = Array.isArray(event?.target?.value) ? event.target.value : [];
+        const nonEmpty = items.filter(({ icon }) => Boolean(icon)).slice(0, 8);
+        const icons = nonEmpty.map(({ icon }) => icon ?? '');
+        const alts = nonEmpty.map(({ alt }) => alt ?? '');
+        this.fragmentStore.updateField(INCLUDED_ICONS, icons.length ? icons : ['']);
+        this.fragmentStore.updateField('includedIconsAlt', alts.length ? alts : ['']);
+    };
 
     #updateMnemonics(event) {
         this.lastMnemonicState = {

@@ -128,6 +128,15 @@ export const CSS = `
         margin-left: 8px;
     }
 
+    merch-card[variant='fries'] merch-icon[slot='included-icons'] {
+        display: inline-flex;
+    }
+
+    merch-card[variant='fries'] merch-icon[slot='included-icons'] img {
+        width: 24px;
+        height: 24px;
+    }
+
     .spectrum--dark merch-card[variant="fries"],
     .spectrum--darkest merch-card[variant="fries"] {
       --spectrum-yellow-300:rgb(248, 217, 4);
