@@ -3,6 +3,7 @@ export default class SavedViewsPage {
         this.page = page;
 
         this.toolbar = page.locator('mas-toolbar');
+        this.filterBadge = this.toolbar.locator('.filters-badge');
         this.picker = this.toolbar.locator('sp-picker[label="Saved views"]');
         this.saveOption = this.picker.locator('sp-menu-item[value="__save__"]');
 

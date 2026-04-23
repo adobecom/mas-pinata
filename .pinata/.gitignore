@@ -1,1 +1,3 @@
+# Runtime artifacts — never commit
+auth-cache.json
 state/

@@ -89,6 +89,11 @@ test.describe('M@S Studio Saved Views test suite', () => {
             await mockPreferencesEndpoint(newPage);
             await newPage.goto(sharedUrl);
             await newPage.waitForLoadState('domcontentloaded');
+
+            const newSavedViews = new (savedViews.constructor)(newPage);
+            await expect(newSavedViews.picker).toBeVisible();
+            await expect(newSavedViews.filterBadge).toHaveText(data.expectedFilterCount);
+
             for (const key of data.expectedHashKeys) {
                 expect(newPage.url()).toContain(key);
             }

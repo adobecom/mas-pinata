@@ -66,8 +66,7 @@ class MasStudio extends LitElement {
         this.subscribeLandscapeObserver();
         this.subscribeConsumerObserver();
         this.addEventListener('fragment-loaded', this.handleFragmentLoaded);
-        initUsers();
-        initSavedViews();
+        initUsers().then(initSavedViews);
     }
 
     handleFragmentLoaded = () => {
