@@ -22,6 +22,7 @@ import './editor-panel.js';
 import './editors/merch-card-editor.js';
 import './editors/merch-card-collection-editor.js';
 import { initUsers } from './users.js';
+import { initSavedViews } from './saved-views.js';
 import './placeholders/mas-placeholders.js';
 import './settings/mas-settings.js';
 import './mas-confirm-dialog.js';
@@ -66,6 +67,7 @@ class MasStudio extends LitElement {
         this.subscribeConsumerObserver();
         this.addEventListener('fragment-loaded', this.handleFragmentLoaded);
         initUsers();
+        initSavedViews();
     }
 
     handleFragmentLoaded = () => {

@@ -1,11 +1,14 @@
 import { LitElement, html, css, nothing } from 'lit';
 import StoreController from './reactivity/store-controller.js';
 import Store from './store.js';
+import Events from './events.js';
+import { saveSavedViews } from './saved-views.js';
 import './mas-folder-picker.js';
 import './aem/mas-filter-panel.js';
 import './mas-selection-panel.js';
 import './mas-create-dialog.js';
 import './mas-copy-dialog.js';
+// Requires sp-picker / sp-menu-item / sp-menu-divider (loaded via ./swc.js)
 
 const renderModes = [
     {
@@ -31,6 +34,11 @@ const contentTypes = [
     },
 ];
 
+const MAX_SAVED_VIEWS = 20;
+const MAX_VIEW_NAME_LENGTH = 60;
+const SAVE_SENTINEL = '__save__';
+const SHAREABLE_HASH_LIMIT = 2000;
+
 class MasToolbar extends LitElement {
     static properties = {
         createDialogOpen: { state: true },
@@ -38,6 +46,10 @@ class MasToolbar extends LitElement {
         filterCount: { state: true },
         copyDialogOpen: { state: true },
         fragmentToCopy: { state: true },
+        savedViewDialogOpen: { state: true },
+        savedViewNameDraft: { state: true },
+        savedViewNameError: { state: true },
+        savedViewSaving: { state: true },
     };
 
     static styles = css`
@@ -123,6 +135,71 @@ class MasToolbar extends LitElement {
         #search-results-label {
             color: var(--spectrum-gray-700);
         }
+
+        .saved-views-picker {
+            min-width: 180px;
+        }
+
+        .saved-view-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .saved-view-row .saved-view-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .saved-view-delete {
+            flex-shrink: 0;
+        }
+
+        .saved-view-dialog-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .saved-view-dialog {
+            background: var(--spectrum-white);
+            border-radius: 8px;
+            padding: 24px;
+            min-width: 360px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .saved-view-dialog-header {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .saved-view-dialog-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .saved-view-dialog sp-textfield {
+            width: 100%;
+        }
+
+        .saved-view-name-error {
+            color: var(--spectrum-red-700, #b60000);
+            font-size: 12px;
+            margin-top: 8px;
+        }
     `;
 
     constructor() {
@@ -132,6 +209,10 @@ class MasToolbar extends LitElement {
         this.filterCount = 0;
         this.copyDialogOpen = false;
         this.fragmentToCopy = null;
+        this.savedViewDialogOpen = false;
+        this.savedViewNameDraft = '';
+        this.savedViewNameError = '';
+        this.savedViewSaving = false;
 
         this.handleCopyToFolder = this.handleCopyToFolder.bind(this);
     }
@@ -145,6 +226,7 @@ class MasToolbar extends LitElement {
     renderMode = new StoreController(this, Store.renderMode);
     selecting = new StoreController(this, Store.selecting);
     loading = new StoreController(this, Store.fragments.list.loading);
+    savedViews = new StoreController(this, Store.savedViews);
 
     connectedCallback() {
         super.connectedCallback();
@@ -238,6 +320,7 @@ class MasToolbar extends LitElement {
                     : html`<div slot="icon" class="filters-badge">${this.filterCount}</div>`}
                 Filter</sp-action-button
             >
+            ${this.savedViewsPicker}
             <sp-search
                 label="Search"
                 placeholder="Search"
@@ -246,6 +329,273 @@ class MasToolbar extends LitElement {
                 value=${this.search.value.query}
                 size="m"
             ></sp-search>
+        </div>`;
+    }
+
+    get savedViewsPicker() {
+        const views = this.savedViews.value || [];
+        return html`<sp-picker
+            class="saved-views-picker"
+            label="Saved views"
+            placeholder="Saved views"
+            .value=${''}
+            size="m"
+            @change=${this.handleSavedViewPickerChange}
+        >
+            <sp-menu-item value="${SAVE_SENTINEL}">
+                <sp-icon-save-floppy slot="icon"></sp-icon-save-floppy>
+                Save current view
+            </sp-menu-item>
+            ${views.length > 0 ? html`<sp-menu-divider></sp-menu-divider>` : nothing}
+            ${views.map(
+                (view) => html`<sp-menu-item value="${view.id}">
+                    <div class="saved-view-row">
+                        <span class="saved-view-name" title=${view.name}>${view.name}</span>
+                        <sp-action-button
+                            quiet
+                            size="s"
+                            class="saved-view-delete"
+                            label="Delete view ${view.name}"
+                            @click=${(e) => this.handleDeleteSavedView(e, view)}
+                            @pointerdown=${(e) => e.stopPropagation()}
+                        >
+                            <sp-icon-close slot="icon"></sp-icon-close>
+                        </sp-action-button>
+                    </div>
+                </sp-menu-item>`,
+            )}
+        </sp-picker>`;
+    }
+
+    handleSavedViewPickerChange(event) {
+        const target = event.target;
+        const value = target.value;
+        if (!value) return;
+        if (value === SAVE_SENTINEL) {
+            this.openSavedViewDialog();
+        } else {
+            this.applySavedView(value);
+        }
+        // Reset selection so the same view can be chosen again.
+        if (target) target.value = '';
+    }
+
+    openSavedViewDialog() {
+        this.savedViewNameDraft = '';
+        this.savedViewNameError = '';
+        this.savedViewSaving = false;
+        this.savedViewDialogOpen = true;
+    }
+
+    closeSavedViewDialog() {
+        this.savedViewDialogOpen = false;
+        this.savedViewNameDraft = '';
+        this.savedViewNameError = '';
+        this.savedViewSaving = false;
+    }
+
+    buildCurrentViewPayload() {
+        const filters = Store.filters.value || {};
+        const sort = Store.sort.value || {};
+        const search = Store.search.value || {};
+        return {
+            filters: {
+                locale: filters.locale,
+                tags: filters.tags,
+                personalizationFilterEnabled: !!filters.personalizationFilterEnabled,
+            },
+            createdByUsers: (Store.createdByUsers.value || []).map((u) => ({
+                displayName: u.displayName,
+                userPrincipalName: u.userPrincipalName,
+            })),
+            searchPath: search.path || '',
+            sort: {
+                sortBy: sort.sortBy,
+                sortDirection: sort.sortDirection,
+            },
+        };
+    }
+
+    generateViewId() {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID();
+        }
+        return `view-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    async handleSaveSavedViewConfirm() {
+        const name = (this.savedViewNameDraft || '').trim();
+        if (!name) {
+            this.savedViewNameError = 'Name is required';
+            return;
+        }
+        if (name.length > MAX_VIEW_NAME_LENGTH) {
+            this.savedViewNameError = `Name must be ${MAX_VIEW_NAME_LENGTH} characters or fewer`;
+            return;
+        }
+
+        const current = Store.savedViews.value || [];
+        const existing = current.find((v) => v.name.toLowerCase() === name.toLowerCase());
+        if (!existing && current.length >= MAX_SAVED_VIEWS) {
+            Events.toast.emit({
+                variant: 'negative',
+                content: `Maximum of ${MAX_SAVED_VIEWS} saved views reached. Delete one to save a new view.`,
+            });
+            this.closeSavedViewDialog();
+            return;
+        }
+
+        if (existing) {
+            const confirmed = window.confirm(`Overwrite existing view "${existing.name}"?`);
+            if (!confirmed) return;
+        }
+
+        const payload = this.buildCurrentViewPayload();
+        let next;
+        if (existing) {
+            next = current.map((v) =>
+                v.id === existing.id
+                    ? { ...existing, name, payload, createdAt: new Date().toISOString() }
+                    : v,
+            );
+        } else {
+            next = [
+                ...current,
+                {
+                    id: this.generateViewId(),
+                    name,
+                    createdAt: new Date().toISOString(),
+                    payload,
+                },
+            ];
+        }
+
+        const previous = current;
+        this.savedViewSaving = true;
+        Store.savedViews.set(next);
+        try {
+            const persisted = await saveSavedViews(next);
+            Store.savedViews.set(Array.isArray(persisted) ? persisted : next);
+            Events.toast.emit({ variant: 'positive', content: 'View saved' });
+            this.closeSavedViewDialog();
+        } catch (e) {
+            console.error('Failed to save view', e);
+            Store.savedViews.set(previous);
+            this.savedViewSaving = false;
+            Events.toast.emit({ variant: 'negative', content: 'Could not save view. Try again.' });
+        }
+    }
+
+    applySavedView(id) {
+        const view = (Store.savedViews.value || []).find((v) => v.id === id);
+        if (!view || !view.payload) return;
+        const { payload } = view;
+
+        Store.search.set((prev) => ({
+            ...prev,
+            region: undefined,
+            path: payload.searchPath || '',
+        }));
+        Store.filters.set(() => ({
+            locale: payload.filters?.locale || 'en_US',
+            tags: payload.filters?.tags,
+            personalizationFilterEnabled: !!payload.filters?.personalizationFilterEnabled,
+        }));
+        if (payload.sort) {
+            Store.sort.set({
+                sortBy: payload.sort.sortBy,
+                sortDirection: payload.sort.sortDirection,
+            });
+        }
+        Store.createdByUsers.set(Array.isArray(payload.createdByUsers) ? payload.createdByUsers : []);
+
+        // Missing-folder warning
+        const folders = Store.folders.data.value || [];
+        if (
+            payload.searchPath &&
+            Store.folders.loaded.value &&
+            !folders.includes(payload.searchPath)
+        ) {
+            Events.toast.emit({
+                variant: 'negative',
+                content: `Saved folder path not found: ${payload.searchPath}`,
+            });
+        }
+
+        // Hash length warning (debounced writer runs at ~50ms).
+        setTimeout(() => {
+            if ((window.location.hash || '').length > SHAREABLE_HASH_LIMIT) {
+                Events.toast.emit({
+                    variant: 'info',
+                    content: 'View applied, but the URL is too long to share.',
+                });
+            }
+        }, 100);
+    }
+
+    async handleDeleteSavedView(event, view) {
+        event.stopPropagation();
+        event.preventDefault();
+        const confirmed = window.confirm(`Delete saved view "${view.name}"?`);
+        if (!confirmed) return;
+        const current = Store.savedViews.value || [];
+        const next = current.filter((v) => v.id !== view.id);
+        Store.savedViews.set(next);
+        try {
+            const persisted = await saveSavedViews(next);
+            Store.savedViews.set(Array.isArray(persisted) ? persisted : next);
+        } catch (e) {
+            console.error('Failed to delete view', e);
+            Store.savedViews.set(current);
+            Events.toast.emit({ variant: 'negative', content: 'Could not delete view. Try again.' });
+        }
+    }
+
+    get savedViewDialog() {
+        if (!this.savedViewDialogOpen) return nothing;
+        return html`<div class="saved-view-dialog-backdrop" @click=${(e) => {
+            if (e.target === e.currentTarget && !this.savedViewSaving) this.closeSavedViewDialog();
+        }}>
+            <div class="saved-view-dialog" @click=${(e) => e.stopPropagation()}>
+                <div class="saved-view-dialog-header">Save current view</div>
+                <sp-field-label for="saved-view-name">View name</sp-field-label>
+                <sp-textfield
+                    id="saved-view-name"
+                    placeholder="e.g. ACOM FR plans"
+                    maxlength="${MAX_VIEW_NAME_LENGTH}"
+                    value=${this.savedViewNameDraft}
+                    ?disabled=${this.savedViewSaving}
+                    @input=${(e) => {
+                        this.savedViewNameDraft = e.target.value;
+                        this.savedViewNameError = '';
+                    }}
+                    @keydown=${(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.handleSaveSavedViewConfirm();
+                        }
+                    }}
+                ></sp-textfield>
+                ${this.savedViewNameError
+                    ? html`<div class="saved-view-name-error">${this.savedViewNameError}</div>`
+                    : nothing}
+                <div class="saved-view-dialog-footer">
+                    <sp-button
+                        variant="secondary"
+                        ?disabled=${this.savedViewSaving}
+                        @click=${() => this.closeSavedViewDialog()}
+                    >
+                        Cancel
+                    </sp-button>
+                    <sp-button
+                        variant="accent"
+                        ?disabled=${this.savedViewSaving}
+                        @click=${() => this.handleSaveSavedViewConfirm()}
+                    >
+                        Save
+                    </sp-button>
+                </div>
+            </div>
         </div>`;
     }
 
@@ -359,7 +709,8 @@ class MasToolbar extends LitElement {
                           this.fragmentToCopy = null;
                       }}
                   ></mas-copy-dialog>`
-                : nothing} `;
+                : nothing}
+            ${this.savedViewDialog}`;
     }
 }
 

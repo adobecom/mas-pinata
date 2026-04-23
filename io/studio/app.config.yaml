@@ -40,6 +40,13 @@ application:
                         function: src/members/list.js
                         web: 'yes'
                         runtime: nodejs:22
+                    preferences:
+                        function: src/preferences/index.js
+                        web: 'yes'
+                        runtime: nodejs:22
+                        annotations:
+                            require-adobe-auth: false
+                            final: true
                     translation-project-start:
                         function: src/translation/project-start.js
                         web: 'yes'
