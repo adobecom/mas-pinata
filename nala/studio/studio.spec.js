@@ -121,6 +121,7 @@ export default {
             path: '/studio.html',
             data: {
                 cardid: '48a759ce-3c9a-4158-9bc3-b21ffa07e8e4',
+                contentQuery: 'Adobe',
             },
             browserParams: '#path=nala&page=content',
             tags: '@mas-studio @search',

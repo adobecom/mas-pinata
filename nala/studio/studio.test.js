@@ -424,12 +424,29 @@ test.describe('M@S Studio feature test suite', () => {
         await test.step('step-3: Search by the captured title string', async () => {
             await studio.searchInput.fill(fragmentTitle);
             await page.keyboard.press('Enter');
-            await page.waitForTimeout(3000);
+            await studio.waitForCardsLoaded();
         });
 
         await test.step('step-4: Validate fragment is returned by title-based search', async () => {
             await expect(studio.tableViewRowByFragmentId(data.cardid)).toBeVisible({ timeout: 15000 });
             expect(page.url()).toContain('query=');
+        });
+
+        await test.step('step-5: Content-field search still returns results (regression)', async () => {
+            await studio.searchInput.fill('');
+            await studio.searchInput.fill(data.contentQuery);
+            await page.keyboard.press('Enter');
+            await studio.waitForCardsLoaded();
+            await expect(studio.tableViewRows.first()).toBeVisible({ timeout: 15000 });
+            expect(page.url()).toContain(`query=${data.contentQuery}`);
+        });
+
+        await test.step('step-6: Title+content term returns fragment exactly once (dedup)', async () => {
+            await studio.searchInput.fill('');
+            await studio.searchInput.fill(fragmentTitle);
+            await page.keyboard.press('Enter');
+            await studio.waitForCardsLoaded();
+            await expect(studio.tableViewRowByFragmentId(data.cardid)).toHaveCount(1);
         });
     });
 
