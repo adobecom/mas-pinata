@@ -54,6 +54,7 @@
     },
     "review": {
         "start_recipe": "pinata-start",
-        "stop_recipe": "pinata-stop"
+        "stop_recipe": "pinata-stop",
+        "ims_gated": true
     }
 }
