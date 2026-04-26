@@ -17,9 +17,14 @@ export default class StudioPage {
         this.searchIcon = page.locator('#actions sp-search[placeholder="Search"] sp-icon-search');
         this.filter = page.locator('sp-action-button[label="Filter"]');
         this.folderPicker = page.locator('mas-nav-folder-picker sp-action-menu');
-        this.previewMenu = page.locator('#actions sp-action-menu[value="render"]');
+        this.previewMenu = page.locator('#actions sp-action-menu[selects="single"]');
         this.renderViewOption = this.previewMenu.locator('sp-menu-item[value="render"]');
         this.tableViewOption = this.previewMenu.locator('sp-menu-item[value="table"]');
+        this.saveViewButton = page.getByRole('button', { name: 'Save view' });
+        this.savedViewsMenu = page.locator('sp-action-menu#saved-views-menu');
+        this.savedViewItem = (name) => this.savedViewsMenu.locator('sp-menu-item').filter({ hasText: name });
+        this.setDefaultButton = (name) => this.savedViewItem(name).locator('sp-action-button[label*="default" i]');
+        this.deleteViewButton = (name) => this.savedViewItem(name).locator('sp-action-button[label="Delete view"]');
         this.renderView = page.locator('#render');
         this.tableView = page.locator('sp-table');
         this.contentTableBody = page.locator('#content sp-table-body');

@@ -77,6 +77,7 @@ const Store = {
     profile: new ReactiveStore({}),
     createdByUsers: new ReactiveStore([]),
     users: new ReactiveStore([]),
+    savedViews: new ReactiveStore([], savedViewsValidator),
     confirmDialogOptions: new ReactiveStore(null),
     showCloneDialog: new ReactiveStore(false),
     preview: new ReactiveStore(null, previewValidator),
@@ -229,6 +230,29 @@ function previewValidator(value) {
     if (!value.position) return { ...value, position: defaultPosition };
     value.position = { ...defaultPosition, ...value.position };
     return value;
+}
+
+/**
+ * @param {any} value
+ * @returns {Array<{id: string, name: string, filters: object, sort: object, viewMode: string, isDefault: boolean}>}
+ */
+function savedViewsValidator(value) {
+    if (!Array.isArray(value)) return [];
+    const cleaned = value.filter(
+        (v) => v && typeof v === 'object' && typeof v.id === 'string' && typeof v.name === 'string' && v.name.trim() !== '',
+    );
+    let lastDefaultIndex = -1;
+    cleaned.forEach((v, i) => {
+        if (v.isDefault === true) lastDefaultIndex = i;
+    });
+    return cleaned.map((v, i) => ({
+        id: v.id,
+        name: v.name,
+        filters: v.filters && typeof v.filters === 'object' ? v.filters : {},
+        sort: v.sort && typeof v.sort === 'object' ? v.sort : {},
+        viewMode: typeof v.viewMode === 'string' ? v.viewMode : 'render',
+        isDefault: i === lastDefaultIndex,
+    }));
 }
 
 // #endregion

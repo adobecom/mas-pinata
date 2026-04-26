@@ -41,6 +41,8 @@ import { getDefaultLocaleCode } from '../../io/www/src/fragment/locales.js';
 import { getDictionary } from '../libs/fragment-client.js';
 import { applyCorrectorToFragment } from './utils/corrector-helper.js';
 import { Promotion } from './aem/promotion.js';
+import { loadPreferences } from './preferences.js';
+import { applySavedView } from './saved-views-utils.js';
 
 let fragmentCache;
 
@@ -163,7 +165,41 @@ export class MasRepository extends LitElement {
         });
 
         this.loadFolders();
+        this.#loadSavedViews();
         this.style.display = 'none';
+    }
+
+    async #loadSavedViews() {
+        try {
+            await this.#whenProfileReady();
+            const { savedViews } = await loadPreferences();
+            Store.savedViews.set(savedViews);
+            const defaultView = Store.savedViews.get().find((v) => v.isDefault === true);
+            if (!defaultView) return;
+            if (Store.fragments.list.firstPageLoaded.get() === true) return;
+            applySavedView(defaultView);
+        } catch (error) {
+            console.error('Failed to load saved views', error);
+        }
+    }
+
+    #whenProfileReady() {
+        if (Store.profile.value?.userId) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+            let timeoutId;
+            const onChange = (value) => {
+                if (value?.userId) {
+                    clearTimeout(timeoutId);
+                    Store.profile.unsubscribe(onChange);
+                    resolve();
+                }
+            };
+            timeoutId = setTimeout(() => {
+                Store.profile.unsubscribe(onChange);
+                reject(new Error('Profile not ready within 10s'));
+            }, 10000);
+            Store.profile.subscribe(onChange);
+        });
     }
 
     /**

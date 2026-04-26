@@ -1,6 +1,9 @@
 import { LitElement, html, css, nothing } from 'lit';
 import StoreController from './reactivity/store-controller.js';
 import Store from './store.js';
+import { showToast } from './utils.js';
+import { savePreferences } from './preferences.js';
+import { applySavedView } from './saved-views-utils.js';
 import './mas-folder-picker.js';
 import './aem/mas-filter-panel.js';
 import './mas-selection-panel.js';
@@ -123,6 +126,10 @@ class MasToolbar extends LitElement {
         #search-results-label {
             color: var(--spectrum-gray-700);
         }
+
+        sp-action-button.default-toggle.is-default {
+            color: var(--spectrum-accent-color-1000);
+        }
     `;
 
     constructor() {
@@ -145,6 +152,8 @@ class MasToolbar extends LitElement {
     renderMode = new StoreController(this, Store.renderMode);
     selecting = new StoreController(this, Store.selecting);
     loading = new StoreController(this, Store.fragments.list.loading);
+    savedViews = new StoreController(this, Store.savedViews);
+    profile = new StoreController(this, Store.profile);
 
     connectedCallback() {
         super.connectedCallback();
@@ -190,6 +199,70 @@ class MasToolbar extends LitElement {
     handleRenderModeChange(ev) {
         localStorage.setItem('mas-render-mode', ev.target.value);
         Store.renderMode.set(ev.target.value);
+    }
+
+    async #persistSavedViews(nextViews, previousViews) {
+        Store.savedViews.set(nextViews);
+        try {
+            await savePreferences(Store.savedViews.get());
+        } catch (e) {
+            Store.savedViews.set(previousViews);
+            showToast('Could not save view', 'negative');
+            throw e;
+        }
+    }
+
+    async handleSaveView() {
+        const rawName = window.prompt('Name for this view');
+        if (rawName === null) return;
+        const name = rawName.trim();
+        if (name === '') {
+            showToast('Please enter a name for this view', 'negative');
+            return;
+        }
+        const previousViews = Store.savedViews.get();
+        const entry = {
+            id: crypto.randomUUID(),
+            name,
+            filters: { ...Store.filters.get() },
+            sort: { ...Store.sort.get() },
+            viewMode: Store.renderMode.get(),
+            isDefault: false,
+        };
+        try {
+            await this.#persistSavedViews([...previousViews, entry], previousViews);
+            showToast('View saved', 'positive');
+        } catch (e) {
+            // already toasted
+        }
+    }
+
+    async handleApplyView(view) {
+        applySavedView(view);
+    }
+
+    async handleToggleDefault(view) {
+        const previousViews = Store.savedViews.get();
+        const wasDefault = view.isDefault === true;
+        const nextViews = previousViews.map((v) => ({
+            ...v,
+            isDefault: !wasDefault && v.id === view.id,
+        }));
+        try {
+            await this.#persistSavedViews(nextViews, previousViews);
+        } catch (e) {
+            // already toasted
+        }
+    }
+
+    async handleDeleteView(view) {
+        const previousViews = Store.savedViews.get();
+        const nextViews = previousViews.filter((v) => v.id !== view.id);
+        try {
+            await this.#persistSavedViews(nextViews, previousViews);
+        } catch (e) {
+            // already toasted
+        }
     }
 
     clearUuidResolutionState() {
@@ -238,6 +311,7 @@ class MasToolbar extends LitElement {
                     : html`<div slot="icon" class="filters-badge">${this.filterCount}</div>`}
                 Filter</sp-action-button
             >
+            ${this.savedViewsControls}
             <sp-search
                 label="Search"
                 placeholder="Search"
@@ -247,6 +321,59 @@ class MasToolbar extends LitElement {
                 size="m"
             ></sp-search>
         </div>`;
+    }
+
+    get savedViewsControls() {
+        if (!this.profile.value?.userId) return nothing;
+        const views = this.savedViews.value;
+        return html`<sp-button
+                variant="secondary"
+                treatment="outline"
+                @click=${() => this.handleSaveView()}
+                title="Save the current filters, sort, and view as a named view"
+            >
+                <sp-icon-save-floppy slot="icon"></sp-icon-save-floppy>
+                Save view
+            </sp-button>
+            <sp-action-menu
+                id="saved-views-menu"
+                placement="bottom"
+                label="Saved views"
+                ?disabled=${views.length === 0}
+            >
+                <sp-icon-bookmark slot="icon"></sp-icon-bookmark>
+                <span slot="label">Saved views</span>
+                ${views.map(
+                    (view) => html`<sp-menu-item @click=${() => this.handleApplyView(view)}>
+                        ${view.name}
+                        <sp-action-button
+                            slot="value"
+                            quiet
+                            size="s"
+                            class="default-toggle ${view.isDefault ? 'is-default' : ''}"
+                            label="${view.isDefault ? 'Unset as default' : 'Set as default'}"
+                            @click=${(ev) => {
+                                ev.stopPropagation();
+                                this.handleToggleDefault(view);
+                            }}
+                        >
+                            <sp-icon-star slot="icon"></sp-icon-star>
+                        </sp-action-button>
+                        <sp-action-button
+                            slot="value"
+                            quiet
+                            size="s"
+                            label="Delete view"
+                            @click=${(ev) => {
+                                ev.stopPropagation();
+                                this.handleDeleteView(view);
+                            }}
+                        >
+                            <sp-icon-delete slot="icon"></sp-icon-delete>
+                        </sp-action-button>
+                    </sp-menu-item>`,
+                )}
+            </sp-action-menu>`;
     }
 
     get createButton() {
