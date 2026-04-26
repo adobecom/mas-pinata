@@ -461,4 +461,98 @@ test.describe('M@S Studio feature test suite', () => {
             });
         });
     });
+
+    // @studio-saved-views-save - Save current filters/sort/viewMode as a named view
+    test(`${features[14].name},${features[14].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[14];
+        const testPage = `${baseURL}${features[14].path}${miloLibs}${features[14].browserParams}`;
+        const viewName = `${data.viewName}-${Date.now()}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Go to MAS Studio content page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+        });
+
+        await test.step('step-2: Stub window.prompt and click Save view', async () => {
+            await page.evaluate((name) => {
+                window.prompt = () => name;
+            }, viewName);
+            await expect(studio.saveViewButton).toBeVisible();
+            await studio.saveViewButton.click();
+        });
+
+        await test.step('step-3: Validate the new view appears in the menu', async () => {
+            await expect(studio.toastPositive).toBeVisible({ timeout: 10000 });
+            await studio.savedViewsMenu.click();
+            await expect(studio.savedViewItem(viewName)).toBeVisible({ timeout: 10000 });
+        });
+    });
+
+    // @studio-saved-views-default-reload - Default view auto-applies on reload before first search
+    test(`${features[15].name},${features[15].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[15];
+        const testPage = `${baseURL}${features[15].path}${miloLibs}${features[15].browserParams}`;
+        const viewName = `${data.viewName}-${Date.now()}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Go to MAS Studio content page and switch to table view', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+            await studio.switchToTableView();
+            await expect(studio.previewMenu).toHaveAttribute('value', 'table');
+        });
+
+        await test.step('step-2: Save the current view and star it as default', async () => {
+            await page.evaluate((name) => {
+                window.prompt = () => name;
+            }, viewName);
+            await studio.saveViewButton.click();
+            await expect(studio.toastPositive).toBeVisible({ timeout: 10000 });
+            await studio.savedViewsMenu.click();
+            await expect(studio.savedViewItem(viewName)).toBeVisible({ timeout: 10000 });
+            await studio.setDefaultButton(viewName).click();
+        });
+
+        await test.step('step-3: Reload and verify default view auto-applies', async () => {
+            await page.reload();
+            await page.waitForLoadState('domcontentloaded');
+            await expect(studio.previewMenu).toHaveAttribute('value', 'table', { timeout: 15000 });
+        });
+    });
+
+    // @studio-saved-views-delete - Inline delete removes the saved view permanently
+    test(`${features[16].name},${features[16].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[16];
+        const testPage = `${baseURL}${features[16].path}${miloLibs}${features[16].browserParams}`;
+        const viewName = `${data.viewName}-${Date.now()}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Go to MAS Studio content page and save a view', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+            await page.evaluate((name) => {
+                window.prompt = () => name;
+            }, viewName);
+            await studio.saveViewButton.click();
+            await expect(studio.toastPositive).toBeVisible({ timeout: 10000 });
+        });
+
+        await test.step('step-2: Delete the saved view from the menu', async () => {
+            await studio.savedViewsMenu.click();
+            await expect(studio.savedViewItem(viewName)).toBeVisible({ timeout: 10000 });
+            await studio.deleteViewButton(viewName).click();
+        });
+
+        await test.step('step-3: Verify view does not return after reload', async () => {
+            await page.reload();
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+            await studio.savedViewsMenu.click().catch(() => {});
+            await expect(studio.savedViewItem(viewName)).toHaveCount(0, { timeout: 10000 });
+        });
+    });
 });

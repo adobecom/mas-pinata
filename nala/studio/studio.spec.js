@@ -133,5 +133,35 @@ export default {
             },
             tags: '@mas-studio @regional-variations @grouped-variations',
         },
+        {
+            tcid: '14',
+            name: '@studio-saved-views-save',
+            path: '/studio.html',
+            browserParams: '#page=content&path=nala',
+            data: {
+                viewName: 'NalaSaveView',
+            },
+            tags: '@mas-studio @studio-saved-views-save',
+        },
+        {
+            tcid: '15',
+            name: '@studio-saved-views-default-reload',
+            path: '/studio.html',
+            browserParams: '#page=content&path=nala',
+            data: {
+                viewName: 'NalaDefaultView',
+            },
+            tags: '@mas-studio @studio-saved-views-default-reload',
+        },
+        {
+            tcid: '16',
+            name: '@studio-saved-views-delete',
+            path: '/studio.html',
+            browserParams: '#page=content&path=nala',
+            data: {
+                viewName: 'NalaDeleteView',
+            },
+            tags: '@mas-studio @studio-saved-views-delete',
+        },
     ],
 };
