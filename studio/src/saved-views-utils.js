@@ -9,5 +9,5 @@ export function applySavedView(view) {
     if (!view) return;
     if (view.filters) Store.filters.set({ ...view.filters });
     if (view.sort) Store.sort.set({ ...view.sort });
-    if (typeof view.viewMode === 'string') Store.viewMode.set(view.viewMode);
+    if (typeof view.viewMode === 'string') Store.renderMode.set(view.viewMode);
 }

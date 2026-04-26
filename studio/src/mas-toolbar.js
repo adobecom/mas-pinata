@@ -226,7 +226,7 @@ class MasToolbar extends LitElement {
             name,
             filters: { ...Store.filters.get() },
             sort: { ...Store.sort.get() },
-            viewMode: Store.viewMode.get(),
+            viewMode: Store.renderMode.get(),
             isDefault: false,
         };
         try {

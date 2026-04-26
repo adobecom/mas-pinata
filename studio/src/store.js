@@ -250,7 +250,7 @@ function savedViewsValidator(value) {
         name: v.name,
         filters: v.filters && typeof v.filters === 'object' ? v.filters : {},
         sort: v.sort && typeof v.sort === 'object' ? v.sort : {},
-        viewMode: typeof v.viewMode === 'string' ? v.viewMode : 'default',
+        viewMode: typeof v.viewMode === 'string' ? v.viewMode : 'render',
         isDefault: i === lastDefaultIndex,
     }));
 }

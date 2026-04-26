@@ -185,13 +185,19 @@ export class MasRepository extends LitElement {
 
     #whenProfileReady() {
         if (Store.profile.value?.userId) return Promise.resolve();
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
+            let timeoutId;
             const onChange = (value) => {
                 if (value?.userId) {
+                    clearTimeout(timeoutId);
                     Store.profile.unsubscribe(onChange);
                     resolve();
                 }
             };
+            timeoutId = setTimeout(() => {
+                Store.profile.unsubscribe(onChange);
+                reject(new Error('Profile not ready within 10s'));
+            }, 10000);
             Store.profile.subscribe(onChange);
         });
     }

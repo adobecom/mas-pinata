@@ -517,6 +517,7 @@ test.describe('M@S Studio feature test suite', () => {
         });
 
         await test.step('step-3: Reload and verify default view auto-applies', async () => {
+            await page.evaluate(() => localStorage.removeItem('mas-render-mode'));
             await page.reload();
             await page.waitForLoadState('domcontentloaded');
             await expect(studio.previewMenu).toHaveAttribute('value', 'table', { timeout: 15000 });
