@@ -83,6 +83,11 @@ export default class EditorPage {
 
         this.variant = this.panel.locator('#card-variant sp-picker[label="Card Template"]');
 
+        this.cardNameFieldGroup = this.panel.locator('sp-field-group#cardName');
+        this.cardNameLabel = this.cardNameFieldGroup.locator('sp-field-label[for="card-name"]');
+        this.cardName = this.cardNameFieldGroup.locator('sp-textfield#card-name');
+        this.cardNameInput = this.cardName.locator('input');
+
         this.whatsIncluded = this.panel.locator('sp-field-group#whatsIncluded');
         this.whatsIncludedAddIcon = this.panel.locator('#whatsIncluded sp-action-button:has-text("Add application")');
         this.whatsIncludedEditButton = page.locator('sp-menu sp-menu-item:has-text("Edit")');
