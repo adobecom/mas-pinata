@@ -325,6 +325,43 @@ describe('locales', function () {
         });
     });
 
+    describe('Express en_US KE and MU regional locales', function () {
+        it('should include KE and MU in COUNTRY_DATA with correct name and flag', function () {
+            expect(getCountryName('KE')).to.equal('Kenya');
+            expect(getCountryFlag('KE')).to.equal('🇰🇪');
+            expect(getCountryName('MU')).to.equal('Mauritius');
+            expect(getCountryFlag('MU')).to.equal('🇲🇺');
+        });
+
+        it('should include KE and MU in Express en_US regions', function () {
+            const expressEnUS = getDefaultLocale('express', 'en_US');
+            expect(expressEnUS).to.not.be.null;
+            expect(expressEnUS.regions).to.include('KE');
+            expect(expressEnUS.regions).to.include('MU');
+        });
+
+        it('should resolve en_KE and en_MU to en_US for Express surface', function () {
+            expect(getDefaultLocaleCode('express', 'en_KE')).to.equal('en_US');
+            expect(getDefaultLocaleCode('express', 'en_MU')).to.equal('en_US');
+        });
+
+        it('should expose en_KE and en_MU via getSurfaceLocales for Express', function () {
+            const surfaceLocales = getSurfaceLocales('express');
+            const codes = surfaceLocales.map((locale) => getLocaleCode(locale));
+            expect(codes).to.include('en_KE');
+            expect(codes).to.include('en_MU');
+        });
+
+        it('should not include KE in ACOM, CCD, ADOBE_HOME, or COMMERCE en_US regions', function () {
+            for (const surface of ['acom', 'ccd', 'adobe-home', 'commerce']) {
+                const enUS = getDefaultLocale(surface, 'en_US');
+                if (enUS?.regions) {
+                    expect(enUS.regions, surface).to.not.include('KE');
+                }
+            }
+        });
+    });
+
     describe('isVariationPathInParentLocaleFamily', function () {
         const basePath = (localeSegment, rest = 'folder/fragment') => `/content/dam/mas/acom/${localeSegment}/${rest}`;
 
