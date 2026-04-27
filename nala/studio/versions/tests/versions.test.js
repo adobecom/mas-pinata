@@ -343,4 +343,31 @@ test.describe('M@S Studio - Version Page test suite', () => {
             }
         });
     });
+
+    // @version-page-card-name-deep-linking-label - cardName field in version-history label map renders as "Deep linking name"
+    test(`${features[7].name},${features[7].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[7];
+        const testPage = `${baseURL}${features[7].path}${miloLibs}${features[7].browserParams}${data.fragmentId}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Navigate to version page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await page.waitForTimeout(5000);
+            await expect(versions.versionPage).toBeVisible({ timeout: 10000 });
+        });
+
+        await test.step('step-2: Validate FIELD_CONFIG.cardName.label === "Deep linking name"', async () => {
+            const cardNameEntry = await page.evaluate((key) => {
+                const VersionPageClass = customElements.get('version-page');
+                const config = VersionPageClass?.FIELD_CONFIG?.[key];
+                if (!config) return null;
+                return { label: config.label, visible: config.visible };
+            }, data.fieldKey);
+
+            expect(cardNameEntry, 'FIELD_CONFIG.cardName entry should be present').not.toBeNull();
+            expect(cardNameEntry.label).toBe(data.expectedLabel);
+            expect(cardNameEntry.visible).toBe(false);
+        });
+    });
 });

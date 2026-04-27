@@ -81,5 +81,17 @@ export default {
             browserParams: '#page=version&path=nala&fragmentId=',
             tags: '@mas-studio @version @nala',
         },
+        {
+            tcid: '7',
+            name: '@version-page-card-name-deep-linking-label',
+            path: '/studio.html',
+            data: {
+                fragmentId: '48a759ce-3c9a-4158-9bc3-b21ffa07e8e4',
+                fieldKey: 'cardName',
+                expectedLabel: 'Deep linking name',
+            },
+            browserParams: '#page=version&path=nala&fragmentId=',
+            tags: '@mas-studio @version @deep-linking-name',
+        },
     ],
 };
