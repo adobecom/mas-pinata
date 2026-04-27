@@ -104,6 +104,10 @@ class AEM {
                 text: encodeURIComponent(query),
                 // For info about modes: https://adobe-sites.redoc.ly/tag/Search#operation/fragments/search!path=query/filter/fullText/queryMode&t=request
                 queryMode: 'EDGES',
+                // Search both CF content fields and the fragment title metadata so
+                // authors can find a card by its title. See:
+                // https://adobe-sites.redoc.ly/tag/Search#operation/fragments/search
+                paths: ['jcr:content/data/master', 'jcr:content/jcr:title'],
             };
         }
         const searchQuery = { ...defaultSearchOptions, filter };

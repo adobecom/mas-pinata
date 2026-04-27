@@ -397,10 +397,63 @@ test.describe('M@S Studio feature test suite', () => {
         });
     });
 
-    // @studio-variations-locale-filter — Locale and grouped variation visibility per studio locale (Nala)
+    // @studio-search-by-title - Search by fragment title (covers title-metadata extension to fullText search)
     test(`${features[13].name},${features[13].tags}`, async ({ page, baseURL }) => {
         const { data } = features[13];
-        const testPage = `${baseURL}${features[13].path}${miloLibs}${features[13].browserParams}${data.query}`;
+        const testPage = `${baseURL}${features[13].path}${miloLibs}${features[13].browserParams}`;
+        setTestPage(testPage);
+
+        let fragmentTitle;
+
+        await test.step('step-1: Go to MAS Studio content page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+        });
+
+        await test.step('step-2: Capture fragment title from table view', async () => {
+            await studio.switchToTableView();
+            await page.waitForTimeout(2000);
+            const fragmentRow = studio.tableViewRowByFragmentId(data.cardid);
+            await expect(fragmentRow).toBeVisible({ timeout: 15000 });
+            const titleCell = studio.tableViewTitleCell(fragmentRow);
+            fragmentTitle = (await titleCell.textContent()).trim();
+            expect(fragmentTitle.length).toBeGreaterThan(0);
+        });
+
+        await test.step('step-3: Search by the captured title string', async () => {
+            await studio.searchInput.fill(fragmentTitle);
+            await page.keyboard.press('Enter');
+            await studio.waitForCardsLoaded();
+        });
+
+        await test.step('step-4: Validate fragment is returned by title-based search', async () => {
+            await expect(studio.tableViewRowByFragmentId(data.cardid)).toBeVisible({ timeout: 15000 });
+            expect(page.url()).toContain('query=');
+        });
+
+        await test.step('step-5: Content-field search still returns results (regression)', async () => {
+            await studio.searchInput.fill('');
+            await studio.searchInput.fill(data.contentQuery);
+            await page.keyboard.press('Enter');
+            await studio.waitForCardsLoaded();
+            await expect(studio.tableViewRows.first()).toBeVisible({ timeout: 15000 });
+            expect(page.url()).toContain(`query=${data.contentQuery}`);
+        });
+
+        await test.step('step-6: Title+content term returns fragment exactly once (dedup)', async () => {
+            await studio.searchInput.fill('');
+            await studio.searchInput.fill(fragmentTitle);
+            await page.keyboard.press('Enter');
+            await studio.waitForCardsLoaded();
+            await expect(studio.tableViewRowByFragmentId(data.cardid)).toHaveCount(1);
+        });
+    });
+
+    // @studio-variations-locale-filter — Locale and grouped variation visibility per studio locale (Nala)
+    test(`${features[14].name},${features[14].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[14];
+        const testPage = `${baseURL}${features[14].path}${miloLibs}${features[14].browserParams}${data.query}`;
         setTestPage(testPage);
 
         /**
