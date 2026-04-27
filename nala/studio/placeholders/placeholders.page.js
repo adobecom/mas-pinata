@@ -42,6 +42,34 @@ export default class PlaceholdersPage {
         this.toastInfo = page.locator('mas-toast >> sp-toast[variant="info"]');
     }
 
+    // Action menu helpers
+    getRow(rowIndex = 0) {
+        return this.placeholderRows.nth(rowIndex);
+    }
+
+    getActionMenuButton(rowIndex = 0) {
+        return this.getRow(rowIndex).locator('button.action-menu-button');
+    }
+
+    getDropdownMenu(rowIndex = 0) {
+        return this.getRow(rowIndex).locator('.dropdown-menu');
+    }
+
+    getDropdownItems(rowIndex = 0) {
+        return this.getDropdownMenu(rowIndex).locator('.dropdown-item');
+    }
+
+    getCopyLinkItem(rowIndex = 0) {
+        return this.getDropdownMenu(rowIndex).locator('.dropdown-item', {
+            has: this.page.locator('sp-icon-link'),
+        });
+    }
+
+    async openRowActionMenu(rowIndex = 0) {
+        await this.getActionMenuButton(rowIndex).click();
+        await this.getDropdownMenu(rowIndex).waitFor({ state: 'visible', timeout: 5000 });
+    }
+
     // Helper methods
     async getPlaceholderByKey(key) {
         return this.page.locator(`sp-table-row[value="${key}"]`);
@@ -116,7 +144,7 @@ export default class PlaceholdersPage {
         const cells = await row.locator('sp-table-cell').all();
 
         return {
-            key: await cells[0].textContent(),
+            key: await row.getAttribute('value'),
             value: await cells[1].textContent(),
             status: await row.locator('mas-fragment-status').getAttribute('variant'),
             locale: await cells[3].textContent(),

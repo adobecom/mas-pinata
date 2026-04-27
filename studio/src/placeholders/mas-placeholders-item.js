@@ -128,6 +128,19 @@ class MasPlaceholdersItem extends LitElement {
         this.placeholderStore.refreshFrom(updatedPlaceholder);
     }
 
+    async onCopyLink(event) {
+        this.toggleDropdown(this.placeholder.key, event);
+        const { origin, pathname } = window.location;
+        const url = `${origin}${pathname}#page=placeholders&search=${encodeURIComponent(this.placeholder.key)}`;
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast('Link copied', 'positive');
+        } catch (err) {
+            console.error('Failed to copy link:', err);
+            showToast('Failed to copy link', 'negative');
+        }
+    }
+
     preventSelection(event) {
         event.stopPropagation();
     }
@@ -295,6 +308,10 @@ class MasPlaceholdersItem extends LitElement {
                                       >
                                           <sp-icon-publish size="m"></sp-icon-publish>
                                           <span>Publish</span>
+                                      </div>
+                                      <div class="dropdown-item" @click=${this.onCopyLink}>
+                                          <sp-icon-link size="m"></sp-icon-link>
+                                          <span>Copy link</span>
                                       </div>
                                       <div class="dropdown-item" @click="${this.onDelete}">
                                           <sp-icon-delete size="m"></sp-icon-delete>
