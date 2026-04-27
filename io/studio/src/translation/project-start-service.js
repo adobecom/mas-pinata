@@ -252,7 +252,26 @@ function getItemsToTranslate(projectCF) {
     const collections = getValues(projectCF, 'collections')?.values || [];
     const placeholders = getValues(projectCF, 'placeholders')?.values || [];
 
-    return [...fragments, ...collections, ...placeholders];
+    logger.info(
+        `Items to translate breakdown: fragments=${fragments.length} collections=${collections.length} placeholders=${placeholders.length}`,
+    );
+    logger.info(`Items to translate fragments: ${JSON.stringify(fragments)}`);
+    logger.info(`Items to translate collections: ${JSON.stringify(collections)}`);
+    logger.info(`Items to translate placeholders: ${JSON.stringify(placeholders)}`);
+
+    const combined = [...fragments, ...collections, ...placeholders];
+    const seen = new Set();
+    const deduped = [];
+    for (const path of combined) {
+        if (seen.has(path)) continue;
+        seen.add(path);
+        deduped.push(path);
+    }
+    const droppedCount = combined.length - deduped.length;
+    if (droppedCount > 0) {
+        logger.warn(`Deduplicated ${droppedCount} duplicate path(s) from translation payload`);
+    }
+    return deduped;
 }
 
 function getPznVariations(projectCF) {
@@ -330,19 +349,39 @@ async function sendLocRequestWithRetry(config) {
     try {
         const { authToken, odinEndpoint, locPayload, maxRetries = 3 } = config;
         logger.info('Sending loc request');
-        const success = await postToOdinWithRetry(
+        const response = await postToOdinWithRetry(
             odinEndpoint,
             '/bin/sendToLocalisationAsync',
             authToken,
             locPayload,
             maxRetries,
         );
-        return { success };
+        await logOdinResponse(response, 'Odin loc response');
+        return { success: true };
     } catch (error) {
         const lastError = error.message || error.toString();
         logger.error(`Failed to send loc request after retries: ${lastError}`);
         return { success: false, error: lastError };
     }
+}
+
+async function logOdinResponse(response, label) {
+    if (!response) return;
+    const status = response.status;
+    let bodyText = '';
+    try {
+        if (typeof response.clone === 'function' && typeof response.json === 'function') {
+            const cloned = response.clone();
+            const body = await cloned.json();
+            bodyText = ` body=${JSON.stringify(body)}`;
+        } else if (typeof response.json === 'function') {
+            const body = await response.json();
+            bodyText = ` body=${JSON.stringify(body)}`;
+        }
+    } catch (e) {
+        // body unavailable or not JSON; ignore
+    }
+    logger.info(`${label}: status=${status}${bodyText}`);
 }
 
 async function sendSyncRequest({ path, update: { name, value } }, { authToken, params }) {
@@ -443,6 +482,8 @@ async function startTranslationProject(translationData = {}, authToken, params =
     };
 
     logger.info(`locPayload: ${JSON.stringify(locPayload)}`);
+    logger.info(`Dispatching translation: cfPaths.length=${itemsToTranslate.length}`);
+    logger.info(`Dispatching translation cfPaths: ${JSON.stringify(itemsToTranslate)}`);
 
     const config = {
         authToken,
@@ -476,6 +517,8 @@ async function startRolloutOnlyProject(translationData, authToken, params = {}) 
     };
 
     logger.info(`locPayload: ${JSON.stringify(locPayload)}`);
+    logger.info(`Dispatching rollout: items.length=${items.length}`);
+    logger.info(`Dispatching rollout items: ${JSON.stringify(items)}`);
 
     const config = {
         authToken,
@@ -498,8 +541,9 @@ async function sendRolloutRequestWithRetry(config) {
     try {
         const { authToken, odinEndpoint, locPayload, maxRetries = 3 } = config;
         logger.info('Sending rollout request');
-        const success = await postToOdinWithRetry(odinEndpoint, '/bin/localeSync', authToken, locPayload, maxRetries);
-        return { success };
+        const response = await postToOdinWithRetry(odinEndpoint, '/bin/localeSync', authToken, locPayload, maxRetries);
+        await logOdinResponse(response, 'Odin rollout response');
+        return { success: true };
     } catch (error) {
         const lastError = error.message || error.toString();
         logger.error(`Failed to send rollout request after retries: ${lastError}`);
