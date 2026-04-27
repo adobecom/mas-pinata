@@ -325,6 +325,44 @@ describe('locales', function () {
         });
     });
 
+    describe('KE and MU on Express surface (MWPW-191681)', function () {
+        const surfacesWithoutKE = ['ccd', 'adobe-home', 'commerce'];
+
+        it('should expose en_KE and en_MU via getSurfaceLocales for express', function () {
+            const expressLocales = getSurfaceLocales('express');
+            expect(expressLocales.some((locale) => locale.lang === 'en' && locale.country === 'KE')).to.equal(true);
+            expect(expressLocales.some((locale) => locale.lang === 'en' && locale.country === 'MU')).to.equal(true);
+        });
+
+        it('should resolve en_KE and en_MU to en_US on express', function () {
+            expect(getDefaultLocaleCode('express', 'en_KE')).to.equal('en_US');
+            expect(getDefaultLocaleCode('express', 'en_MU')).to.equal('en_US');
+        });
+
+        it('should not list KE as a region on ccd, adobe-home, or commerce', function () {
+            for (const surface of surfacesWithoutKE) {
+                const defaults = getDefaultLocales(surface);
+                const hasKE = defaults.some((locale) => locale.regions?.includes('KE'));
+                expect(hasKE, surface).to.equal(false);
+            }
+        });
+
+        it('should only include KE under the en_US row of express', function () {
+            const expressDefaults = getDefaultLocales('express');
+            const rowsWithKE = expressDefaults.filter((locale) => locale.regions?.includes('KE'));
+            expect(rowsWithKE.length).to.equal(1);
+            expect(rowsWithKE[0].lang).to.equal('en');
+            expect(rowsWithKE[0].country).to.equal('US');
+        });
+
+        it('should expose Kenya and Mauritius country names and flags', function () {
+            expect(getCountryName('KE')).to.equal('Kenya');
+            expect(getCountryFlag('KE')).to.equal('🇰🇪');
+            expect(getCountryName('MU')).to.equal('Mauritius');
+            expect(getCountryFlag('MU')).to.equal('🇲🇺');
+        });
+    });
+
     describe('isVariationPathInParentLocaleFamily', function () {
         const basePath = (localeSegment, rest = 'folder/fragment') => `/content/dam/mas/acom/${localeSegment}/${rest}`;
 
