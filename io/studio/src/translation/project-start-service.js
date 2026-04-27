@@ -161,6 +161,7 @@ async function getTranslationData(authToken, projectCF, surface, translationFlow
         logger.warn(`No items to translate found in translation project: ${projectCF.id}`);
         return null;
     }
+    const collectionPaths = getValues(projectCF, 'collections')?.values || [];
     const { items: itemsToSync, success } = await getItemsToSync(authToken, projectCF, locales, surface, params);
     if (!success) {
         logger.error('Failed to get items to sync');
@@ -173,6 +174,7 @@ async function getTranslationData(authToken, projectCF, surface, translationFlow
         title: getValue(projectCF, 'title')?.value || 'Untitled Project',
         itemsToTranslate,
         itemsToSync,
+        collectionPaths,
         locales,
         surface,
         translationFlow: translationFlow
@@ -461,11 +463,44 @@ async function startTranslationProject(translationData = {}, authToken, params =
     return true;
 }
 
+async function filterCollectionChildren(itemsToTranslate, collectionPaths, authToken, params) {
+    if (collectionPaths.length === 0) {
+        return itemsToTranslate;
+    }
+
+    const excludedPaths = new Set();
+    for (const collectionPath of collectionPaths) {
+        try {
+            const { fragment, status } = await fetchFragmentByPath(params.odinEndpoint, collectionPath, authToken);
+            if (status !== 200 || !fragment) {
+                logger.error(`Failed to fetch collection ${collectionPath} for child filtering: ${status}`);
+                continue;
+            }
+            const childCards = getValues(fragment, 'cards')?.values || [];
+            const childCollections = getValues(fragment, 'collections')?.values || [];
+            for (const child of [...childCards, ...childCollections]) {
+                excludedPaths.add(child);
+            }
+        } catch (error) {
+            logger.error(`Error fetching collection ${collectionPath} for child filtering: ${error.message || error}`);
+        }
+    }
+
+    const filtered = itemsToTranslate.filter((path) => !excludedPaths.has(path));
+    const excludedCount = itemsToTranslate.length - filtered.length;
+    if (excludedCount > 0) {
+        logger.info(`Excluded ${excludedCount} collection-child fragments from rollout payload`);
+    }
+    return filtered;
+}
+
 async function startRolloutOnlyProject(translationData, authToken, params = {}) {
-    const { itemsToTranslate, locales, surface } = translationData;
+    const { itemsToTranslate, locales, surface, collectionPaths = [] } = translationData;
     logger.info(`Starting rollout only project ${itemsToTranslate} for locales ${locales} and surface ${surface}`);
 
-    const items = itemsToTranslate.map((item) => ({
+    const filteredItems = await filterCollectionChildren(itemsToTranslate, collectionPaths, authToken, params);
+
+    const items = filteredItems.map((item) => ({
         contentPath: item,
         targetLocales: locales,
         syncNestedCFs: false,

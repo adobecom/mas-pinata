@@ -436,6 +436,190 @@ describe('Translation project-start', () => {
             expect(result.body.message).to.equal('Translation project started');
             expect(callCounts['/bin/sendToLocalisationAsync']).to.equal(1);
         });
+
+        it('should skip Odin lookups when no collections are declared (early-exit guard)', async () => {
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                projectType: ['rollout'],
+                fragments: ['/content/dam/mas/foo/en_US/fragment1', '/content/dam/mas/foo/en_US/fragment2'],
+                targetLocales: ['de_DE'],
+            });
+
+            const { stub, callCounts } = setupFetchStub({
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/localeSync': { ok: true },
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+            // Only versioning lookups should hit the ?path= route (target locale paths only).
+            // 2 fragments × 1 locale = 2 versioning lookups, no collection lookups.
+            expect(callCounts['/adobe/sites/cf/fragments?path=']).to.equal(2);
+
+            const localeSyncCall = stub.getCalls().find((call) => call.args[0].includes('/bin/localeSync'));
+            const requestBody = JSON.parse(localeSyncCall.args[1].body);
+            expect(requestBody.items).to.have.lengthOf(2);
+            expect(requestBody.items.map((i) => i.contentPath)).to.deep.equal([
+                '/content/dam/mas/foo/en_US/fragment1',
+                '/content/dam/mas/foo/en_US/fragment2',
+            ]);
+        });
+
+        it('should send only the collection path when projectCF has only a collection', async () => {
+            const collectionPath = '/content/dam/mas/foo/en_US/collection1';
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                projectType: ['rollout'],
+                collections: [collectionPath],
+                targetLocales: ['de_DE'],
+            });
+
+            const { stub, callCounts } = setupFetchStub({
+                [`/adobe/sites/cf/fragments?path=${collectionPath}`]: responses.ok({
+                    items: [
+                        {
+                            id: 'collection1-id',
+                            fields: [
+                                {
+                                    name: 'cards',
+                                    values: [
+                                        '/content/dam/mas/foo/en_US/child-card-a',
+                                        '/content/dam/mas/foo/en_US/child-card-b',
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                }),
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/localeSync': { ok: true },
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+            expect(callCounts[`/adobe/sites/cf/fragments?path=${collectionPath}`]).to.equal(1);
+
+            const localeSyncCall = stub.getCalls().find((call) => call.args[0].includes('/bin/localeSync'));
+            const requestBody = JSON.parse(localeSyncCall.args[1].body);
+            expect(requestBody.items).to.have.lengthOf(1);
+            expect(requestBody.items[0].contentPath).to.equal(collectionPath);
+        });
+
+        it('should keep standalone cards that are not referenced by any collection', async () => {
+            const collectionPath = '/content/dam/mas/foo/en_US/collection1';
+            const card1 = '/content/dam/mas/foo/en_US/standalone-card-1';
+            const card2 = '/content/dam/mas/foo/en_US/standalone-card-2';
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                projectType: ['rollout'],
+                fragments: [card1, card2],
+                collections: [collectionPath],
+                targetLocales: ['de_DE'],
+            });
+
+            const { stub } = setupFetchStub({
+                [`/adobe/sites/cf/fragments?path=${collectionPath}`]: responses.ok({
+                    items: [
+                        {
+                            id: 'collection1-id',
+                            fields: [
+                                {
+                                    name: 'cards',
+                                    values: ['/content/dam/mas/foo/en_US/some-other-card'],
+                                },
+                            ],
+                        },
+                    ],
+                }),
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/localeSync': { ok: true },
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+
+            const localeSyncCall = stub.getCalls().find((call) => call.args[0].includes('/bin/localeSync'));
+            const requestBody = JSON.parse(localeSyncCall.args[1].body);
+            const contentPaths = requestBody.items.map((i) => i.contentPath);
+            expect(contentPaths).to.have.lengthOf(3);
+            expect(contentPaths).to.include.members([card1, card2, collectionPath]);
+        });
+
+        it('should exclude collection-child cards from the rollout payload', async () => {
+            const collectionPath = '/content/dam/mas/foo/en_US/collection1';
+            const childCard = '/content/dam/mas/foo/en_US/child-card';
+            const unrelatedCard = '/content/dam/mas/foo/en_US/unrelated-card';
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                projectType: ['rollout'],
+                fragments: [childCard, unrelatedCard],
+                collections: [collectionPath],
+                targetLocales: ['de_DE'],
+            });
+
+            const { stub, callCounts } = setupFetchStub({
+                [`/adobe/sites/cf/fragments?path=${collectionPath}`]: responses.ok({
+                    items: [
+                        {
+                            id: 'collection1-id',
+                            fields: [
+                                {
+                                    name: 'cards',
+                                    values: [childCard],
+                                },
+                            ],
+                        },
+                    ],
+                }),
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/localeSync': { ok: true },
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+            expect(callCounts[`/adobe/sites/cf/fragments?path=${collectionPath}`]).to.equal(1);
+
+            const localeSyncCall = stub.getCalls().find((call) => call.args[0].includes('/bin/localeSync'));
+            const requestBody = JSON.parse(localeSyncCall.args[1].body);
+            const contentPaths = requestBody.items.map((i) => i.contentPath);
+            expect(contentPaths).to.have.lengthOf(2);
+            expect(contentPaths).to.include.members([collectionPath, unrelatedCard]);
+            expect(contentPaths).to.not.include(childCard);
+            expect(mockLogger.info).to.have.been.calledWith(sinon.match(/Excluded 1 collection-child/));
+        });
+
+        it('should log error and proceed without exclusions when collection fetch fails', async () => {
+            const collectionPath = '/content/dam/mas/foo/en_US/collection1';
+            const card1 = '/content/dam/mas/foo/en_US/card1';
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                projectType: ['rollout'],
+                fragments: [card1],
+                collections: [collectionPath],
+                targetLocales: ['de_DE'],
+            });
+
+            const { stub } = setupFetchStub({
+                [`/adobe/sites/cf/fragments?path=${collectionPath}`]: responses.error(500, 'Internal Server Error'),
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/localeSync': { ok: true },
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+
+            const localeSyncCall = stub.getCalls().find((call) => call.args[0].includes('/bin/localeSync'));
+            const requestBody = JSON.parse(localeSyncCall.args[1].body);
+            const contentPaths = requestBody.items.map((i) => i.contentPath);
+            expect(contentPaths).to.have.lengthOf(2);
+            expect(contentPaths).to.include.members([card1, collectionPath]);
+            expect(mockLogger.error).to.have.been.calledWith(sinon.match(collectionPath));
+        });
     });
 
     describe('Translation project fetching', () => {
