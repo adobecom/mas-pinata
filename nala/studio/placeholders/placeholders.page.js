@@ -144,7 +144,7 @@ export default class PlaceholdersPage {
         const cells = await row.locator('sp-table-cell').all();
 
         return {
-            key: await cells[0].textContent(),
+            key: await row.getAttribute('value'),
             value: await cells[1].textContent(),
             status: await row.locator('mas-fragment-status').getAttribute('variant'),
             locale: await cells[3].textContent(),
