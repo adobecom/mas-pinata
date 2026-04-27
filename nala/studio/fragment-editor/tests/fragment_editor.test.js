@@ -251,4 +251,37 @@ test.describe('M@S Studio Fragment Editor Locale test suite', () => {
             await expect(await editor.footer).toBeVisible();
         });
     });
+
+    // @studio-fragment-editor-deep-linking-name-label - Validate "Deep linking name" label and placeholder for the cardName field
+    test(`${features[6].name},${features[6].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[6];
+        const testPage = `${baseURL}${features[6].path}${miloLibs}${features[6].browserParams}${data.cardid}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Go to MAS Studio fragment editor page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+        });
+
+        await test.step('step-2: Verify editor panel is visible', async () => {
+            await expect(editor.panel).toBeVisible({ timeout: 15000 });
+        });
+
+        await test.step('step-3: Verify field group, label, and textfield are rendered with internal identifiers intact', async () => {
+            await expect(editor.cardNameFieldGroup).toBeVisible();
+            await expect(editor.cardNameFieldGroup).toHaveAttribute('id', 'cardName');
+            await expect(editor.cardName).toBeVisible();
+            await expect(editor.cardName).toHaveAttribute('id', 'card-name');
+            await expect(editor.cardName).toHaveAttribute('data-field', 'cardName');
+        });
+
+        await test.step('step-4: Verify the label reads "Deep linking name"', async () => {
+            await expect(editor.cardNameLabel).toBeVisible();
+            await expect(editor.cardNameLabel).toHaveText(data.expectedLabel);
+        });
+
+        await test.step('step-5: Verify the textfield placeholder reads "Enter deep linking name"', async () => {
+            await expect(editor.cardName).toHaveAttribute('placeholder', data.expectedPlaceholder);
+        });
+    });
 });
