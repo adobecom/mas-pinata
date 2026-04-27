@@ -1198,4 +1198,240 @@ describe('Translation project-start', () => {
             });
         });
     });
+
+    describe('Collection-referenced card bleed prevention', () => {
+        it('should deduplicate paths that appear in both fragments and collections', async () => {
+            const sharedPath = '/content/dam/mas/foo/en_US/shared';
+            const fragmentOnlyPath = '/content/dam/mas/foo/en_US/fragmentOnly';
+            const collectionOnlyPath = '/content/dam/mas/foo/en_US/collectionOnly';
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                fragments: [fragmentOnlyPath, sharedPath],
+                collections: [sharedPath, collectionOnlyPath],
+            });
+
+            const { stub } = setupFetchStub({
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/sendToLocalisationAsync': responses.ok(),
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+            const locCall = stub.getCalls().find((call) => call.args[0].includes('/bin/sendToLocalisationAsync'));
+            const requestBody = JSON.parse(locCall.args[1].body);
+            expect(requestBody.cfPaths).to.deep.equal([fragmentOnlyPath, sharedPath, collectionOnlyPath]);
+            expect(requestBody.cfPaths).to.have.lengthOf(3);
+            expect(mockLogger.warn).to.have.been.calledWith(sinon.match(/Deduplicated 1 duplicate path/));
+        });
+
+        it('should deduplicate the same path appearing twice within fragments', async () => {
+            const path = '/content/dam/mas/foo/en_US/fragment1';
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                fragments: [path, path],
+            });
+
+            const { stub } = setupFetchStub({
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/sendToLocalisationAsync': responses.ok(),
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+            const locCall = stub.getCalls().find((call) => call.args[0].includes('/bin/sendToLocalisationAsync'));
+            const requestBody = JSON.parse(locCall.args[1].body);
+            expect(requestBody.cfPaths).to.deep.equal([path]);
+            expect(mockLogger.warn).to.have.been.calledWith(sinon.match(/Deduplicated 1 duplicate path/));
+        });
+
+        it('should not expand collections client-side: cfPaths matches the project inputs only', async () => {
+            const collectionPath = '/content/dam/mas/foo/en_US/collection1';
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                fragments: [],
+                collections: [collectionPath],
+            });
+
+            const { stub } = setupFetchStub({
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/sendToLocalisationAsync': responses.ok(),
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+            const locCall = stub.getCalls().find((call) => call.args[0].includes('/bin/sendToLocalisationAsync'));
+            const requestBody = JSON.parse(locCall.args[1].body);
+            expect(requestBody.cfPaths).to.deep.equal([collectionPath]);
+            expect(requestBody.includeNestedCFs).to.equal(false);
+            expect(requestBody.syncNestedCFs).to.equal(false);
+        });
+
+        it('should preserve standalone fragments (no dedup, no extras, no reorder)', async () => {
+            const fragments = [
+                '/content/dam/mas/foo/en_US/fragment1',
+                '/content/dam/mas/foo/en_US/fragment2',
+                '/content/dam/mas/foo/en_US/fragment3',
+            ];
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                fragments,
+            });
+
+            const { stub } = setupFetchStub({
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/sendToLocalisationAsync': responses.ok(),
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+            const locCall = stub.getCalls().find((call) => call.args[0].includes('/bin/sendToLocalisationAsync'));
+            const requestBody = JSON.parse(locCall.args[1].body);
+            expect(requestBody.cfPaths).to.deep.equal(fragments);
+            expect(mockLogger.warn).to.not.have.been.calledWith(sinon.match(/Deduplicated/));
+        });
+
+        it('should keep placeholders alongside fragments when there is no overlap', async () => {
+            const fragmentPath = '/content/dam/mas/foo/en_US/fragment1';
+            const placeholderPath = '/content/dam/mas/foo/en_US/dictionary/placeholder1';
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                fragments: [fragmentPath],
+                placeholders: [placeholderPath],
+                targetLocales: ['de_DE'],
+            });
+
+            const { stub } = setupFetchStub({
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=/content/dam/mas/foo/de_DE/dictionary/index': responses.ok({
+                    items: [{ id: 'dict-de-id', etag: 'test-de-ph-etag', fields: [{ name: 'entries', values: [] }] }],
+                }),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/adobe/sites/cf/fragments/dict-de-id': responses.ok(),
+                '/bin/sendToLocalisationAsync': responses.ok(),
+            });
+
+            const params = {
+                ...baseParams,
+                surface: 'foo',
+            };
+
+            const result = await executeProjectStart(projectStartService, params);
+
+            expect(result.statusCode).to.equal(200);
+            const locCall = stub.getCalls().find((call) => call.args[0].includes('/bin/sendToLocalisationAsync'));
+            const requestBody = JSON.parse(locCall.args[1].body);
+            expect(requestBody.cfPaths).to.have.lengthOf(2);
+            expect(requestBody.cfPaths).to.include(fragmentPath);
+            expect(requestBody.cfPaths).to.include(placeholderPath);
+            expect(mockLogger.warn).to.not.have.been.calledWith(sinon.match(/Deduplicated/));
+        });
+    });
+
+    describe('Translation dispatch observability', () => {
+        it('should log the items breakdown by bucket', async () => {
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                fragments: ['/content/dam/mas/foo/en_US/fragment1', '/content/dam/mas/foo/en_US/fragment2'],
+                collections: ['/content/dam/mas/foo/en_US/collection1'],
+                placeholders: [],
+            });
+
+            setupFetchStub({
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/sendToLocalisationAsync': responses.ok(),
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+            expect(mockLogger.info).to.have.been.calledWith(
+                sinon.match(/fragments=2 collections=1 placeholders=0/),
+            );
+        });
+
+        it('should log cfPaths length before dispatching the translation request', async () => {
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                fragments: ['/content/dam/mas/foo/en_US/fragment1'],
+            });
+
+            setupFetchStub({
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/sendToLocalisationAsync': responses.ok(),
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+            expect(mockLogger.info).to.have.been.calledWith(sinon.match(/cfPaths\.length=1/));
+        });
+
+        it('should log Odin loc response status after a successful loc request', async () => {
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                fragments: ['/content/dam/mas/foo/en_US/fragment1'],
+            });
+
+            setupFetchStub({
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/sendToLocalisationAsync': responses.ok({ accepted: true }),
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+            expect(mockLogger.info).to.have.been.calledWith(sinon.match(/Odin loc response: status=200/));
+        });
+
+        it('should not emit a dedup warn when there are no duplicates', async () => {
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                fragments: ['/content/dam/mas/foo/en_US/fragment1'],
+                collections: ['/content/dam/mas/foo/en_US/collection1'],
+            });
+
+            setupFetchStub({
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/sendToLocalisationAsync': responses.ok(),
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+            expect(mockLogger.warn).to.not.have.been.calledWith(sinon.match(/Deduplicated/));
+        });
+    });
+
+    describe('Rollout-only dispatch parity', () => {
+        it('should deduplicate items[*].contentPath and log Odin rollout response status', async () => {
+            const sharedPath = '/content/dam/mas/foo/en_US/shared';
+            const collectionOnlyPath = '/content/dam/mas/foo/en_US/collectionOnly';
+            const mockProjectCF = setProjectFields(createMockProjectCF(), {
+                projectType: ['rollout'],
+                fragments: [sharedPath],
+                collections: [sharedPath, collectionOnlyPath],
+                targetLocales: ['de_DE'],
+            });
+
+            const { stub, callCounts } = setupFetchStub({
+                '/adobe/sites/cf/fragments/test-project-id': responses.ok(mockProjectCF, '"test-etag"'),
+                '/adobe/sites/cf/fragments?path=': responses.notFound(),
+                '/bin/localeSync': responses.ok({ accepted: true }),
+            });
+
+            const result = await executeProjectStart(projectStartService, baseParams);
+
+            expect(result.statusCode).to.equal(200);
+            expect(callCounts['/bin/localeSync']).to.equal(1);
+            const localeSyncCall = stub.getCalls().find((call) => call.args[0].includes('/bin/localeSync'));
+            const requestBody = JSON.parse(localeSyncCall.args[1].body);
+            const contentPaths = requestBody.items.map((i) => i.contentPath);
+            expect(contentPaths).to.deep.equal([sharedPath, collectionOnlyPath]);
+            expect(mockLogger.warn).to.have.been.calledWith(sinon.match(/Deduplicated 1 duplicate path/));
+            expect(mockLogger.info).to.have.been.calledWith(sinon.match(/Odin rollout response: status=200/));
+        });
+    });
 });
