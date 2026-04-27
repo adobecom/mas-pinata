@@ -122,4 +122,52 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
             expect(rowCount).toBeGreaterThan(1); // Should show more than just the test placeholder
         });
     });
+
+    // Test 3: @studio-placeholders-copy-link - Validate Copy link action in row dropdown
+    test(`${features[3].name},${features[3].tags}`, async ({ page, baseURL, context }) => {
+        const testPage = `${baseURL}${features[3].path}${miloLibs}${features[3].browserParams}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Grant clipboard permissions and navigate', async () => {
+            await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await placeholders.waitForTableToLoad();
+        });
+
+        let firstKey;
+        await test.step('step-2: Capture first placeholder key', async () => {
+            const firstRow = await placeholders.getPlaceholderRowData(0);
+            firstKey = firstRow.key.trim();
+            expect(firstKey.length).toBeGreaterThan(0);
+        });
+
+        await test.step('step-3: Open the row action menu', async () => {
+            await placeholders.openRowActionMenu(0);
+            await expect(placeholders.getDropdownMenu(0)).toBeVisible();
+        });
+
+        await test.step('step-4: Verify Copy link item appears between Publish and Delete', async () => {
+            const items = placeholders.getDropdownItems(0);
+            await expect(items).toHaveCount(3);
+            await expect(items.nth(0)).toContainText('Publish');
+            await expect(items.nth(1)).toContainText('Copy link');
+            await expect(items.nth(2)).toContainText('Delete');
+            await expect(items.nth(1).locator('sp-icon-link')).toBeVisible();
+        });
+
+        await test.step('step-5: Click Copy link and verify clipboard + toast', async () => {
+            await placeholders.getCopyLinkItem(0).click();
+
+            await expect(placeholders.toastPositive).toBeVisible({ timeout: 10000 });
+            await expect(placeholders.toastPositive).toContainText('Link copied');
+
+            // Dropdown should close after click
+            await expect(placeholders.getDropdownMenu(0)).toBeHidden();
+
+            const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+            const expected = `${new URL(testPage).origin}${new URL(testPage).pathname}#page=placeholders&search=${encodeURIComponent(firstKey)}`;
+            expect(clipboardText).toBe(expected);
+        });
+    });
 });
