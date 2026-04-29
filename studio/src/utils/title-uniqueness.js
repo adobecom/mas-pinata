@@ -32,7 +32,7 @@ export async function findUniqueTitle({ aem, parentPath, desiredTitle, excludeFr
     const titles = new Set();
     // AEM full-text search is fuzzy (EDGES mode), so we always re-check titles
     // exactly client-side.
-    const cursor = await aem.sites.cf.fragments.search({
+    const cursor = aem.sites.cf.fragments.search({
         path: parentPath,
         query: desiredTitle,
     });

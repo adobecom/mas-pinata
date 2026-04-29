@@ -1,5 +1,6 @@
 import { test, expect, studio, editor, miloLibs, setTestPage, setClonedCardID } from '../../../libs/mas-test.js';
 import DuplicateTitleSpec from '../specs/duplicate_title.spec.js';
+import { escapeRegex } from '../../../../studio/src/utils/title-uniqueness.js';
 
 const { features } = DuplicateTitleSpec;
 
@@ -91,6 +92,8 @@ test.describe('M@S Studio Duplicate Title auto-rename test suite', () => {
         const testPageA = `${baseURL}${features[2].path}${miloLibs}#page=content&path=${data.folderA}`;
         const testPageB = `${baseURL}${features[2].path}${miloLibs}#page=content&path=${data.folderB}`;
         setTestPage(testPageA);
+        const sharedTitle = `MAS.Nala.CrossFolder.${Date.now()}`;
+        data.sharedTitle = sharedTitle;
 
         await test.step('step-1: Go to folder A', async () => {
             await page.goto(testPageA);
@@ -98,7 +101,7 @@ test.describe('M@S Studio Duplicate Title auto-rename test suite', () => {
         });
 
         await test.step('step-2: Create card in folder A', async () => {
-            const idA = await studio.createFragment({ osi: data.osi, variant: data.variant });
+            const idA = await studio.createFragment({ osi: data.osi, variant: data.variant, title: sharedTitle });
             setClonedCardID(idA);
             data.titleInA = await editor.title.inputValue();
             expect(data.titleInA).toBeTruthy();
@@ -109,20 +112,15 @@ test.describe('M@S Studio Duplicate Title auto-rename test suite', () => {
             await page.waitForLoadState('domcontentloaded');
         });
 
-        await test.step('step-4: Create card in folder B with same title (auto-generated)', async () => {
-            const idB = await studio.createFragment({ osi: data.osi, variant: data.variant });
+        await test.step('step-4: Create card in folder B with the same explicit title', async () => {
+            const idB = await studio.createFragment({ osi: data.osi, variant: data.variant, title: sharedTitle });
             setClonedCardID(idB);
             data.titleInB = await editor.title.inputValue();
         });
 
         await test.step('step-5: Verify both folders kept the original title without suffix', async () => {
-            // The auto-generated title is identical for both invocations of getTitle()
-            // within a single test run, so titleInA === titleInB proves cross-folder isolation.
-            expect(data.titleInB).toBe(data.titleInA);
+            expect(data.titleInA).toBe(sharedTitle);
+            expect(data.titleInB).toBe(sharedTitle);
         });
     });
 });
-
-function escapeRegex(str) {
-    return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
