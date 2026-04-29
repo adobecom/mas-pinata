@@ -265,6 +265,32 @@ function buildStudioFragmentHref({ webComponentName, fragmentId, page, path, fie
 }
 
 /**
+ * Parses a copied card link (or bare fragment id) into a fragment id.
+ * Accepts the studio link shape produced by buildStudioFragmentHref:
+ *   https://mas.adobe.com/studio.html#content-type=...&query=<fragmentId>
+ * @param {string} rawValue
+ * @returns {string | null}
+ */
+export function extractFragmentIdFromCardLink(rawValue) {
+    const value = (rawValue ?? '').trim();
+    if (!value) return null;
+    if (isUUID(value)) return value;
+    try {
+        const url = new URL(value);
+        const hash = (url.hash || '').replace(/^#/, '');
+        if (hash) {
+            const id = new URLSearchParams(hash).get('query');
+            if (id) return id;
+        }
+        const fromSearch = url.searchParams.get('query');
+        if (fromSearch) return fromSearch;
+    } catch {
+        return null;
+    }
+    return null;
+}
+
+/**
  * Generates a rich link for a single fragment field.
  * Used by the "Copy Field" sidebar button to produce a clipboard entry
  * that pastes as a clickable "alias → fieldName" link in SharePoint.
