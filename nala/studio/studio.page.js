@@ -602,9 +602,10 @@ export default class StudioPage {
      * @param {Object} options - Configuration options
      * @param {string} options.osi - OSI to search and select
      * @param {string} options.variant - Variant type to select in the editor (e.g., 'ccd-suggested', 'ccd-slice', 'plans', 'ah-try-buy-widget')
+     * @param {string} [options.title] - Optional explicit title; defaults to auto-generated test-run-scoped title.
      * @returns {Promise<string>} The fragment ID of the created card
      */
-    async createFragment({ osi, variant }) {
+    async createFragment({ osi, variant, title }) {
         if (!osi) {
             throw new Error('osi is required parameter');
         }
@@ -622,7 +623,7 @@ export default class StudioPage {
         await this.page.waitForTimeout(500);
 
         await expect(this.createDialogTitleInput).toBeVisible({ timeout: 10000 });
-        const titleWithRunId = getTitle();
+        const titleWithRunId = title ?? getTitle();
         await this.createDialogTitleInput.fill(titleWithRunId);
 
         await expect(this.createDialogOSIButton).toBeVisible({ timeout: 10000 });

@@ -41,6 +41,7 @@ import generateFragmentStore from './reactivity/source-fragment-store.js';
 import { getDefaultLocaleCode } from '../../io/www/src/fragment/locales.js';
 import { getDictionary } from '../libs/fragment-client.js';
 import { applyCorrectorToFragment } from './utils/corrector-helper.js';
+import { findUniqueTitle } from './utils/title-uniqueness.js';
 import { Promotion } from './aem/promotion.js';
 
 let fragmentCache;
@@ -1266,6 +1267,26 @@ export class MasRepository extends LitElement {
         }
 
         try {
+            // Silently auto-rename the title if it collides with another card
+            // in the same folder. AEM's PUT contract for saveFragment only
+            // accepts {title, description, fields}, so name/path stay frozen
+            // after creation — only the visible title is deduplicated here.
+            const initialTitle = fragment.initialValue?.title;
+            if (fragmentToSave.title && fragmentToSave.title !== initialTitle) {
+                const parentPath = fragment.path?.split('/').slice(0, -1).join('/');
+                if (parentPath) {
+                    const uniqueTitle = await findUniqueTitle({
+                        aem: this.aem,
+                        parentPath,
+                        desiredTitle: fragmentToSave.title,
+                        excludeFragmentId: fragment.id,
+                    });
+                    if (uniqueTitle !== fragmentToSave.title) {
+                        fragmentToSave.title = uniqueTitle;
+                        fragmentStore.updateFieldInternal('title', uniqueTitle);
+                    }
+                }
+            }
             const savedFragment = await this.aem.sites.cf.fragments.save(fragmentToSave);
             if (!savedFragment) throw new Error('Invalid fragment.');
 
