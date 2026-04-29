@@ -5,6 +5,7 @@ import Store from './store.js';
 import './rte/osi-field.js';
 import './aem/aem-tag-picker-field.js';
 import generateFragmentStore from './reactivity/source-fragment-store.js';
+import { findUniqueTitle } from './utils/title-uniqueness.js';
 
 export class MasCreateDialog extends LitElement {
     static properties = {
@@ -183,17 +184,6 @@ export class MasCreateDialog extends LitElement {
         }
     }
 
-    getSuffix(offset) {
-        let suffix = '';
-        const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
-        const charactersLength = characters.length;
-        const length = offset + 3;
-        for (let i = 0; i < length; i++) {
-            suffix += characters.charAt(Math.floor(Math.random() * charactersLength));
-        }
-        return suffix;
-    }
-
     async handleSubmit(event) {
         if (event) {
             event.preventDefault();
@@ -228,11 +218,24 @@ export class MasCreateDialog extends LitElement {
         }
 
         const masRepository = document.querySelector('mas-repository');
-        const firstName = fragmentData.name;
+        const parentPath = fragmentData.parentPath || masRepository.parentPath;
+        const originalTitle = fragmentData.title;
+
+        const applyUniqueTitle = async () => {
+            const uniqueTitle = await findUniqueTitle({
+                aem: masRepository.aem,
+                parentPath,
+                desiredTitle: originalTitle,
+            });
+            fragmentData.title = uniqueTitle;
+            fragmentData.name = this.normalizeFragmentName(uniqueTitle);
+        };
+
+        await applyUniqueTitle();
         let nmbOfTries = 0;
-        while (!(await this.tryToCreateFragment(masRepository, fragmentData)) && nmbOfTries < 10) {
+        while (!(await this.tryToCreateFragment(masRepository, fragmentData)) && nmbOfTries < 5) {
             nmbOfTries += 1;
-            fragmentData.name = `${firstName}-${this.getSuffix(nmbOfTries)}`;
+            await applyUniqueTitle();
         }
     }
 
