@@ -47,6 +47,10 @@ jobs:
 
             - name: Mint clone token (mas-pinata + mas)
               id: clone-token
+              # Don't fail-fast — surface a clear PR comment if the App
+              # isn't installed on the upstream repo (else the dev sees
+              # only a 422 stack trace in the Actions log).
+              continue-on-error: true
               uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
               with:
                   app-id: ${{ secrets.PINATA_APP_ID }}
@@ -55,6 +59,26 @@ jobs:
                   repositories: |
                       mas-pinata
                       mas
+
+            - name: Mint tenant-only token for failure comment
+              if: steps.clone-token.outcome == 'failure'
+              id: tenant-token
+              uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+              with:
+                  app-id: ${{ secrets.PINATA_APP_ID }}
+                  private-key: ${{ secrets.PINATA_APP_PRIVATE_KEY }}
+                  owner: adobecom
+                  repositories: mas-pinata
+
+            - name: Comment on source PR if upstream install missing
+              if: steps.clone-token.outcome == 'failure'
+              env:
+                  GH_TOKEN: ${{ steps.tenant-token.outputs.token }}
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  REPO: ${{ github.repository }}
+              run: |
+                  gh pr comment "$PR_NUMBER" --repo "$REPO" --body "❌ Clone aborted: the \`pinata-agent\` App does not have access to all repositories in this workflow's clone scope. An admin must extend the App's access in the \`adobecom\` org settings to include the configured upstream repo (see \`.pinata/.config.json::clone.upstream_repo\`). Once installed, re-apply the label."
+                  exit 1
 
             - name: Set up uv
               uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.0.1
