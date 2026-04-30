@@ -24,6 +24,11 @@ import {
     processAddon,
     processTrialBadge,
 } from '../src/hydrate.js';
+import {
+    PAGE_CONTEXT_GLOBAL,
+    getPageContext,
+    interpolateFields,
+} from '../src/page-context.js';
 import { CCD_SLICE_AEM_FRAGMENT_MAPPING } from '../src/variants/ccd-slice.js';
 
 import { mockFetch } from './mocks/fetch.js';
@@ -1103,5 +1108,107 @@ describe('appendSlot', () => {
         const appended = el.querySelector('[slot="test-slot"]');
         expect(appended).to.exist;
         expect(appended.textContent).to.equal('This is a...');
+    });
+});
+
+describe('page-context interpolation', () => {
+    const INTERPOLATABLE = [
+        'cardTitle',
+        'subtitle',
+        'description',
+        'shortDescription',
+        'promoText',
+        'badge',
+        'trialBadge',
+        'callout',
+        'ctas',
+        'addonConfirmation',
+    ];
+
+    afterEach(() => {
+        delete window[PAGE_CONTEXT_GLOBAL];
+        sinon.restore();
+    });
+
+    it('substitutes {{product_name}} in description when global is set', () => {
+        window[PAGE_CONTEXT_GLOBAL] = { product_name: 'Photoshop' };
+        const fields = { description: 'Get {{product_name}} today' };
+        interpolateFields(fields, getPageContext(), INTERPOLATABLE);
+
+        const merchCard = mockMerchCard();
+        const aemFragmentMapping = {
+            description: { tag: 'div', slot: 'body-xs' },
+        };
+        processDescription(fields, merchCard, aemFragmentMapping);
+
+        expect(
+            merchCard.querySelector('div[slot="body-xs"]')?.textContent,
+        ).to.equal('Get Photoshop today');
+    });
+
+    it('resolves {{product_name}} to empty string when global is unset', () => {
+        delete window[PAGE_CONTEXT_GLOBAL];
+        const fields = { description: 'Get {{product_name}} today' };
+        interpolateFields(fields, getPageContext(), INTERPOLATABLE);
+
+        const merchCard = mockMerchCard();
+        const aemFragmentMapping = {
+            description: { tag: 'div', slot: 'body-xs' },
+        };
+        processDescription(fields, merchCard, aemFragmentMapping);
+
+        expect(
+            merchCard.querySelector('div[slot="body-xs"]')?.textContent,
+        ).to.equal('Get  today');
+    });
+
+    it('substitutes tokens in title, subtitle, promoText, callout, badge', () => {
+        window[PAGE_CONTEXT_GLOBAL] = { product_name: 'Illustrator' };
+        const fields = {
+            cardTitle: '{{product_name}} Pro',
+            subtitle: 'Subtitle: {{product_name}}',
+            promoText: 'Save on {{product_name}}',
+            callout: 'Try {{product_name}}',
+            badge: 'New {{product_name}}',
+        };
+        interpolateFields(fields, getPageContext(), INTERPOLATABLE);
+
+        expect(fields.cardTitle).to.equal('Illustrator Pro');
+        expect(fields.subtitle).to.equal('Subtitle: Illustrator');
+        expect(fields.promoText).to.equal('Save on Illustrator');
+        expect(fields.callout).to.equal('Try Illustrator');
+        expect(fields.badge).to.equal('New Illustrator');
+    });
+
+    it('supports an arbitrary new key without code changes', () => {
+        window[PAGE_CONTEXT_GLOBAL] = {
+            product_family: 'Creative Cloud',
+        };
+        const fields = {
+            description: 'Part of {{product_family}}',
+        };
+        interpolateFields(fields, getPageContext(), INTERPOLATABLE);
+        expect(fields.description).to.equal('Part of Creative Cloud');
+    });
+
+    it('leaves token-free fields untouched (fast path)', () => {
+        window[PAGE_CONTEXT_GLOBAL] = { product_name: 'Photoshop' };
+        const original = 'No tokens at all';
+        const fields = { description: original };
+        interpolateFields(fields, getPageContext(), INTERPOLATABLE);
+        expect(fields.description).to.equal(original);
+    });
+
+    it('does not interpolate fields outside the allow-list', () => {
+        window[PAGE_CONTEXT_GLOBAL] = { product_name: 'Photoshop' };
+        const fields = {
+            description: 'Get {{product_name}}',
+            cardTitle: '{{product_name}} Pro',
+            unrelatedField: 'leave {{product_name}} alone',
+        };
+        interpolateFields(fields, getPageContext(), INTERPOLATABLE);
+        expect(fields.description).to.equal('Get Photoshop');
+        expect(fields.cardTitle).to.equal('Photoshop Pro');
+        expect(fields.unrelatedField).to.equal('leave {{product_name}} alone');
     });
 });

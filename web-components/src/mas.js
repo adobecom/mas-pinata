@@ -14,6 +14,11 @@ import './mas-mnemonic.js';
 
 import { registerVariant } from './variants/variants.js';
 
+export {
+    PAGE_CONTEXT_GLOBAL,
+    EVENT_MAS_PAGE_CONTEXT_READY,
+} from './page-context.js';
+
 // Import ccd variants
 import {
     CCD_SUGGESTED_AEM_FRAGMENT_MAPPING,

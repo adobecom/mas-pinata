@@ -1,6 +1,43 @@
-import { SELECTOR_MAS_INLINE_PRICE } from './constants.js';
+import {
+    PAGE_CONTEXT_TIMEOUT_MS,
+    SELECTOR_MAS_INLINE_PRICE,
+} from './constants.js';
 import { UptLink } from './upt-link.js';
 import { createTag } from './utils.js';
+import {
+    getPageContext,
+    interpolateFields,
+    whenPageContextReady,
+} from './page-context.js';
+
+const INTERPOLATABLE_FIELDS = [
+    'cardTitle',
+    'subtitle',
+    'description',
+    'shortDescription',
+    'promoText',
+    'badge',
+    'trialBadge',
+    'callout',
+    'ctas',
+    'addonConfirmation',
+];
+
+function hasInterpolationToken(fields) {
+    for (const name of INTERPOLATABLE_FIELDS) {
+        const value = fields[name];
+        if (typeof value === 'string') {
+            if (value.indexOf('{{') !== -1) return true;
+        } else if (Array.isArray(value)) {
+            for (const item of value) {
+                if (typeof item === 'string' && item.indexOf('{{') !== -1) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
 
 const DEFAULT_BADGE_COLOR = '#000000';
 const DEFAULT_BADGE_BACKGROUND_COLOR = '#F8D904';
@@ -830,6 +867,10 @@ export async function hydrate(fragment, merchCard) {
     const { variant } = fields;
     if (!variant) throw new Error(`hydrate: no variant found in payload ${id}`);
     cleanup(merchCard);
+    if (hasInterpolationToken(fields)) {
+        await whenPageContextReady(PAGE_CONTEXT_TIMEOUT_MS);
+        interpolateFields(fields, getPageContext(), INTERPOLATABLE_FIELDS);
+    }
     merchCard.settings = settings;
     if (priceLiterals) merchCard.priceLiterals = priceLiterals;
     merchCard.id ??= fragment.id;
