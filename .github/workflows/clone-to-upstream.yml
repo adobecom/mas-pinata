@@ -6,10 +6,20 @@ on:
 
 permissions:
     contents: read
-    pull-requests: read
+
+# Don't race two runs against the same upstream branch when a PR is rapidly
+# unlabeled/relabeled. Cancel-in-progress is false because we don't want to
+# leave the upstream branch half-pushed if a second event arrives mid-flight.
+concurrency:
+    group: clone-to-upstream-${{ github.event.pull_request.number }}
+    cancel-in-progress: false
 
 jobs:
     clone:
+        # Skip PRs whose head branch lives in a fork — secrets are stripped
+        # for those events and the head SHA isn't fetchable from `origin`.
+        # Direct branch PRs only.
+        if: github.event.pull_request.head.repo.full_name == github.repository
         runs-on: ubuntu-latest
         timeout-minutes: 10
         steps:
@@ -47,15 +57,17 @@ jobs:
                       mas
 
             - name: Set up uv
-              uses: astral-sh/setup-uv@v6
+              uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.0.1
 
             - name: Run clone
               env:
                   APP_TOKEN: ${{ steps.clone-token.outputs.token }}
-                  GITHUB_EVENT_PATH: ${{ github.event_path }}
+                  LABEL_NAME: ${{ github.event.label.name }}
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  FORK_REPO: ${{ github.repository }}
               run: |
                   uv run .pinata-harness/workflows/clone_to_upstream.py \
-                      --pr=${{ github.event.pull_request.number }} \
-                      --fork-repo=${{ github.repository }} \
-                      --label="${{ github.event.label.name }}" \
+                      --pr="$PR_NUMBER" \
+                      --fork-repo="$FORK_REPO" \
+                      --label="$LABEL_NAME" \
                       --repo-path=.
