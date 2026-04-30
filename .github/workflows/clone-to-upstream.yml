@@ -1,0 +1,97 @@
+name: 'Clone to Upstream'
+
+on:
+    pull_request:
+        types: [labeled]
+
+permissions:
+    contents: read
+
+# Don't race two runs against the same upstream branch when a PR is rapidly
+# unlabeled/relabeled. Cancel-in-progress is false because we don't want to
+# leave the upstream branch half-pushed if a second event arrives mid-flight.
+concurrency:
+    group: clone-to-upstream-${{ github.event.pull_request.number }}
+    cancel-in-progress: false
+
+jobs:
+    clone:
+        # Skip PRs whose head branch lives in a fork — secrets are stripped
+        # for those events and the head SHA isn't fetchable from `origin`.
+        # Direct branch PRs only.
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        steps:
+            - name: Checkout fork (full history)
+              uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+              with:
+                  fetch-depth: 0
+
+            - name: Mint token for harness checkout
+              id: harness-token
+              uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+              with:
+                  app-id: ${{ secrets.PINATA_APP_ID }}
+                  private-key: ${{ secrets.PINATA_APP_PRIVATE_KEY }}
+                  owner: adobe-acom
+                  repositories: pinata
+
+            - name: Checkout harness scripts
+              uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+              with:
+                  repository: adobe-acom/pinata
+                  ref: main
+                  path: .pinata-harness
+                  token: ${{ steps.harness-token.outputs.token }}
+
+            - name: Mint clone token (mas-pinata + mas)
+              id: clone-token
+              # Don't fail-fast — surface a clear PR comment if the App
+              # isn't installed on the upstream repo (else the dev sees
+              # only a 422 stack trace in the Actions log).
+              continue-on-error: true
+              uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+              with:
+                  app-id: ${{ secrets.PINATA_APP_ID }}
+                  private-key: ${{ secrets.PINATA_APP_PRIVATE_KEY }}
+                  owner: adobecom
+                  repositories: |
+                      mas-pinata
+                      mas
+
+            - name: Mint tenant-only token for failure comment
+              if: steps.clone-token.outcome == 'failure'
+              id: tenant-token
+              uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+              with:
+                  app-id: ${{ secrets.PINATA_APP_ID }}
+                  private-key: ${{ secrets.PINATA_APP_PRIVATE_KEY }}
+                  owner: adobecom
+                  repositories: mas-pinata
+
+            - name: Comment on source PR if upstream install missing
+              if: steps.clone-token.outcome == 'failure'
+              env:
+                  GH_TOKEN: ${{ steps.tenant-token.outputs.token }}
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  REPO: ${{ github.repository }}
+              run: |
+                  gh pr comment "$PR_NUMBER" --repo "$REPO" --body "❌ Clone aborted: the \`pinata-agent\` App does not have access to all repositories in this workflow's clone scope. An admin must extend the App's access in the \`adobecom\` org settings to include the configured upstream repo (see \`.pinata/.config.json::clone.upstream_repo\`). Once installed, re-apply the label."
+                  exit 1
+
+            - name: Set up uv
+              uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.0.1
+
+            - name: Run clone
+              env:
+                  APP_TOKEN: ${{ steps.clone-token.outputs.token }}
+                  LABEL_NAME: ${{ github.event.label.name }}
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  FORK_REPO: ${{ github.repository }}
+              run: |
+                  uv run .pinata-harness/workflows/clone_to_upstream.py \
+                      --pr="$PR_NUMBER" \
+                      --fork-repo="$FORK_REPO" \
+                      --label="$LABEL_NAME" \
+                      --repo-path=.
