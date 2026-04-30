@@ -100,6 +100,11 @@ export const EVENT_AEM_ERROR = 'aem:error';
 export const EVENT_MAS_READY = 'mas:ready';
 export const EVENT_MAS_ERROR = 'mas:error';
 
+export {
+    EVENT_MAS_PAGE_CONTEXT_READY,
+    PAGE_CONTEXT_TIMEOUT_MS,
+} from './page-context.js';
+
 export const CLASS_NAME_FAILED = 'placeholder-failed';
 export const CLASS_NAME_PENDING = 'placeholder-pending';
 export const CLASS_NAME_RESOLVED = 'placeholder-resolved';
