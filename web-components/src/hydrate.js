@@ -57,16 +57,23 @@ export function appendSlot(fieldName, fields, el, mapping) {
 }
 
 export function processMnemonics(fields, merchCard, mnemonicsConfig) {
-    // Filter out empty string sentinel values (indicates explicitly cleared)
-    const icons = (fields.mnemonicIcon || []).filter((icon) => icon);
+    const icons = fields.mnemonicIcon || [];
+    const alts = fields.mnemonicAlt || [];
+    const links = fields.mnemonicLink || [];
+    const rowCount = Math.max(icons.length, alts.length, links.length);
 
-    const mnemonics = icons.map((icon, index) => ({
-        icon,
-        alt: fields.mnemonicAlt?.[index] ?? '',
-        link: fields.mnemonicLink?.[index] ?? '',
-    }));
+    const mnemonics = [];
+    for (let index = 0; index < rowCount; index += 1) {
+        const icon = icons[index] ?? '';
+        const alt = alts[index] ?? '';
+        const link = links[index] ?? '';
+        // Drop fully empty rows (preserves the "explicit clear" [""] sentinel
+        // and any author-side blank rows).
+        if (!icon && !alt && !link) continue;
+        mnemonics.push({ icon, alt, link });
+    }
 
-    mnemonics?.forEach(({ icon: src, alt, link: href }) => {
+    mnemonics.forEach(({ icon: src, alt, link: href }) => {
         if (href && !/^https?:/.test(href)) {
             try {
                 href = new URL(`https://${href}`).href.toString();
@@ -78,10 +85,10 @@ export function processMnemonics(fields, merchCard, mnemonicsConfig) {
 
         const attrs = {
             slot: 'icons',
-            src,
             loading: merchCard.loading,
             size: mnemonicsConfig?.size ?? 'l',
         };
+        if (src) attrs.src = src;
         if (alt) attrs.alt = alt;
         if (href) attrs.href = href;
         const merchIcon = createTag('merch-icon', attrs);
@@ -90,7 +97,7 @@ export function processMnemonics(fields, merchCard, mnemonicsConfig) {
 
     const slotIcons = merchCard.shadowRoot.querySelector('slot[name="icons"]');
     if (slotIcons) {
-        slotIcons.style.display = mnemonics?.length ? null : 'none';
+        slotIcons.style.display = mnemonics.length ? null : 'none';
     }
 }
 

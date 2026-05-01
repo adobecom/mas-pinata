@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, nothing } from 'lit';
 
 // Self-contained tooltip detection for MAS
 function hasSpectrumTooltip() {
@@ -79,20 +79,27 @@ export default class MerchIcon extends LitElement {
     }
 
     render() {
-        const { href } = this;
-        return href
-            ? html`<a href="${href}">
-                  <img
-                      src="${this.src}"
+        const { href, src } = this;
+        if (src) {
+            return href
+                ? html`<a href="${href}">
+                      <img
+                          src="${src}"
+                          alt="${this.alt}"
+                          loading="${this.loading}"
+                      />
+                  </a>`
+                : html` <img
+                      src="${src}"
                       alt="${this.alt}"
                       loading="${this.loading}"
-                  />
-              </a>`
-            : html` <img
-                  src="${this.src}"
-                  alt="${this.alt}"
-                  loading="${this.loading}"
-              />`;
+                  />`;
+        }
+        // No src: keep the slot occupied. Render a bare anchor when a link is
+        // set so the area stays keyboard reachable; otherwise render nothing.
+        return href
+            ? html`<a href="${href}" aria-label="${this.alt || ''}"></a>`
+            : nothing;
     }
 
     static styles = css`

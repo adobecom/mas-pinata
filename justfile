@@ -3,6 +3,7 @@ set quiet
 port := env("AEM_PORT", "3000")
 studio_port := env("STUDIO_PORT", "3100")
 wc_port := env("WC_PORT", "3200")
+aem_host := env("AEM_HOST", "https://author-p22655-e59433.adobeaemcloud.com")
 
 default:
     @just --list
@@ -12,8 +13,8 @@ install:
     cd studio && npm install
 
 start:
-    cd studio && PORT={{studio_port}} node ./proxy-server.mjs &
-    cd web-components && DEV_SERVER_PORT={{wc_port}} node ./watch.mjs --serve &
+    cd studio && PROXY_PORT={{studio_port}} node ./proxy-server.mjs {{aem_host}} &
+    cd web-components && node ./watch.mjs &
     aem up --port {{port}} &
 
 stop:
