@@ -31,6 +31,7 @@ import {
     CARD_MODEL_PATH,
     MAS_PRODUCT_CODE_PREFIX,
     PZN_FOLDER,
+    PZN_COUNTRY_TAG_PATH_PREFIX,
     SURFACES,
     ODIN_PREVIEW_FRAGMENTS_URL,
 } from './constants.js';
@@ -38,7 +39,7 @@ import { fragmentHasPersonalizationTag, isPznCountryTagId, PZN_TAG_ID_PREFIX } f
 import { Placeholder } from './aem/placeholder.js';
 import { getFragmentName } from './translation/translation-utils.js';
 import generateFragmentStore from './reactivity/source-fragment-store.js';
-import { getDefaultLocaleCode } from '../../io/www/src/fragment/locales.js';
+import { getDefaultLocaleCode, getSurfaceLocales, getLocaleCode } from '../../io/www/src/fragment/locales.js';
 import { getDictionary } from '../libs/fragment-client.js';
 import { applyCorrectorToFragment } from './utils/corrector-helper.js';
 import { Promotion } from './aem/promotion.js';
@@ -1975,6 +1976,184 @@ export class MasRepository extends LitElement {
         }
 
         return createdFragment;
+    }
+
+    /**
+     * Builds pzn country tag paths from a row's Countries cell.
+     * Accepts comma-separated locale codes (`fr_FR`) or country codes (`FR`)
+     * — country codes are resolved to a locale via the parent surface's data.
+     * Unknown codes are returned as-is so the create call surfaces a clear
+     * AEM-side error rather than silently dropping data.
+     * @param {string} countriesValue
+     * @param {string} surface
+     * @returns {string[]}
+     */
+    #parseCountryCellToPznTags(countriesValue, surface) {
+        if (!countriesValue) return [];
+        const surfaceLocales = getSurfaceLocales(surface) || [];
+        const byCountry = new Map();
+        for (const locale of surfaceLocales) {
+            const code = getLocaleCode(locale);
+            if (code) byCountry.set(locale.country, code);
+        }
+        return String(countriesValue)
+            .split(/[,;\n]/)
+            .map((entry) => entry.trim())
+            .filter(Boolean)
+            .map((entry) => {
+                if (entry.includes('_')) return entry;
+                return byCountry.get(entry.toUpperCase()) || entry;
+            })
+            .map((localeCode) => `${PZN_COUNTRY_TAG_PATH_PREFIX}/${localeCode}`);
+    }
+
+    async #resolveBaseOfferData(baseFragment) {
+        const fragmentForOsi = new Fragment(baseFragment);
+        const wcsOsi = fragmentForOsi.getFieldValue?.('osi');
+        if (!wcsOsi) {
+            throw new UserFriendlyError('Base card has no OSI; cannot resolve product arrangement code.');
+        }
+
+        const service = document.querySelector('mas-commerce-service');
+        if (!service) {
+            throw new UserFriendlyError('Commerce service is not ready.');
+        }
+
+        const priceOptions = service.collectPriceOptions({ wcsOsi });
+        const [offersPromise] = service.resolveOfferSelectors(priceOptions);
+        const [offer] = await offersPromise;
+        if (!offer?.productArrangementCode) {
+            throw new UserFriendlyError('Could not resolve product arrangement code for the base card.');
+        }
+        return offer;
+    }
+
+    /**
+     * Bulk-creates regional and intro pricing variations under a base merch
+     * card. Sequentially iterates each row to keep `pollCreatedFragment` and
+     * `updateParentVariations` race-free. Strictly create-only: rows whose
+     * OSI / promo code already exists are reported in `skipped`, never
+     * silently mutated.
+     * @param {Object} args
+     * @param {string} args.baseFragmentId
+     * @param {Object[]} args.regionalRows
+     * @param {Object[]} args.introRows
+     * @param {(progress: { done: number, total: number, currentLabel: string }) => void} [args.onProgress]
+     * @returns {Promise<{ created: Object[], skipped: Object[], failed: Object[] }>}
+     */
+    async bulkCreateVariationsFromRows({ baseFragmentId, regionalRows = [], introRows = [], onProgress }) {
+        const baseRaw = await this.aem.sites.cf.fragments.getById(baseFragmentId);
+        if (!baseRaw) {
+            throw new UserFriendlyError('Failed to fetch base fragment.');
+        }
+
+        let parentRaw = baseRaw;
+        if (Fragment.isGroupedVariationPath(baseRaw.path)) {
+            parentRaw = await this.resolveHydratedParentFragment(baseRaw.path);
+            if (!parentRaw) {
+                throw new UserFriendlyError('Failed to resolve parent fragment for grouped variation.');
+            }
+        }
+
+        const parentFragment = new Fragment(parentRaw);
+        const surface = extractSurfaceFromPath(parentRaw.path);
+        if (!surface) {
+            throw new UserFriendlyError('Could not determine surface from parent path.');
+        }
+
+        const offerData = await this.#resolveBaseOfferData(parentRaw);
+        const productArrangementCode = offerData.productArrangementCode;
+        const targetFolder = `${ROOT_PATH}/${surface}/en_US/${productArrangementCode}/${PZN_FOLDER}`;
+        await this.aem.sites.cf.fragments.ensureFolderExists(targetFolder);
+
+        const created = [];
+        const skipped = [];
+        const failed = [];
+
+        const allRows = [
+            ...regionalRows.map((row) => ({ row, type: 'regional' })),
+            ...introRows.map((row) => ({ row, type: 'intro' })),
+        ];
+        const total = allRows.length;
+
+        for (let index = 0; index < allRows.length; index++) {
+            const { row, type } = allRows[index];
+            const identifier = type === 'regional' ? row['Regional Price Offer ID'] : row['Promo Vanity Code'];
+            const currentLabel = `${type === 'regional' ? 'Regional' : 'Intro'} · ${identifier || ''}`;
+            onProgress?.({ done: index, total, currentLabel });
+
+            try {
+                const pznTags = this.#parseCountryCellToPznTags(row['Countries'], surface);
+                const overrideFields = [];
+                if (pznTags.length) {
+                    overrideFields.push({ name: 'pznTags', type: 'tag', multiple: true, values: pznTags });
+                }
+                if (row['Price Point']) {
+                    overrideFields.push({ name: 'pricePoint', type: 'text', values: [String(row['Price Point']).trim()] });
+                }
+                if (type === 'regional' && row['Regional Price Offer ID']) {
+                    overrideFields.push({ name: 'osi', type: 'text', values: [String(row['Regional Price Offer ID']).trim()] });
+                }
+                if (type === 'intro' && row['Promo Vanity Code']) {
+                    overrideFields.push({ name: 'promoCode', type: 'text', values: [String(row['Promo Vanity Code']).trim()] });
+                }
+
+                let fragmentName = this.generateGroupedVariationName(parentFragment, pznTags);
+                const collision = await this.aem.sites.cf.fragments
+                    .getByPath(`${targetFolder}/${fragmentName}`)
+                    .catch(() => null);
+                if (collision) {
+                    const suffix = Array.from({ length: 4 }, () =>
+                        String.fromCharCode(97 + Math.floor(Math.random() * 26)),
+                    ).join('');
+                    fragmentName = `${fragmentName}-${suffix}`;
+                }
+
+                let newFragment;
+                try {
+                    newFragment = await this.aem.sites.cf.fragments.create({
+                        title: parentRaw.title,
+                        description: parentRaw.description,
+                        modelId: parentRaw.model.id,
+                        parentPath: targetFolder,
+                        name: fragmentName,
+                        fields: overrideFields,
+                    });
+                } catch (createErr) {
+                    const existingPath = this.parseVariationAlreadyExistsPath(createErr?.message);
+                    if (existingPath) {
+                        skipped.push({ identifier, type, reason: 'already exists', path: existingPath });
+                        continue;
+                    }
+                    throw createErr;
+                }
+
+                if (parentRaw.tags?.length) {
+                    await this.aem.sites.cf.fragments.copyFragmentTags(newFragment, parentRaw.tags);
+                }
+
+                const polled = await this.aem.sites.cf.fragments.pollCreatedFragment(newFragment);
+                if (!polled) {
+                    throw new Error('Timed out waiting for fragment creation.');
+                }
+
+                await this.updateParentVariations(parentRaw, polled.path);
+                Events.fragmentAdded.emit(polled.id);
+                created.push({ identifier, type, id: polled.id, path: polled.path });
+            } catch (err) {
+                console.error(`Bulk import row ${index + 1} failed:`, err);
+                failed.push({ identifier, type, error: err?.message || 'Unknown error' });
+            }
+
+            onProgress?.({ done: index + 1, total, currentLabel });
+        }
+
+        const parentStore = Store.fragments.list.data.get().find((store) => store.get()?.id === parentRaw.id);
+        if (parentStore) {
+            await this.refreshFragment(parentStore);
+        }
+
+        return { created, skipped, failed };
     }
 
     async createPlaceholder(placeholder) {

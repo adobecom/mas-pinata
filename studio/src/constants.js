@@ -124,6 +124,7 @@ export const PAGE_NAMES = {
     PROMOTIONS_EDITOR: 'promotions-editor',
     TRANSLATIONS: 'translations',
     TRANSLATION_EDITOR: 'translation-editor',
+    IMPORT_VARIATIONS: 'import-variations',
 };
 
 export const TAG_STATUS_PUBLISHED = 'mas:status/published';
