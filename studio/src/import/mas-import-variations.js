@@ -335,7 +335,11 @@ export class MasImportVariations extends LitElement {
         return html`
             <h2>Importing variations…</h2>
             <p>${done} of ${total}${currentLabel ? html` — ${currentLabel}` : nothing}</p>
-            <sp-progress-circle indeterminate size="l"></sp-progress-circle>
+            <sp-progress-bar
+                label="Importing…"
+                value=${done}
+                max=${total}
+            ></sp-progress-bar>
         `;
     }
 

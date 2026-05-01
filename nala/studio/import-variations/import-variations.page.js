@@ -35,6 +35,7 @@ export default class ImportVariationsPage {
         this.invalidRows = page.locator('mas-import-variations sp-table sp-table-row.invalid');
         this.duplicateRows = page.locator('mas-import-variations sp-table sp-table-row.duplicate');
         this.formatErrorBanner = page.locator('mas-import-variations .format-error');
+        this.formatErrorDownloadButton = page.locator('mas-import-variations .format-error sp-button', { hasText: 'Download template' });
         this.importButton = page.locator('mas-import-variations sp-button[variant="cta"]');
         this.backButton = page.locator('mas-import-variations sp-button', { hasText: 'Back' });
 
@@ -45,6 +46,12 @@ export default class ImportVariationsPage {
         // Step 5 — summary
         this.summaryHeading = page.locator('mas-import-variations h2', { hasText: 'Import complete' });
         this.summarySections = page.locator('mas-import-variations section');
+        this.summaryCreatedSection = page.locator('mas-import-variations section', { has: page.locator('h3', { hasText: 'Created' }) });
+        this.summarySkippedSection = page.locator('mas-import-variations section', { has: page.locator('h3', { hasText: 'Skipped' }) });
+        this.summaryFailedSection = page.locator('mas-import-variations section', { has: page.locator('h3', { hasText: 'Failed' }) });
+        this.summaryCreatedItems = this.summaryCreatedSection.locator('ul li');
+        this.summarySkippedItems = this.summarySkippedSection.locator('ul li');
+        this.summaryFailedItems = this.summaryFailedSection.locator('ul li');
         this.doneButton = page.locator('mas-import-variations sp-button[variant="cta"]', { hasText: 'Done' });
     }
 
