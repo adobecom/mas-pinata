@@ -677,11 +677,11 @@ test.describe('M@S Studio ACOM Plans Individuals card test suite', () => {
             await expect(await individualsCard.locator(plans.cardQuantitySelector)).toBeVisible();
         });
 
-        await test.step('step-6: Edit quantity selector start value', async () => {
-            await expect(await editor.quantitySelectorStart).toBeVisible();
-            await expect(await editor.quantitySelectorStart).toHaveValue(data.startValue.original);
-            await editor.quantitySelectorStart.fill(data.startValue.updated);
-            await expect(await editor.quantitySelectorStart).toHaveValue(data.startValue.updated);
+        await test.step('step-6: Edit quantity selector minimum value', async () => {
+            await expect(await editor.quantitySelectorMinimum).toBeVisible();
+            await expect(await editor.quantitySelectorMinimum).toHaveValue(data.minimumValue.original);
+            await editor.quantitySelectorMinimum.fill(data.minimumValue.updated);
+            await expect(await editor.quantitySelectorMinimum).toHaveValue(data.minimumValue.updated);
         });
 
         await test.step('step-7: Edit quantity selector step value', async () => {
@@ -698,14 +698,14 @@ test.describe('M@S Studio ACOM Plans Individuals card test suite', () => {
             );
             await expect(await individualsCard.locator(plans.cardQuantitySelector)).toHaveAttribute(
                 'min',
-                data.startValue.updated,
+                data.minimumValue.updated,
             );
             // Test stepping through values
             await individualsCard.locator(plans.cardQuantitySelector).locator('button').click();
             await individualsCard.locator(plans.cardQuantitySelector).locator('button').press('ArrowDown');
             await individualsCard.locator(plans.cardQuantitySelector).locator('button').press('Enter');
             await expect(await individualsCard.locator(plans.cardQuantitySelector).locator('.text-field-input')).toHaveValue(
-                String(Number(data.startValue.updated) + Number(data.stepValue.updated)),
+                String(Number(data.minimumValue.updated) + Number(data.stepValue.updated)),
             );
         });
 

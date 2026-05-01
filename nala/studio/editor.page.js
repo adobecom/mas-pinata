@@ -61,7 +61,14 @@ export default class EditorPage {
         this.quantitySelectorFields = this.panel.locator('#quantitySelector quantity-select-field');
         this.quantitySelectorTitle = this.quantitySelectorFields.locator('#quantity-selector-title input');
         this.quantitySelectorStart = this.quantitySelectorFields.locator('#quantity-selector-start input');
+        this.quantitySelectorMinimum = this.quantitySelectorFields.locator('#quantity-selector-minimum input');
         this.quantitySelectorStep = this.quantitySelectorFields.locator('#quantity-selector-step input');
+        this.quantitySelectorStartWarning = this.quantitySelectorFields.locator(
+            'sp-field-group:has(#quantity-selector-start) sp-help-text[variant="negative"]',
+        );
+        this.quantitySelectorMinimumWarning = this.quantitySelectorFields.locator(
+            'sp-field-group:has(#quantity-selector-minimum) sp-help-text[variant="negative"]',
+        );
 
         this.shortDescription = this.panel.locator('rte-field#shortDescription div[contenteditable="true"]');
         this.size = this.panel.locator('#card-size');
