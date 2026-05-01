@@ -14,6 +14,7 @@ import VersionPage from '../studio/versions/versions.page.js';
 import PlaceholdersPage from '../studio/placeholders/placeholders.page.js';
 import TranslationsPage from '../studio/translations/translations.page.js';
 import TranslationEditorPage from '../studio/translations/translation-editor.page.js';
+import ImportVariationsPage from '../studio/import-variations/import-variations.page.js';
 import OSTPage from '../studio/ost.page.js';
 import WebUtil from './webutil.js';
 
@@ -31,6 +32,7 @@ let placeholders;
 let versions;
 let translations;
 let translationEditor;
+let importVariations;
 let ost;
 let webUtil;
 let clonedCardID = '';
@@ -79,6 +81,7 @@ const masTest = base.extend({
         webUtil = new WebUtil(page);
         versions = new VersionPage(page);
         placeholders = new PlaceholdersPage(page);
+        importVariations = new ImportVariationsPage(page);
 
         // Initialize counter
         await GlobalRequestCounter.init(page);
@@ -130,6 +133,7 @@ export {
     translations,
     translationEditor,
     placeholders,
+    importVariations,
     webUtil,
     versions,
     setClonedCardID,
