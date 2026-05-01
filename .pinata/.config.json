@@ -23,6 +23,8 @@
     "libs_param_value": "local",
     "depends_on": [],
     "pipeline": {
+        "event_trail": true,
+        "structured_prd": true,
         "progress_tracking": {
             "github": true,
             "slack": true
