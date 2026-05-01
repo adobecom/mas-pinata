@@ -31,6 +31,7 @@ export class MasImportVariations extends LitElement {
         parsing: { state: true },
         existingOsiSet: { state: true },
         existingPromoSet: { state: true },
+        collecting: { state: true },
     };
 
     constructor() {
@@ -45,6 +46,7 @@ export class MasImportVariations extends LitElement {
         this.parsing = false;
         this.existingOsiSet = new Set();
         this.existingPromoSet = new Set();
+        this.collecting = false;
     }
 
     createRenderRoot() {
@@ -65,13 +67,21 @@ export class MasImportVariations extends LitElement {
         this.result = null;
         this.existingOsiSet = new Set();
         this.existingPromoSet = new Set();
+        this.collecting = false;
     }
 
-    onBaseSelected(event) {
+    async onBaseSelected(event) {
         const fragment = event.detail?.fragment;
         if (!fragment) return;
         this.baseFragment = fragment;
-        this.collectExistingIdentifiers(fragment);
+        this.collecting = true;
+        try {
+            await this.collectExistingIdentifiers(fragment);
+        } catch (err) {
+            showToast(err?.message || 'Failed to load existing variations', 'negative');
+        } finally {
+            this.collecting = false;
+        }
         this.step = STEPS.UPLOAD;
     }
 
@@ -203,6 +213,13 @@ export class MasImportVariations extends LitElement {
     }
 
     renderPickBase() {
+        if (this.collecting) {
+            return html`
+                <h2>Step 1 — Choose a base card</h2>
+                <p>Loading existing variations for <strong>${this.baseFragment?.title || this.baseFragment?.name}</strong>…</p>
+                <sp-progress-circle indeterminate size="m"></sp-progress-circle>
+            `;
+        }
         return html`
             <h2>Step 1 — Choose a base card</h2>
             <p>Search for the merch card whose fields every new variation should inherit.</p>
