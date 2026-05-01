@@ -66,5 +66,17 @@ export default {
             browserParams: '#page=fragment-editor&path=nala&fragmentId=',
             tags: '@mas-studio @fragment-editor @ahome @ahome-promoted-plans',
         },
+        {
+            tcid: '6',
+            name: '@studio-deep-linking-name-field',
+            path: '/studio.html',
+            data: {
+                cardid: '48a759ce-3c9a-4158-9bc3-b21ffa07e8e4',
+                label: 'Deep linking name',
+                placeholder: 'Enter deep linking name',
+            },
+            browserParams: '#page=fragment-editor&path=nala&fragmentId=',
+            tags: '@mas-studio @fragment-editor @deep-linking-name',
+        },
     ],
 };

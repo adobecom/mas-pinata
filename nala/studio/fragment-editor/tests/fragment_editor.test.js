@@ -251,4 +251,35 @@ test.describe('M@S Studio Fragment Editor Locale test suite', () => {
             await expect(await editor.footer).toBeVisible();
         });
     });
+
+    // @studio-deep-linking-name-field - Validate "Card name" field is rendered as "Deep linking name"
+    test(`${features[6].name},${features[6].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[6];
+        const testPage = `${baseURL}${features[6].path}${miloLibs}${features[6].browserParams}${data.cardid}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Go to MAS Studio fragment editor page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+        });
+
+        await test.step('step-2: Verify editor panel is visible', async () => {
+            await expect(editor.panel).toBeVisible({ timeout: 15000 });
+        });
+
+        await test.step('step-3: Verify deep linking name field group is rendered with stable bindings', async () => {
+            await expect(editor.cardNameFieldGroup).toBeVisible();
+            await expect(editor.cardName).toHaveAttribute('data-field', 'cardName');
+        });
+
+        await test.step('step-4: Verify field label reads "Deep linking name"', async () => {
+            await expect(editor.cardNameLabel).toBeVisible();
+            await expect(editor.cardNameLabel).toHaveText(data.label);
+            await expect(editor.cardNameFieldGroup).not.toContainText('Card name');
+        });
+
+        await test.step('step-5: Verify input placeholder reads "Enter deep linking name"', async () => {
+            await expect(editor.cardName).toHaveAttribute('placeholder', data.placeholder);
+        });
+    });
 });
