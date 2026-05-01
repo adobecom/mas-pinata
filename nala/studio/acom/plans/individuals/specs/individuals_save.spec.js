@@ -160,5 +160,19 @@ export default {
             browserParams: '#page=fragment-editor&path=nala&fragmentId=',
             tags: '@mas-studio @acom @acom-save @acom-plans @acom-plans-save @acom-plans-individuals @acom-plans-individuals-save',
         },
+        {
+            tcid: '8',
+            name: '@studio-plans-individuals-save-empty-mnemonic-url',
+            path: '/studio.html',
+            data: {
+                cardid: '6f189be0-d64b-468f-b340-92888206cce8',
+                mnemonic: {
+                    alt: 'Empty visual slot accessibility text',
+                    link: 'https://www.adobe.com/empty-mnemonic-link',
+                },
+            },
+            browserParams: '#page=fragment-editor&path=nala&fragmentId=',
+            tags: '@mas-studio @acom @acom-save @acom-plans @acom-plans-save @acom-plans-individuals @acom-plans-individuals-save',
+        },
     ],
 };

@@ -109,8 +109,9 @@ class MnemonicField extends LitElement {
 
     #handleModalClose() {
         this.modalOpen = false;
-        // If field is empty (no icon selected), remove it
-        if (!this.icon) {
+        // Only remove the row when every field was abandoned (no icon, alt, or link).
+        // Icon-library fields manage their own clear behavior via #handleDeleteClick.
+        if (!this.iconLibrary && !this.icon && !this.alt && !this.link) {
             this.#handleDeleteClick();
         }
     }
@@ -178,7 +179,7 @@ class MnemonicField extends LitElement {
     }
 
     #getIconName() {
-        if (!this.icon) return 'No icon selected';
+        if (!this.icon) return this.alt?.trim() || 'Empty visual slot';
 
         if (this.iconLibrary && this.icon.startsWith('sp-icon-')) {
             return this.icon

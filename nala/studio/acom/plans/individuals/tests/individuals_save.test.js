@@ -625,4 +625,52 @@ test.describe('M@S Studio ACOM Plans Individuals card test suite', () => {
             await expect(await clonedCard.locator(plans.cardIcon)).toHaveAttribute('src', data.productIcon.updated.src);
         });
     });
+
+    // @studio-plans-individuals-save-empty-mnemonic-url - Validate mnemonic row saves with empty icon URL
+    test(`${features[8].name},${features[8].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[8];
+        const testPage = `${baseURL}${features[8].path}${miloLibs}${features[8].browserParams}${data.cardid}`;
+        setTestPage(testPage);
+        let clonedCard;
+
+        await test.step('step-1: Go to MAS Studio test page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+        });
+
+        await test.step('step-2: Clone card and open editor', async () => {
+            await studio.cloneCard(data.cardid);
+            clonedCard = await studio.getCard(data.cardid, 'cloned');
+            setClonedCardID(await clonedCard.locator('aem-fragment').getAttribute('fragment'));
+            data.clonedCardID = getClonedCardID();
+            await expect(await editor.panel).toBeVisible();
+            await expect(await clonedCard).toBeVisible();
+        });
+
+        await test.step('step-3: Open mnemonic modal and save with empty icon URL', async () => {
+            await editor.openMnemonicModal();
+            await editor.setMnemonicURL('', data.mnemonic.alt, data.mnemonic.link);
+            await editor.saveMnemonicModal();
+            await expect(await editor.mnemonicModal).toHaveCount(0);
+        });
+
+        await test.step('step-4: Save card', async () => {
+            await studio.saveCard();
+        });
+
+        await test.step('step-5: Validate empty-URL row round-trips through the editor', async () => {
+            await editor.openMnemonicModal();
+            await editor.mnemonicUrlTab.click();
+            await expect(await editor.iconURL).toHaveValue('');
+            await expect(await editor.mnemonicUrlAltInput).toHaveValue(data.mnemonic.alt);
+            await expect(await editor.mnemonicUrlLinkInput).toHaveValue(data.mnemonic.link);
+            await editor.cancelMnemonicModal();
+        });
+
+        await test.step('step-6: Validate card preview omits <img> for the empty-URL row', async () => {
+            await expect(clonedCard.locator('merch-icon[slot="icons"]').first()).toBeVisible();
+            await expect(clonedCard.locator('merch-icon[slot="icons"] img')).toHaveCount(0);
+        });
+    });
 });

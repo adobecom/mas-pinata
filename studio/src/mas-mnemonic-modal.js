@@ -285,10 +285,6 @@ class MasMnemonicModal extends LitElement {
             iconValue = this.icon || '';
         }
 
-        if (!iconValue.trim()) {
-            return;
-        }
-
         this.dispatchEvent(
             new CustomEvent('save', {
                 bubbles: true,
@@ -369,10 +365,9 @@ class MasMnemonicModal extends LitElement {
         return html`
             <div class="tab-content">
                 <div class="form-field">
-                    <sp-field-label for="url-icon" required>Icon URL</sp-field-label>
+                    <sp-field-label for="url-icon">Icon URL</sp-field-label>
                     <sp-textfield
                         id="url-icon"
-                        required
                         placeholder="https://example.com/icon.svg"
                         value="${!this.icon?.startsWith('sp-icon-') ? this.icon : ''}"
                         @input=${(e) => (this.icon = e.target.value)}
@@ -417,7 +412,7 @@ class MasMnemonicModal extends LitElement {
     }
 
     render() {
-        const isEditing = !!this.icon;
+        const isEditing = !!this.icon || !!this.alt || !!this.link;
 
         return html`
             <div @input=${(e) => e.stopPropagation()} @change=${(e) => e.stopPropagation()}>
