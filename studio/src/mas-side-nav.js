@@ -736,6 +736,13 @@ class MasSideNav extends LitElement {
                 <sp-icon-bookmark slot="icon"></sp-icon-bookmark>
             </mas-side-nav-item>
             <mas-side-nav-item
+                label="Import Variations"
+                ?selected=${Store.page.get() === PAGE_NAMES.IMPORT_VARIATIONS}
+                @nav-click="${router.navigateToPage(PAGE_NAMES.IMPORT_VARIATIONS)}"
+            >
+                <sp-icon-upload-to-cloud slot="icon"></sp-icon-upload-to-cloud>
+            </mas-side-nav-item>
+            <mas-side-nav-item
                 label="Translations"
                 ?selected=${Store.page.get() === PAGE_NAMES.TRANSLATIONS}
                 @nav-click=${this.isTranslationEnabled ? router.navigateToPage(PAGE_NAMES.TRANSLATIONS) : nothing}

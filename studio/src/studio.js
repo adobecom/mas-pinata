@@ -23,6 +23,7 @@ import './editors/merch-card-editor.js';
 import './editors/merch-card-collection-editor.js';
 import { initUsers } from './users.js';
 import './placeholders/mas-placeholders.js';
+import './import/mas-import-variations.js';
 import './settings/mas-settings.js';
 import './mas-confirm-dialog.js';
 import './mas-card-preview.js';
@@ -149,6 +150,11 @@ class MasStudio extends LitElement {
         return html` <mas-placeholders></mas-placeholders> `;
     }
 
+    get importVariations() {
+        if (this.page.value !== PAGE_NAMES.IMPORT_VARIATIONS) return nothing;
+        return html`<mas-import-variations></mas-import-variations>`;
+    }
+
     get settings() {
         if (this.page.value !== PAGE_NAMES.SETTINGS && this.page.value !== PAGE_NAMES.SETTINGS_EDITOR) return nothing;
         return html`<mas-settings bucket=${this.bucket} base-url=${this.baseUrl}></mas-settings>`;
@@ -238,9 +244,9 @@ class MasStudio extends LitElement {
                 ${this.sideNav}
                 ${this.masJsReady
                     ? html`<div class="main-container">
-                          ${this.splashScreen} ${this.content} ${this.placeholders} ${this.fragmentEditor} ${this.promotions}
-                          ${this.promotionsEditor} ${this.versionPage} ${this.translation} ${this.translationEditor}
-                          ${this.editorPanel} ${this.settings}
+                          ${this.splashScreen} ${this.content} ${this.placeholders} ${this.importVariations}
+                          ${this.fragmentEditor} ${this.promotions} ${this.promotionsEditor} ${this.versionPage}
+                          ${this.translation} ${this.translationEditor} ${this.editorPanel} ${this.settings}
                       </div>`
                     : nothing}
             </div>
