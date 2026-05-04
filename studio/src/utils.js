@@ -1,4 +1,4 @@
-import { CARD_MODEL_PATH, COLLECTION_MODEL_PATH, MAS_PRODUCT_CODE_PREFIX, TAG_PROMOTION_PREFIX } from './constants.js';
+import { CARD_MODEL_PATH, COLLECTION_MODEL_PATH, MAS_PRODUCT_CODE_PREFIX, PAGE_NAMES, TAG_PROMOTION_PREFIX } from './constants.js';
 import { VARIANTS } from './editors/variant-picker.js';
 import Events from './events.js';
 import { MAS_ROOT, PATH_TOKENS } from '../../io/www/src/fragment/utils/paths.js';
@@ -252,6 +252,27 @@ export function generateCodeToUse(fragment, path, page, failMessage) {
     });
     const richText = `<a href="${href}" target="_blank">${authorPath}</a>`;
     return { authorPath, code, richText, href };
+}
+
+/**
+ * Builds a shareable Studio deep link for a single fragment row.
+ * Used by the table-view "Copy link" action so authors can paste a URL that
+ * pre-filters the content view to a specific fragment or variation.
+ * @param {object} fragment - The AEM content fragment
+ * @param {string} path - The current surface path (e.g. "acom")
+ * @returns {{ href: string, label: string } | null}
+ */
+export function generateLinkToCard(fragment, path) {
+    const webComponentName = MODEL_WEB_COMPONENT_MAPPING[fragment?.model?.path];
+    if (!webComponentName) return null;
+    const { fragmentParts } = getFragmentPartsToUse(fragment, path);
+    const params = new URLSearchParams();
+    params.set('content-type', webComponentName);
+    params.set('page', PAGE_NAMES.CONTENT);
+    if (path) params.set('path', path);
+    if (fragment?.id) params.set('query', fragment.id);
+    const href = `https://mas.adobe.com/studio.html#${params.toString()}|${encodeURIComponent(fragmentParts)}`;
+    return { href, label: fragmentParts };
 }
 
 function buildStudioFragmentHref({ webComponentName, fragmentId, page, path, fieldName }) {

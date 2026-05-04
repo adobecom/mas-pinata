@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import ReactiveController from './reactivity/reactive-controller.js';
-import { extractLocaleFromPath, generateCodeToUse, getService, showToast } from './utils.js';
+import { extractLocaleFromPath, generateCodeToUse, generateLinkToCard, getService, showToast } from './utils.js';
 import { getFragmentName } from './translation/translation-utils.js';
 import Store from './store.js';
 import { closePreview, openPreview } from './mas-card-preview.js';
@@ -152,6 +152,22 @@ class MasFragmentTable extends LitElement {
         return `...${offerId.slice(-5)}`;
     }
 
+    async handleCopyLink(event) {
+        event.stopPropagation();
+        const path = Store.search.get().path;
+        const link = generateLinkToCard(this.fragmentStore.value, path);
+        if (!link?.href || !navigator.clipboard?.writeText) {
+            showToast('Failed to copy link to clipboard', 'negative');
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(link.href);
+            showToast('Link copied to clipboard', 'positive');
+        } catch (err) {
+            showToast('Failed to copy link to clipboard', 'negative');
+        }
+    }
+
     async copyOfferIdToClipboard(e) {
         e.stopPropagation();
         const offerId = this.offerData?.offerId;
@@ -232,6 +248,10 @@ class MasFragmentTable extends LitElement {
                               <sp-menu-item @click=${this.handleEditFragment}>
                                   <sp-icon-edit slot="icon"></sp-icon-edit>
                                   Edit fragment
+                              </sp-menu-item>
+                              <sp-menu-item @click=${this.handleCopyLink}>
+                                  <sp-icon-link slot="icon"></sp-icon-link>
+                                  Copy link
                               </sp-menu-item>
                           </sp-action-menu>`}
                 </sp-table-cell>
