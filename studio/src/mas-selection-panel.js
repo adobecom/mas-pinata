@@ -2,6 +2,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { EVENT_KEYDOWN } from './constants.js';
 import ReactiveController from './reactivity/reactive-controller.js';
 import Store from './store.js';
+import { generateCodeToUse, showToast } from './utils.js';
 
 class MasSelectionPanel extends LitElement {
     static styles = css`
@@ -119,6 +120,63 @@ class MasSelectionPanel extends LitElement {
         this.onUnpublish(this.selection, event);
     }
 
+    async handleCopyCode() {
+        const fragments = this.selection
+            .map((item) => {
+                if (typeof item === 'string') {
+                    return Store.fragments.list.data
+                        .get()
+                        .find((store) => store.get().id === item)
+                        ?.get();
+                }
+                if (item?.get) return item.get();
+                if (item?.id) return item;
+                return null;
+            })
+            .filter(Boolean);
+
+        if (fragments.length === 0) return;
+
+        const surface = Store.search.get().path;
+        const page = Store.page.get();
+        const lines = fragments
+            .map((fragment) => {
+                const result = generateCodeToUse(fragment, surface, page);
+                const href = result?.href;
+                const label = result?.authorPath || fragment.fragmentName;
+                return { href, label };
+            })
+            .filter((line) => line.href || line.label);
+
+        if (lines.length === 0) {
+            showToast('Failed to copy code to clipboard', 'negative');
+            return;
+        }
+
+        const htmlPayload = lines
+            .map(({ href, label }) =>
+                href ? `<a href="${href}" target="_blank">${label}</a>` : label,
+            )
+            .join('<br>\n');
+        const plainPayload = lines.map(({ href, label }) => href || label).join('\n');
+
+        try {
+            await navigator.clipboard.write([
+                /* global ClipboardItem */
+                new ClipboardItem({
+                    'text/plain': new Blob([plainPayload], { type: 'text/plain' }),
+                    'text/html': new Blob([htmlPayload], { type: 'text/html' }),
+                }),
+            ]);
+            showToast(
+                `Copied ${lines.length} link${lines.length === 1 ? '' : 's'} to clipboard`,
+                'positive',
+            );
+        } catch (e) {
+            showToast('Failed to copy code to clipboard', 'negative');
+        }
+    }
+
     // #endregion
 
     render() {
@@ -171,6 +229,12 @@ class MasSelectionPanel extends LitElement {
                   >
                       <sp-icon-publish-remove slot="icon"></sp-icon-publish-remove>
                       <sp-tooltip self-managed placement="top">Unpublish</sp-tooltip>
+                  </sp-action-button>`
+                : nothing}
+            ${count > 0
+                ? html`<sp-action-button slot="buttons" label="Copy code" @click=${this.handleCopyCode}>
+                      <sp-icon-code slot="icon"></sp-icon-code>
+                      <sp-tooltip self-managed placement="top">Copy code</sp-tooltip>
                   </sp-action-button>`
                 : nothing}
         </sp-action-bar>`;
