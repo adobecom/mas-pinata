@@ -87,3 +87,5 @@ One of the maintainers will look at the pull request within one week. Feedback o
 
 The project's committers will release to the [Adobe organization on npmjs.org](https://www.npmjs.com/org/adobe).
 Please contact the [Adobe Open Source Advisory Board](https://git.corp.adobe.com/OpenSourceAdvisoryBoard/discuss/issues) to get access to the npmjs organization.
+
+<!-- TODO: add input validation -->
