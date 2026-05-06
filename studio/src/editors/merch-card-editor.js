@@ -709,7 +709,7 @@ class MerchCardEditor extends LitElement {
 
         let html = '';
         if (e.target.checked) {
-            html = this.quantityValue || createQuantitySelectValue({ title: '', min: '1', step: '1' });
+            html = this.quantityValue || createQuantitySelectValue({ title: '', min: '1', step: '1', defaultValue: '' });
         } else {
             const qsValues = this.fragmentStore.get().getField(QUANTITY_MODEL)?.values;
             this.quantitySelectorValues = qsValues?.length ? qsValues[0] : '';
@@ -1381,6 +1381,7 @@ class MerchCardEditor extends LitElement {
                             ${this.renderQuantityComponentOverrideIndicator('title')}
                             ${this.renderQuantityComponentOverrideIndicator('min')}
                             ${this.renderQuantityComponentOverrideIndicator('step')}
+                            ${this.renderQuantityComponentOverrideIndicator('defaultValue')}
                         </div>
                     </div>
                 </sp-field-group>
@@ -2143,6 +2144,7 @@ class MerchCardEditor extends LitElement {
             title: component === 'title' ? parentValues.title : currentValues.title,
             min: component === 'min' ? parentValues.min : currentValues.min,
             step: component === 'step' ? parentValues.step : currentValues.step,
+            defaultValue: component === 'defaultValue' ? parentValues.defaultValue : currentValues.defaultValue,
         });
         this.fragmentStore.updateField(QUANTITY_MODEL, [html]);
         this.quantitySelectorValues = html;
