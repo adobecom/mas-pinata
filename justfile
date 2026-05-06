@@ -1,4 +1,5 @@
 set quiet
+set dotenv-load
 
 port := env("AEM_PORT", "3000")
 studio_port := env("STUDIO_PORT", "3100")
@@ -12,7 +13,7 @@ install:
     cd studio && npm install
 
 start:
-    cd studio && PORT={{studio_port}} node ./proxy-server.mjs &
+    cd studio && PROXY_PORT={{studio_port}} node ./proxy-server.mjs &
     cd web-components && DEV_SERVER_PORT={{wc_port}} node ./watch.mjs --serve &
     aem up --port {{port}} &
 
