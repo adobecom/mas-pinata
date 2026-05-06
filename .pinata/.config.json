@@ -54,6 +54,14 @@
             "exit_nonzero": false
         }
     },
+    "clone": {
+        "label": "clone-to-mas",
+        "upstream_repo": "adobecom/mas",
+        "pinata_paths": [
+            ".github/workflows/pinata*.yml",
+            ".pinata/**"
+        ]
+    },
     "review": {
         "start_recipe": "pinata-start",
         "stop_recipe": "pinata-stop"
