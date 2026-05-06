@@ -140,5 +140,36 @@ export default {
             browserParams: '#page=content&path=sandbox',
             tags: '@mas-studio',
         },
+        {
+            tcid: '15',
+            name: '@studio-copy-code-parent-row',
+            path: '/studio.html',
+            browserParams: '#page=content&path=nala&query=',
+            data: {
+                cardid: '48a759ce-3c9a-4158-9bc3-b21ffa07e8e4',
+            },
+            tags: '@mas-studio',
+        },
+        {
+            tcid: '16',
+            name: '@studio-copy-code-variant-row',
+            path: '/studio.html',
+            browserParams: '#page=content&path=nala&query=',
+            data: {
+                cardid: '481a2002-9a4e-447b-a990-b3e56fdb2d14',
+                variationid: '287ef7ee-b0e3-4d95-a689-578de492ceae',
+            },
+            tags: '@mas-studio @regional-variations',
+        },
+        {
+            tcid: '17',
+            name: '@studio-copy-code-clipboard-denied',
+            path: '/studio.html',
+            browserParams: '#page=content&path=nala&query=',
+            data: {
+                cardid: '48a759ce-3c9a-4158-9bc3-b21ffa07e8e4',
+            },
+            tags: '@mas-studio',
+        },
     ],
 };
