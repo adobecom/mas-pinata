@@ -482,4 +482,120 @@ test.describe('M@S Studio feature test suite', () => {
             await expect(studio.renderView.locator('merch-card').nth(1)).toBeVisible();
         });
     });
+
+    // @studio-copy-code-parent-row - Copy code from a parent card row in table view
+    test(`${features[15].name},${features[15].tags}`, async ({ page, baseURL, context }) => {
+        const { data } = features[15];
+        const testPage = `${baseURL}${features[15].path}${miloLibs}${features[15].browserParams}${data.cardid}`;
+        setTestPage(testPage);
+
+        await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+        await test.step('step-1: Go to MAS Studio test page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+        });
+
+        await test.step('step-2: Switch to table view', async () => {
+            await studio.switchToTableView();
+        });
+
+        await test.step('step-3: Click Copy code on parent row', async () => {
+            const fragmentRow = studio.tableViewRowByFragmentId(data.cardid);
+            await expect(fragmentRow).toBeVisible();
+            const actionsMenu = studio.tableViewActionsMenu(fragmentRow);
+            await expect(actionsMenu).toBeVisible();
+            await actionsMenu.click();
+            const copyCodeOption = studio.tableViewCopyCodeOption(actionsMenu);
+            await expect(copyCodeOption).toBeVisible();
+            await copyCodeOption.click();
+        });
+
+        await test.step('step-4: Validate success toast and clipboard content', async () => {
+            await expect(studio.toastPositive).toBeVisible({ timeout: 10000 });
+            const toastText = await studio.toastPositive.textContent();
+            expect(toastText).toContain('Code copied to clipboard');
+            const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+            expect(clipboardText).toContain('studio.html#');
+            expect(clipboardText).toContain(`query=${data.cardid}`);
+            expect(clipboardText).toContain('page=content');
+        });
+    });
+
+    // @studio-copy-code-variant-row - Copy code from a locale variant row in table view
+    test(`${features[16].name},${features[16].tags}`, async ({ page, baseURL, context }) => {
+        const { data } = features[16];
+        const testPage = `${baseURL}${features[16].path}${miloLibs}${features[16].browserParams}${data.cardid}`;
+        setTestPage(testPage);
+
+        await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+        await test.step('step-1: Go to MAS Studio test page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+        });
+
+        await test.step('step-2: Switch to table view and expand parent row', async () => {
+            await studio.switchToTableView();
+            await studio.tableViewFragmentTable(data.cardid).locator('button.expand-button').click();
+            await expect(studio.tableViewFragmentTable(data.variationid)).toBeVisible({ timeout: 15000 });
+        });
+
+        await test.step('step-3: Click Copy code on variant row', async () => {
+            const variantRow = studio.tableViewRowByFragmentId(data.variationid);
+            await expect(variantRow).toBeVisible();
+            const actionsMenu = studio.tableViewActionsMenu(variantRow);
+            await expect(actionsMenu).toBeVisible();
+            await actionsMenu.click();
+            const copyCodeOption = studio.tableViewCopyCodeOption(actionsMenu);
+            await expect(copyCodeOption).toBeVisible();
+            await copyCodeOption.click();
+        });
+
+        await test.step('step-4: Validate success toast and clipboard contains variant ID', async () => {
+            await expect(studio.toastPositive).toBeVisible({ timeout: 10000 });
+            const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+            expect(clipboardText).toContain(`query=${data.variationid}`);
+            expect(clipboardText).toContain('page=content');
+        });
+    });
+
+    // @studio-copy-code-clipboard-denied - Error toast when clipboard write fails
+    test(`${features[17].name},${features[17].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[17];
+        const testPage = `${baseURL}${features[17].path}${miloLibs}${features[17].browserParams}${data.cardid}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Go to MAS Studio test page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+        });
+
+        await test.step('step-2: Switch to table view and override clipboard', async () => {
+            await studio.switchToTableView();
+            await page.evaluate(() => {
+                navigator.clipboard.write = () => Promise.reject(new Error('Clipboard denied'));
+            });
+        });
+
+        await test.step('step-3: Click Copy code on a row', async () => {
+            const fragmentRow = studio.tableViewRowByFragmentId(data.cardid);
+            await expect(fragmentRow).toBeVisible();
+            const actionsMenu = studio.tableViewActionsMenu(fragmentRow);
+            await expect(actionsMenu).toBeVisible();
+            await actionsMenu.click();
+            const copyCodeOption = studio.tableViewCopyCodeOption(actionsMenu);
+            await expect(copyCodeOption).toBeVisible();
+            await copyCodeOption.click();
+        });
+
+        await test.step('step-4: Validate error toast', async () => {
+            await expect(studio.toastNegative).toBeVisible({ timeout: 10000 });
+            const toastText = await studio.toastNegative.textContent();
+            expect(toastText).toContain('Failed to copy code to clipboard');
+        });
+    });
 });

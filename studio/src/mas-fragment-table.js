@@ -4,7 +4,7 @@ import { extractLocaleFromPath, generateCodeToUse, getService, showToast } from 
 import { getFragmentName } from './translation/translation-utils.js';
 import Store from './store.js';
 import { closePreview, openPreview } from './mas-card-preview.js';
-import { CARD_MODEL_PATH } from './constants.js';
+import { CARD_MODEL_PATH, PAGE_NAMES } from './constants.js';
 import { MasRepository } from './mas-repository.js';
 import router from './router.js';
 import './mas-variation-dialog.js';
@@ -146,6 +146,29 @@ class MasFragmentTable extends LitElement {
         }
     }
 
+    async handleCopyCode(event) {
+        event.stopPropagation();
+        const fragment = this.fragmentStore.value;
+        if (!fragment?.id) return;
+        const { code, richText, href } = generateCodeToUse(
+            fragment,
+            Store.search.get().path,
+            PAGE_NAMES.CONTENT,
+        );
+        if (!code || !richText || !href) return;
+        try {
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    'text/plain': new Blob([href], { type: 'text/plain' }),
+                    'text/html': new Blob([richText], { type: 'text/html' }),
+                }),
+            ]);
+            showToast('Code copied to clipboard', 'positive');
+        } catch {
+            showToast('Failed to copy code to clipboard', 'negative');
+        }
+    }
+
     getTruncatedOfferId() {
         const offerId = this.offerData?.offerId;
         if (!offerId || offerId.length <= 5) return offerId;
@@ -232,6 +255,10 @@ class MasFragmentTable extends LitElement {
                               <sp-menu-item @click=${this.handleEditFragment}>
                                   <sp-icon-edit slot="icon"></sp-icon-edit>
                                   Edit fragment
+                              </sp-menu-item>
+                              <sp-menu-item @click=${this.handleCopyCode} ?hidden=${!data.id}>
+                                  <sp-icon-code slot="icon"></sp-icon-code>
+                                  Copy code
                               </sp-menu-item>
                           </sp-action-menu>`}
                 </sp-table-cell>

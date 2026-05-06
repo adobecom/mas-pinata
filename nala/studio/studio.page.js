@@ -53,6 +53,7 @@ export default class StudioPage {
         this.tableViewTitleCell = (row) => row.locator('sp-table-cell.title');
         this.tableViewPriceCell = (row) => row.locator('sp-table-cell.price');
         this.tableViewActionsMenu = (row) => row.locator('sp-table-cell.actions sp-action-menu');
+        this.tableViewCopyCodeOption = (menu) => menu.locator('sp-menu-item:has-text("Copy code")');
         this.tableViewCreateVariationOption = (menu) => menu.locator('sp-menu-item:has-text("Create variation")');
         this.variationDialog = page.locator('mas-variation-dialog > sp-dialog');
         this.variationDialogLocalePicker = this.variationDialog.locator('sp-picker[placeholder="Select a locale"]');
