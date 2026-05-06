@@ -33,6 +33,15 @@ jobs:
               with:
                   fetch-depth: 0
 
+            - name: Generate harness checkout token
+              id: harness-token
+              uses: actions/create-github-app-token@v3
+              with:
+                  client-id: ${{ secrets.PINATA_APP_ID }}
+                  private-key: ${{ secrets.PINATA_APP_PRIVATE_KEY }}
+                  owner: Adobe-acom
+                  repositories: pinata
+
             - name: Generate GitHub App token
               id: app-token
               uses: actions/create-github-app-token@v3
@@ -44,7 +53,7 @@ jobs:
               uses: actions/checkout@v6
               with:
                   repository: Adobe-acom/pinata
-                  token: ${{ steps.app-token.outputs.token }}
+                  token: ${{ steps.harness-token.outputs.token }}
                   path: harness
                   # Self-host on PR base ref when the PR is on the harness repo itself;
                   # tenant PRs (mas-pinata, milo, etc.) fall through to the default branch.
