@@ -57,5 +57,28 @@
     "review": {
         "start_recipe": "pinata-start",
         "stop_recipe": "pinata-stop"
+    },
+    "reviewer": {
+        "domains": [
+            {
+                "name": "mas-pinata-workspace",
+                "description": "Workspace-level conventions for mas-pinata (root configs, npm scripts, lockfile, repo-root docs) — gaps not covered by harness-bundled mas-nala / mas-studio / mas-web-components / mas-cicd domains.",
+                "paths": [
+                    "package.json",
+                    "package-lock.json",
+                    "*.md",
+                    ".github/CODEOWNERS"
+                ],
+                "patterns": [
+                    "Dependency version pins in package.json use consistent range operators per the file's existing convention; do not mix `^` and `~` ranges.",
+                    "Workspace npm scripts run via `npm -w <workspace>` rather than `cd <workspace> && npm run`; cd patterns break parallel execution and break workspace dependency resolution."
+                ],
+                "antipatterns": [
+                    "A runtime dependency in root package.json that's only used by tests — test-only deps belong in `devDependencies`.",
+                    "Hardcoded contributor-specific paths (e.g. `/Users/.../`) in any committed file.",
+                    "TODO comments without an owner handle or ticket reference."
+                ]
+            }
+        ]
     }
 }
