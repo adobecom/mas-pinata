@@ -69,5 +69,17 @@ export default {
             tags: '@mas-studio @translation-editor @regression',
             description: 'Translation Editor Actions: create project save, add languages overlay, add files overlay',
         },
+        {
+            tcid: '7',
+            name: '@translation-editor-search-field-content',
+            path: '/studio.html',
+            data: {
+                fieldContentTerm: 'Buy now',
+            },
+            browserParams: '#page=translation-editor&path=nala',
+            tags: '@mas-studio @translation-editor @search',
+            description:
+                'Search by card field content (e.g. cardTitle/CTA text) that is not visible in title/offer/offerId columns',
+        },
     ],
 };
