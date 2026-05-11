@@ -142,6 +142,17 @@ export default class TranslationEditorPage {
         }
     }
 
+    async expectSearchFiltersToSubset(term) {
+        const totalCountBefore = await this.tableRows.count();
+        await this.searchInput.fill(term);
+        await this.page.keyboard.press('Enter');
+        await this.page.waitForTimeout(1000);
+        await expect(this.fragmentsResultCount).toHaveText(/\d+\s+result/i, { timeout: 10000 });
+        const filteredCount = await this.tableRows.count();
+        expect(filteredCount).toBeGreaterThan(0);
+        expect(filteredCount).toBeLessThan(totalCountBefore);
+    }
+
     async expectResultCountMatchesTableRows() {
         await expect(this.fragmentsResultCount).toHaveText(/\d+\s+result/i, { timeout: 30000 });
         await expect(async () => {

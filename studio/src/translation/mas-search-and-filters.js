@@ -293,7 +293,10 @@ class MasSearchAndFilters extends LitElement {
                     if (
                         !title.includes(query) &&
                         !productTag.toLowerCase().includes(query) &&
-                        !offerId.toLowerCase().includes(query)
+                        !offerId.toLowerCase().includes(query) &&
+                        !fragment.fields?.some((field) =>
+                            field.values?.some((value) => typeof value === 'string' && value.toLowerCase().includes(query)),
+                        )
                     ) {
                         return false;
                     }

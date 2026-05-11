@@ -386,6 +386,75 @@ describe('MasSearchAndFilters', () => {
             expect(Store.translationProjects.displayCards.get().length).to.equal(1);
         });
 
+        it('should filter cards by field values (e.g., cardTitle)', async () => {
+            Store.translationProjects.allCards.set([
+                createMockFragment({
+                    title: 'Generic Card',
+                    fields: [{ name: 'cardTitle', values: ['Firefly Pro Plan'] }],
+                }),
+                createMockFragment({
+                    title: 'Another Card',
+                    fields: [{ name: 'cardTitle', values: ['Illustrator Plan'] }],
+                }),
+            ]);
+            const el = await fixture(html`<mas-search-and-filters type="cards"></mas-search-and-filters>`);
+            el.searchQuery = 'firefly';
+            await el.updateComplete;
+            expect(Store.translationProjects.displayCards.get().length).to.equal(1);
+        });
+
+        it('should match cards when query appears in title but not fields', async () => {
+            Store.translationProjects.allCards.set([
+                createMockFragment({
+                    title: 'Firefly Card',
+                    fields: [{ name: 'cardTitle', values: ['Some other text'] }],
+                }),
+            ]);
+            const el = await fixture(html`<mas-search-and-filters type="cards"></mas-search-and-filters>`);
+            el.searchQuery = 'firefly';
+            await el.updateComplete;
+            expect(Store.translationProjects.displayCards.get().length).to.equal(1);
+        });
+
+        it('should not produce duplicates when query matches both title and field values', async () => {
+            Store.translationProjects.allCards.set([
+                createMockFragment({
+                    title: 'Firefly Card',
+                    fields: [{ name: 'cardTitle', values: ['Firefly Pro'] }],
+                }),
+            ]);
+            const el = await fixture(html`<mas-search-and-filters type="cards"></mas-search-and-filters>`);
+            el.searchQuery = 'firefly';
+            await el.updateComplete;
+            expect(Store.translationProjects.displayCards.get().length).to.equal(1);
+        });
+
+        it('should support partial matches on field values', async () => {
+            Store.translationProjects.allCards.set([
+                createMockFragment({
+                    title: 'Generic Card',
+                    fields: [{ name: 'cardTitle', values: ['Firefly Pro'] }],
+                }),
+            ]);
+            const el = await fixture(html`<mas-search-and-filters type="cards"></mas-search-and-filters>`);
+            el.searchQuery = 'Fire';
+            await el.updateComplete;
+            expect(Store.translationProjects.displayCards.get().length).to.equal(1);
+        });
+
+        it('should skip non-string field values during search', async () => {
+            Store.translationProjects.allCards.set([
+                createMockFragment({
+                    title: 'Generic Card',
+                    fields: [{ name: 'prices', values: [12345, true, null] }],
+                }),
+            ]);
+            const el = await fixture(html`<mas-search-and-filters type="cards"></mas-search-and-filters>`);
+            el.searchQuery = '12345';
+            await el.updateComplete;
+            expect(Store.translationProjects.displayCards.get().length).to.equal(0);
+        });
+
         it('should filter cards by offerId', async () => {
             Store.translationProjects.allCards.set([
                 createMockFragment({

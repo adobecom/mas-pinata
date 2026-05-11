@@ -281,6 +281,38 @@ test.describe('M@S Studio Translations Test Suite', () => {
         await expect(page.getByRole('tab', { name: 'Grouped variation' }).first()).toBeVisible({ timeout: 5000 });
     });
 
+    // 7. @translation-editor-search-field-content – Search by card field content
+    test(`${features[7].name},${features[7].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[7];
+        const testPage = `${baseURL}${features[7].path}${miloLibs}${features[7].browserParams}`;
+        setTestPage(testPage);
+        await page.goto(testPage);
+        await page.waitForLoadState('domcontentloaded');
+        await expect(translationEditor.form).toBeVisible({ timeout: 15000 });
+
+        await test.step('step-1: Open Add Items dialog and navigate to Cards tab', async () => {
+            await translationEditor.addItemsButton.click();
+            await expect(translationEditor.cardsTab).toBeVisible({ timeout: 10000 });
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.selectItemsTable).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+        });
+
+        await test.step('step-2: Search for field content term, verify filtered subset', async () => {
+            await translationEditor.expectSearchFiltersToSubset(data.fieldContentTerm);
+            await translationEditor.expectResultCountMatchesTableRows();
+        });
+
+        await test.step('step-3: Clear search, verify full list returns', async () => {
+            await translationEditor.searchInput.fill('');
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(1000);
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+        });
+    });
+
     // 6. @translation-editor-actions
     test(`${features[6].name},${features[6].tags}`, async ({ page, baseURL }) => {
         const testPage = `${baseURL}${features[6].path}${miloLibs}${features[6].browserParams}`;
