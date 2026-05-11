@@ -482,4 +482,107 @@ test.describe('M@S Studio feature test suite', () => {
             await expect(studio.renderView.locator('merch-card').nth(1)).toBeVisible();
         });
     });
+
+    // @studio-table-copy-code - Validate Copy code on a parent card row in table view
+    test(`${features[15].name},${features[15].tags}`, async ({ page, baseURL, context }) => {
+        const { data } = features[15];
+        const testPage = `${baseURL}${features[15].path}${miloLibs}${features[15].browserParams}${data.cardid}`;
+        setTestPage(testPage);
+
+        await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+        await test.step('step-1: Go to MAS Studio and switch to table view', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+            await studio.switchToTableView();
+        });
+
+        await test.step('step-2: Click Copy code from action menu', async () => {
+            const fragmentRow = studio.tableViewRowByFragmentId(data.cardid);
+            await expect(fragmentRow).toBeVisible();
+            const actionsMenu = studio.tableViewActionsMenu(fragmentRow);
+            await expect(actionsMenu).toBeVisible();
+            await actionsMenu.click();
+            const copyCodeOption = studio.tableViewCopyCodeOption(actionsMenu);
+            await expect(copyCodeOption).toBeVisible();
+            await copyCodeOption.click();
+        });
+
+        await test.step('step-3: Validate positive toast appears', async () => {
+            await expect(studio.toastPositive).toBeVisible({ timeout: 10000 });
+        });
+    });
+
+    // @studio-table-copy-code-variant - Validate Copy code on a locale variant row
+    test(`${features[16].name},${features[16].tags}`, async ({ page, baseURL, context }) => {
+        const { data } = features[16];
+        const testPage = `${baseURL}${features[16].path}${miloLibs}${features[16].browserParams}${data.cardid}`;
+        setTestPage(testPage);
+
+        await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+        await test.step('step-1: Go to MAS Studio and switch to table view', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+            await studio.switchToTableView();
+        });
+
+        await test.step('step-2: Expand parent row to reveal variant', async () => {
+            await expect(studio.tableViewFragmentTable(data.cardid)).toBeVisible();
+            await studio.tableViewFragmentTable(data.cardid).locator('button.expand-button').click();
+            await expect(studio.tableViewFragmentTable(data.variationid)).toBeVisible();
+        });
+
+        await test.step('step-3: Click Copy code on variant row action menu', async () => {
+            const variantRow = studio.tableViewRowByFragmentId(data.variationid);
+            await expect(variantRow).toBeVisible();
+            const actionsMenu = studio.tableViewActionsMenu(variantRow);
+            await expect(actionsMenu).toBeVisible();
+            await actionsMenu.click();
+            const copyCodeOption = studio.tableViewCopyCodeOption(actionsMenu);
+            await expect(copyCodeOption).toBeVisible();
+            await copyCodeOption.click();
+        });
+
+        await test.step('step-4: Validate positive toast appears', async () => {
+            await expect(studio.toastPositive).toBeVisible({ timeout: 10000 });
+        });
+    });
+
+    // @studio-table-copy-code-denied - Validate error toast on clipboard permission denied
+    test(`${features[17].name},${features[17].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[17];
+        const testPage = `${baseURL}${features[17].path}${miloLibs}${features[17].browserParams}${data.cardid}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Go to MAS Studio and switch to table view', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+            await studio.switchToTableView();
+        });
+
+        await test.step('step-2: Mock clipboard.write to reject', async () => {
+            await page.evaluate(() => {
+                navigator.clipboard.write = () => Promise.reject(new Error('Permission denied'));
+            });
+        });
+
+        await test.step('step-3: Click Copy code from action menu', async () => {
+            const fragmentRow = studio.tableViewRowByFragmentId(data.cardid);
+            await expect(fragmentRow).toBeVisible();
+            const actionsMenu = studio.tableViewActionsMenu(fragmentRow);
+            await expect(actionsMenu).toBeVisible();
+            await actionsMenu.click();
+            const copyCodeOption = studio.tableViewCopyCodeOption(actionsMenu);
+            await expect(copyCodeOption).toBeVisible();
+            await copyCodeOption.click();
+        });
+
+        await test.step('step-4: Validate negative toast appears', async () => {
+            await expect(studio.toastNegative).toBeVisible({ timeout: 10000 });
+        });
+    });
 });
