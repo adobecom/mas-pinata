@@ -137,7 +137,8 @@ export default class TranslationEditorPage {
             const title = (await row.locator('sp-table-cell').nth(this.COLUMNS.FRAGMENT_TITLE).textContent()).toLowerCase();
             const offer = (await row.locator('sp-table-cell').nth(this.COLUMNS.OFFER).textContent()).toLowerCase();
             const offerId = (await row.locator('sp-table-cell').nth(this.COLUMNS.OFFER_ID).textContent()).toLowerCase();
-            const matches = title.includes(q) || offer.includes(q) || offerId.includes(q);
+            const path = (await row.locator('sp-table-cell').nth(this.COLUMNS.PATH).textContent()).toLowerCase();
+            const matches = title.includes(q) || offer.includes(q) || offerId.includes(q) || path.includes(q);
             expect(matches).toBe(true);
         }
     }

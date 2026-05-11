@@ -281,6 +281,64 @@ test.describe('M@S Studio Translations Test Suite', () => {
         await expect(page.getByRole('tab', { name: 'Grouped variation' }).first()).toBeVisible({ timeout: 5000 });
     });
 
+    // 7. @translation-editor-content-search – Search matches content fields and path
+    test(`${features[7].name},${features[7].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[7];
+        const testPage = `${baseURL}${features[7].path}${miloLibs}${features[7].browserParams}`;
+        setTestPage(testPage);
+        await page.goto(testPage);
+        await page.waitForLoadState('domcontentloaded');
+        await expect(translationEditor.form).toBeVisible({ timeout: 15000 });
+
+        await test.step('step-1: Open Add Items dialog and navigate to Cards tab', async () => {
+            await translationEditor.addItemsButton.click();
+            await expect(translationEditor.cardsTab).toBeVisible({ timeout: 10000 });
+            await translationEditor.cardsTab.click();
+            await expect(translationEditor.selectItemsTable).toBeVisible({ timeout: 10000 });
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+        });
+
+        await test.step('step-2: Search by path term, verify results contain matching path', async () => {
+            const initialCount = await translationEditor.tableRows.count();
+            await translationEditor.searchInput.fill(data.contentSearchTerm);
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(1000);
+            await translationEditor.expectCardRowsMatchSearchTerm(data.contentSearchTerm);
+            await translationEditor.expectResultCountMatchesTableRows();
+            const filteredCount = await translationEditor.tableRows.count();
+            expect(filteredCount).toBeGreaterThan(0);
+            expect(filteredCount).toBeLessThanOrEqual(initialCount);
+        });
+
+        await test.step('step-3: Clear search and verify full list returns', async () => {
+            await translationEditor.searchInput.fill('');
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(1000);
+            await expect(translationEditor.tableRows.first()).toBeVisible({ timeout: 30000 });
+            await translationEditor.expectResultCountMatchesTableRows();
+        });
+
+        await test.step('step-4: Search by fragment title term, verify results', async () => {
+            await translationEditor.searchInput.fill(data.titleSearchTerm);
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(1000);
+            await translationEditor.expectCardRowsMatchSearchTerm(data.titleSearchTerm);
+            await translationEditor.expectResultCountMatchesTableRows();
+            const count = await translationEditor.tableRows.count();
+            expect(count).toBeGreaterThan(0);
+        });
+
+        await test.step('step-5: Verify case-insensitive partial match', async () => {
+            const upperTerm = data.titleSearchTerm.toUpperCase();
+            await translationEditor.searchInput.fill(upperTerm);
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(1000);
+            await translationEditor.expectCardRowsMatchSearchTerm(data.titleSearchTerm);
+            await translationEditor.expectResultCountMatchesTableRows();
+        });
+    });
+
     // 6. @translation-editor-actions
     test(`${features[6].name},${features[6].tags}`, async ({ page, baseURL }) => {
         const testPage = `${baseURL}${features[6].path}${miloLibs}${features[6].browserParams}`;
