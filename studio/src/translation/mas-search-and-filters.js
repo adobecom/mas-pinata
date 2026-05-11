@@ -290,10 +290,14 @@ class MasSearchAndFilters extends LitElement {
                     const title = (fragment.title || '').toLowerCase();
                     const productTag = fragment.tags?.find(({ id }) => id?.startsWith('mas:product_code/'))?.title || '';
                     const offerId = fragment.offerData?.offerId || '';
+                    const fieldMatch = fragment.fields?.some((field) =>
+                        field.values?.some((v) => typeof v === 'string' && v.toLowerCase().includes(query)),
+                    );
                     if (
                         !title.includes(query) &&
                         !productTag.toLowerCase().includes(query) &&
-                        !offerId.toLowerCase().includes(query)
+                        !offerId.toLowerCase().includes(query) &&
+                        !fieldMatch
                     ) {
                         return false;
                     }

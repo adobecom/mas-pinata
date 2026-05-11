@@ -498,32 +498,20 @@ export class MasRepository extends LitElement {
             sort: [{ on: 'modifiedOrCreated', order: 'DESC' }],
         };
 
-        // AEM's fullText.EDGES index only covers title+description and ANDs across
-        // tokens, so multi-word queries like "creative cloud" return zero on catalogs
-        // where no card has both tokens at edge positions in metadata — even though
-        // many cards have the phrase in body fields (cardTitle, description, etc.).
-        // To make search reliable, we route a single discriminative term to AEM and
-        // apply the user's full query client-side via #skipQuery() against an expanded
-        // haystack covering all string field values.
-        //   - single variant chip: variant name → AEM
-        //   - else multi-word query: longest token → AEM
-        //   - else (single-word or UUID): query unchanged
-        // The client-side #skipQuery is idempotent in the single-word case (matches
-        // exactly what AEM returned) and only narrows in the multi-word case.
+        // AEM's fullText.EDGES index only covers title+description metadata, not
+        // content field values like cardTitle. To ensure searching "Firefly Pro" finds
+        // cards whose cardTitle contains that text, we never send the user's text query
+        // to AEM. Instead, all text matching happens client-side via #skipQuery() which
+        // checks the full haystack (title, description, path, and all string fields).
+        // When a single variant chip is active, we send the variant name as fullText so
+        // AEM can prune by variant; the user query is still applied client-side.
         const userQuery = !isUUID(this.search.value.query) && query ? query : '';
-        let clientQuery = '';
         if (variants.length === 1) {
             localSearch.query = variants[0];
-            clientQuery = userQuery;
-        } else if (userQuery) {
-            const tokens = userQuery.match(/\S+/g) || [];
-            if (tokens.length > 1) {
-                const longest = tokens.reduce((a, b) => (b.length > a.length ? b : a));
-                localSearch.query = longest;
-                clientQuery = userQuery;
-            }
+        } else {
+            delete localSearch.query;
         }
-        const lowerClientQuery = clientQuery.toLowerCase();
+        const lowerClientQuery = userQuery.toLowerCase();
 
         const publishedTagIndex = tags.indexOf(TAG_STATUS_PUBLISHED);
         if (publishedTagIndex > -1) {

@@ -944,7 +944,7 @@ describe('MasRepository dictionary helpers', () => {
             }
         });
 
-        it('leaves query unchanged when no variants are selected', async () => {
+        it('does not send user query to AEM when no variants are selected', async () => {
             const repository = createFullRepository();
             repository.page = { value: PAGE_NAMES.CONTENT };
             repository.search = { value: { path: 'acom', query: 'photoshop' } };
@@ -968,7 +968,7 @@ describe('MasRepository dictionary helpers', () => {
                 await repository.searchFragments();
                 expect(searchStub.calledOnce).to.be.true;
                 const callArg = searchStub.firstCall.args[0];
-                expect(callArg.query).to.equal('photoshop');
+                expect(callArg.query).to.be.undefined;
             } finally {
                 Store.profile.set(originalProfile);
                 Store.fragments.list.data = originalData;
@@ -2442,11 +2442,7 @@ describe('MasRepository dictionary helpers', () => {
             }
         });
 
-        it('multi-word query: sends longest token to AEM and phrase-filters client-side', async () => {
-            // AEM's fullText.EDGES ANDs across tokens, so "creative cloud" returns 0 if no
-            // card has both at edge positions in title/description. Workaround: send the
-            // longest single token ("creative") to AEM, then filter for the full phrase
-            // client-side via skipQuery's expanded haystack.
+        it('multi-word query: filters client-side without sending fullText to AEM', async () => {
             const phraseInTitle = createFragment({
                 id: 'creative-cloud-1',
                 path: `${ROOT_PATH}/acom/en_US/cc-1`,
@@ -2489,7 +2485,7 @@ describe('MasRepository dictionary helpers', () => {
             Store.fragments.list.data = mockDataStore;
             try {
                 await repository.searchFragments();
-                expect(searchStub.firstCall.args[0].query).to.equal('creative');
+                expect(searchStub.firstCall.args[0].query).to.be.undefined;
                 const finalSet = mockDataStore.set.lastCall.args[0];
                 expect(finalSet).to.have.lengthOf(2);
                 const ids = finalSet.map((s) => s.get().id);
@@ -2502,16 +2498,36 @@ describe('MasRepository dictionary helpers', () => {
             }
         });
 
-        it('single-word query: sends query unchanged to AEM (no client-side filter regression)', async () => {
+        it('single-word query: filters client-side, does not send fullText to AEM', async () => {
+            const matching = createFragment({
+                id: 'photoshop-card',
+                path: `${ROOT_PATH}/acom/en_US/photoshop-card`,
+                title: 'Generic Card',
+                fields: [
+                    { name: 'variant', values: ['plans'] },
+                    { name: 'cardTitle', values: ['Adobe Photoshop'] },
+                ],
+            });
+            const nonMatching = createFragment({
+                id: 'illustrator-card',
+                path: `${ROOT_PATH}/acom/en_US/illustrator-card`,
+                title: 'Another Card',
+                fields: [
+                    { name: 'variant', values: ['plans'] },
+                    { name: 'cardTitle', values: ['Adobe Illustrator'] },
+                ],
+            });
+            const mockCursor = createMockCursorFromPages([[matching, nonMatching]]);
             const repository = createFullRepository();
             repository.page = { value: PAGE_NAMES.CONTENT };
             repository.search = { value: { path: 'acom', query: 'photoshop' } };
             repository.filters = { value: { locale: 'en_US', tags: '' } };
-            const searchStub = sandbox.stub().resolves(createMockCursorFromPages([[]]));
+            const searchStub = sandbox.stub().resolves(mockCursor);
             repository.aem = createAemMock({ fragments: { search: searchStub } });
             const { default: Store } = await import('../src/store.js');
             const originalProfile = Store.profile.value;
             Store.profile.set({ name: 'tester' });
+            Store.createdByUsers.set([]);
             const mockDataStore = {
                 get: sandbox.stub().returns([]),
                 getMeta: sandbox.stub().returns(null),
@@ -2522,7 +2538,60 @@ describe('MasRepository dictionary helpers', () => {
             Store.fragments.list.data = mockDataStore;
             try {
                 await repository.searchFragments();
-                expect(searchStub.firstCall.args[0].query).to.equal('photoshop');
+                expect(searchStub.firstCall.args[0].query).to.be.undefined;
+                const finalSet = mockDataStore.set.lastCall.args[0];
+                expect(finalSet).to.have.lengthOf(1);
+                expect(finalSet[0].get().id).to.equal('photoshop-card');
+            } finally {
+                Store.profile.set(originalProfile);
+                Store.fragments.list.data = originalData;
+            }
+        });
+
+        it('finds card by cardTitle field value even when metadata title differs', async () => {
+            const fireflyCard = createFragment({
+                id: 'firefly-pro-card',
+                path: `${ROOT_PATH}/acom/en_US/firefly-pro`,
+                title: 'CC All Apps',
+                description: 'A plans card',
+                fields: [
+                    { name: 'variant', values: ['plans'] },
+                    { name: 'cardTitle', values: ['Firefly Pro'] },
+                ],
+            });
+            const unrelatedCard = createFragment({
+                id: 'unrelated-card',
+                path: `${ROOT_PATH}/acom/en_US/unrelated`,
+                title: 'Acrobat Reader',
+                fields: [
+                    { name: 'variant', values: ['plans'] },
+                    { name: 'cardTitle', values: ['Acrobat Reader'] },
+                ],
+            });
+            const mockCursor = createMockCursorFromPages([[fireflyCard, unrelatedCard]]);
+            const repository = createFullRepository();
+            repository.page = { value: PAGE_NAMES.CONTENT };
+            repository.search = { value: { path: 'acom', query: 'Firefly' } };
+            repository.filters = { value: { locale: 'en_US', tags: '' } };
+            const searchStub = sandbox.stub().resolves(mockCursor);
+            repository.aem = createAemMock({ fragments: { search: searchStub } });
+            const { default: Store } = await import('../src/store.js');
+            const originalProfile = Store.profile.value;
+            Store.profile.set({ name: 'tester' });
+            Store.createdByUsers.set([]);
+            const mockDataStore = {
+                get: sandbox.stub().returns([]),
+                getMeta: sandbox.stub().returns(null),
+                set: sandbox.stub(),
+                setMeta: sandbox.stub(),
+            };
+            const originalData = Store.fragments.list.data;
+            Store.fragments.list.data = mockDataStore;
+            try {
+                await repository.searchFragments();
+                const finalSet = mockDataStore.set.lastCall.args[0];
+                expect(finalSet).to.have.lengthOf(1);
+                expect(finalSet[0].get().id).to.equal('firefly-pro-card');
             } finally {
                 Store.profile.set(originalProfile);
                 Store.fragments.list.data = originalData;
