@@ -79,6 +79,50 @@ describe('aem.js', () => {
         });
     });
 
+    describe('method: searchFragment — title filter', () => {
+        it('should include title filter in search query when query is provided', async () => {
+            let capturedUrl;
+            window.fetch = async (url) => {
+                capturedUrl = url;
+                return {
+                    ok: true,
+                    json: async () => ({ items: [] }),
+                };
+            };
+
+            const result = aem.searchFragment({ query: 'Firefly Pro' });
+            for await (const _ of result) {
+                // consume the generator
+            }
+
+            const params = new URLSearchParams(capturedUrl.split('?')[1]);
+            const searchQuery = JSON.parse(params.get('query'));
+            expect(searchQuery.filter.title).to.equal(encodeURIComponent('Firefly Pro'));
+            expect(searchQuery.filter.fullText.text).to.equal(encodeURIComponent('Firefly Pro'));
+        });
+
+        it('should not include title filter when query is empty', async () => {
+            let capturedUrl;
+            window.fetch = async (url) => {
+                capturedUrl = url;
+                return {
+                    ok: true,
+                    json: async () => ({ items: [] }),
+                };
+            };
+
+            const result = aem.searchFragment({ query: '' });
+            for await (const _ of result) {
+                // consume the generator
+            }
+
+            const params = new URLSearchParams(capturedUrl.split('?')[1]);
+            const searchQuery = JSON.parse(params.get('query'));
+            expect(searchQuery.filter.title).to.be.undefined;
+            expect(searchQuery.filter.fullText).to.be.undefined;
+        });
+    });
+
     describe('method: getFragmentTranslations', () => {
         it('should fetch translations', async () => {
             window.fetch = async () => ({
