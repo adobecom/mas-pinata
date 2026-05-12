@@ -2502,12 +2502,25 @@ describe('MasRepository dictionary helpers', () => {
             }
         });
 
-        it('single-word query: sends query unchanged to AEM (no client-side filter regression)', async () => {
+        it('single-word query: sends query to AEM and applies client-side filter', async () => {
+            const matchingFragment = createFragment({
+                id: 'match',
+                path: `${ROOT_PATH}/acom/en_US/match`,
+                title: 'Photoshop Plans',
+                fields: [],
+            });
+            const nonMatchingFragment = createFragment({
+                id: 'no-match',
+                path: `${ROOT_PATH}/acom/en_US/no-match`,
+                title: 'Unrelated Card',
+                fields: [],
+            });
+            const mockCursor = createMockCursorFromPages([[matchingFragment, nonMatchingFragment]]);
             const repository = createFullRepository();
             repository.page = { value: PAGE_NAMES.CONTENT };
             repository.search = { value: { path: 'acom', query: 'photoshop' } };
             repository.filters = { value: { locale: 'en_US', tags: '' } };
-            const searchStub = sandbox.stub().resolves(createMockCursorFromPages([[]]));
+            const searchStub = sandbox.stub().resolves(mockCursor);
             repository.aem = createAemMock({ fragments: { search: searchStub } });
             const { default: Store } = await import('../src/store.js');
             const originalProfile = Store.profile.value;
@@ -2523,6 +2536,54 @@ describe('MasRepository dictionary helpers', () => {
             try {
                 await repository.searchFragments();
                 expect(searchStub.firstCall.args[0].query).to.equal('photoshop');
+                const setCalls = mockDataStore.set.getCalls();
+                const lastCall = setCalls[setCalls.length - 1];
+                const results = lastCall.args[0];
+                expect(results.length).to.equal(1);
+            } finally {
+                Store.profile.set(originalProfile);
+                Store.fragments.list.data = originalData;
+            }
+        });
+
+        it('single-word query matches cardTitle field via client-side filtering', async () => {
+            const cardTitleMatch = createFragment({
+                id: 'card-title-match',
+                path: `${ROOT_PATH}/acom/en_US/card-title-match`,
+                title: 'Generic Card',
+                fields: [{ name: 'cardTitle', values: ['Firefly Pro'] }],
+            });
+            const noMatch = createFragment({
+                id: 'no-match',
+                path: `${ROOT_PATH}/acom/en_US/no-match`,
+                title: 'Another Card',
+                fields: [{ name: 'cardTitle', values: ['Illustrator'] }],
+            });
+            const mockCursor = createMockCursorFromPages([[cardTitleMatch, noMatch]]);
+            const repository = createFullRepository();
+            repository.page = { value: PAGE_NAMES.CONTENT };
+            repository.search = { value: { path: 'acom', query: 'firefly' } };
+            repository.filters = { value: { locale: 'en_US', tags: '' } };
+            const searchStub = sandbox.stub().resolves(mockCursor);
+            repository.aem = createAemMock({ fragments: { search: searchStub } });
+            const { default: Store } = await import('../src/store.js');
+            const originalProfile = Store.profile.value;
+            Store.profile.set({ name: 'tester' });
+            const mockDataStore = {
+                get: sandbox.stub().returns([]),
+                getMeta: sandbox.stub().returns(null),
+                set: sandbox.stub(),
+                setMeta: sandbox.stub(),
+            };
+            const originalData = Store.fragments.list.data;
+            Store.fragments.list.data = mockDataStore;
+            try {
+                await repository.searchFragments();
+                expect(searchStub.firstCall.args[0].query).to.equal('firefly');
+                const setCalls = mockDataStore.set.getCalls();
+                const lastCall = setCalls[setCalls.length - 1];
+                const results = lastCall.args[0];
+                expect(results.length).to.equal(1);
             } finally {
                 Store.profile.set(originalProfile);
                 Store.fragments.list.data = originalData;

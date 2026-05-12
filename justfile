@@ -8,7 +8,7 @@ default:
     @just --list
 
 install:
-    npm install &&
+    npm install
     cd web-components && npm install
     cd studio && npm install
 
