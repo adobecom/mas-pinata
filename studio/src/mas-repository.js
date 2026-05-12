@@ -506,10 +506,9 @@ export class MasRepository extends LitElement {
         // apply the user's full query client-side via #skipQuery() against an expanded
         // haystack covering all string field values.
         //   - single variant chip: variant name → AEM
-        //   - else multi-word query: longest token → AEM
-        //   - else (single-word or UUID): query unchanged
-        // The client-side #skipQuery is idempotent in the single-word case (matches
-        // exactly what AEM returned) and only narrows in the multi-word case.
+        //   - else any text query: longest token → AEM, full query → client-side
+        // The client-side #skipQuery catches cards whose cardTitle (or other fields)
+        // match even when AEM's metadata-only index would miss them.
         const userQuery = !isUUID(this.search.value.query) && query ? query : '';
         let clientQuery = '';
         if (variants.length === 1) {
@@ -517,11 +516,9 @@ export class MasRepository extends LitElement {
             clientQuery = userQuery;
         } else if (userQuery) {
             const tokens = userQuery.match(/\S+/g) || [];
-            if (tokens.length > 1) {
-                const longest = tokens.reduce((a, b) => (b.length > a.length ? b : a));
-                localSearch.query = longest;
-                clientQuery = userQuery;
-            }
+            const longest = tokens.reduce((a, b) => (b.length > a.length ? b : a), '');
+            localSearch.query = longest;
+            clientQuery = userQuery;
         }
         const lowerClientQuery = clientQuery.toLowerCase();
 
