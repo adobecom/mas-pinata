@@ -15,7 +15,7 @@ install:
 start:
     cd studio && PORT={{studio_port}} node ./proxy-server.mjs &
     cd web-components && DEV_SERVER_PORT={{wc_port}} node ./watch.mjs --serve &
-    aem up --port {{port}} &
+    npx aem up --port {{port}} &
 
 stop:
     -lsof -ti:{{port}} | xargs kill -9 2>/dev/null
