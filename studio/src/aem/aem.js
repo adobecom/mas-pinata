@@ -91,7 +91,10 @@ class AEM {
      * @param {string} [params.path] - The path to search in
      * @param {Array} [params.tags] - The tags
      * @param {Array} [params.modelIds] - The model ids
-     * @param {string} [params.query] - The search query
+     * @param {string} [params.query] - The search query. When non-empty, the query is OR-matched
+     *   against three surfaces in a single AEM CF search request: fullText content (EDGES mode),
+     *   the `jcr:title` metadata property (substring/CONTAINS), and the `title` content field
+     *   (substring/CONTAINS). Empty query is a no-op browse with no text conditions added.
      * @param {AbortController} abortController used for cancellation
      * @returns A generator function that fetches all the matching data using a cursor that is returned by the search API
      */
@@ -100,11 +103,30 @@ class AEM {
             path,
         };
         if (query) {
-            filter.fullText = {
-                text: encodeURIComponent(query),
-                // For info about modes: https://adobe-sites.redoc.ly/tag/Search#operation/fragments/search!path=query/filter/fullText/queryMode&t=request
-                queryMode: 'EDGES',
-            };
+            // Single-request OR composition: AEM's fullText.EDGES index requires the query to
+            // appear at a word edge in indexed content, so substring lookups like "Photo" miss
+            // fragments named "Photoshop Plans". We OR fullText with explicit substring matches
+            // on the jcr:title metadata property and the `title` content field to cover both.
+            // Filter schema: https://adobe-sites.redoc.ly/tag/Search
+            filter.any = [
+                {
+                    fullText: {
+                        text: encodeURIComponent(query),
+                        // For info about modes: https://adobe-sites.redoc.ly/tag/Search#operation/fragments/search!path=query/filter/fullText/queryMode&t=request
+                        queryMode: 'EDGES',
+                    },
+                },
+                {
+                    properties: [
+                        { name: 'jcr:title', value: query, operator: 'CONTAINS', caseSensitive: false },
+                    ],
+                },
+                {
+                    fields: [
+                        { name: 'title', value: query, operator: 'CONTAINS', caseSensitive: false },
+                    ],
+                },
+            ];
         }
         const searchQuery = { ...defaultSearchOptions, filter };
         if (sort) {
