@@ -3,6 +3,15 @@ import FragmentSearchSpec from '../specs/fragment-search.spec.js';
 
 const { features } = FragmentSearchSpec;
 
+async function verifyFixtureExists(page, cardid, test) {
+    const fixtureCard = page.locator(`merch-card:has(aem-fragment[fragment="${cardid}"])`);
+    try {
+        await fixtureCard.waitFor({ state: 'visible', timeout: 5000 });
+    } catch {
+        throw new Error(`Fixture fragment ${cardid} ("Nala Automation Card") not found in AEM nala folder. See nala/studio/fragment-search/README.md for setup instructions.`);
+    }
+}
+
 test.describe('M@S Studio Fragment Search Title test suite', () => {
     // @studio-fragment-search-title-match - Typing a title substring (3+ chars) returns fragments matching jcr:title
     test(`${features[0].name},${features[0].tags}`, async ({ page, baseURL }) => {
@@ -17,6 +26,7 @@ test.describe('M@S Studio Fragment Search Title test suite', () => {
 
         await test.step('step-2: Validate search results contain title-matched fragment', async () => {
             await studio.waitForCardsLoaded();
+            await verifyFixtureExists(page, data.cardid, test);
             await expect(await studio.getCard(data.cardid)).toBeVisible();
         });
     });
@@ -27,13 +37,23 @@ test.describe('M@S Studio Fragment Search Title test suite', () => {
         const testPage = `${baseURL}${features[1].path}${miloLibs}${features[1].browserParams}${data.query}`;
         setTestPage(testPage);
 
+        let searchRequestCount = 0;
+        page.on('request', (req) => {
+            if (req.url().includes('/cf/fragments/search')) searchRequestCount++;
+        });
+
         await test.step('step-1: Go to MAS Studio search page with short query', async () => {
             await page.goto(testPage);
             await page.waitForLoadState('domcontentloaded');
+            await page.waitForTimeout(2000);
         });
 
         await test.step('step-2: Validate search completes without error', async () => {
             await expect(studio.renderView).toBeVisible();
+        });
+
+        await test.step('step-3: Validate only one search request was made (no title search)', async () => {
+            expect(searchRequestCount).toBe(1);
         });
     });
 
@@ -50,6 +70,7 @@ test.describe('M@S Studio Fragment Search Title test suite', () => {
 
         await test.step('step-2: Validate no duplicate cards in results', async () => {
             await studio.waitForCardsLoaded();
+            await verifyFixtureExists(page, data.cardid, test);
             const cardElements = studio.renderView.locator(`merch-card:has(aem-fragment[fragment="${data.cardid}"])`);
             await expect(cardElements).toHaveCount(1);
         });

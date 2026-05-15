@@ -1,3 +1,10 @@
+/**
+ * Fixture dependency: tests require a pre-existing AEM fragment.
+ * - Fragment ID: 287ef7ee-b0e3-4d95-a689-578de492ceae
+ * - Expected title: "Nala Automation Card"
+ * - Location: AEM `nala` folder
+ * - Purpose: validates title-based search returns correct results
+ */
 export default {
     FeatureName: 'M@S Studio Fragment Search Title',
     features: [
