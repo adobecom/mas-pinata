@@ -140,5 +140,15 @@ export default {
             browserParams: '#page=content&path=sandbox',
             tags: '@mas-studio',
         },
+        {
+            tcid: '15',
+            name: '@studio-search-title-substring',
+            path: '/studio.html',
+            data: {
+                cardid: '48a759ce-3c9a-4158-9bc3-b21ffa07e8e4',
+            },
+            browserParams: '#page=content&path=nala',
+            tags: '@mas-studio @search',
+        },
     ],
 };

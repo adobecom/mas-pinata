@@ -482,4 +482,41 @@ test.describe('M@S Studio feature test suite', () => {
             await expect(studio.renderView.locator('merch-card').nth(1)).toBeVisible();
         });
     });
+
+    // @studio-search-title-substring - Validate that fragment search matches a non-prefix
+    // substring of a fragment's title (covers the jcr:title / title content-field branches
+    // OR-composed with fullText, so "ggested" matches "Suggested ..." titled fragments)
+    test(`${features[15].name},${features[15].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[15];
+        const testPage = `${baseURL}${features[15].path}${miloLibs}${features[15].browserParams}`;
+        setTestPage(testPage);
+
+        let titleSubstring;
+
+        await test.step('step-1: Go to MAS Studio nala content page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await studio.waitForCardsLoaded();
+        });
+
+        await test.step('step-2: Read target card title and derive an interior substring', async () => {
+            const targetCard = await studio.getCard(data.cardid);
+            await expect(targetCard).toBeVisible();
+            const titleText = ((await targetCard.locator('h3[slot="heading-xs"]').first().textContent()) || '').trim();
+            expect(titleText.length).toBeGreaterThan(3);
+            // Pick a non-prefix interior chunk of the first 4+ char word so fullText EDGES
+            // alone cannot satisfy the match — this exercises the jcr:title/title CONTAINS branches.
+            const word = (titleText.match(/[A-Za-z]{4,}/) || [])[0];
+            expect(word, `expected a 4+ letter word in title "${titleText}"`).toBeTruthy();
+            titleSubstring = word.slice(2).toLowerCase();
+            expect(titleSubstring.length).toBeGreaterThan(0);
+        });
+
+        await test.step('step-3: Search by the interior substring and validate the card appears', async () => {
+            await studio.searchInput.fill(titleSubstring);
+            await page.keyboard.press('Enter');
+            await studio.waitForCardsLoaded();
+            await expect(await studio.getCard(data.cardid)).toBeVisible();
+        });
+    });
 });
