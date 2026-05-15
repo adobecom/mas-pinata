@@ -134,24 +134,69 @@ class AEM {
             params.limit = limit;
         }
 
+        const shouldSearchTitle = query.length >= 3;
+
         let cursor;
+        let firstPage = true;
         while (true) {
             if (cursor) {
                 params.cursor = cursor;
             }
             const searchParams = new URLSearchParams(params).toString();
-            const response = await fetch(`${this.cfSearchUrl}?${searchParams}`, {
+            const fullTextPromise = fetch(`${this.cfSearchUrl}?${searchParams}`, {
                 headers: this.headers,
                 signal: abortController?.signal,
             });
 
-            if (!response.ok) {
-                throw new Error(`Search failed: ${response.status} ${response.statusText}`);
-            }
             let items;
-            ({ items, cursor } = await response.json());
+            if (firstPage && shouldSearchTitle) {
+                const titleFilter = { path };
+                titleFilter.title = { value: encodeURIComponent(query), operator: 'CONTAINS' };
+                if (tags.length > 0) titleFilter.tags = tags;
+                if (modelIds.length > 0) titleFilter.modelIds = modelIds;
+                if (status) titleFilter.status = [status];
+                if (createdBy?.length > 0) {
+                    titleFilter.created = { by: filter.created.by };
+                }
+                const titleSearchQuery = { ...defaultSearchOptions, filter: titleFilter };
+                if (sort) titleSearchQuery.sort = sort;
+                const titleParams = { query: JSON.stringify(titleSearchQuery) };
+                if (limit) titleParams.limit = limit;
+                const titleSearchParams = new URLSearchParams(titleParams).toString();
+
+                const [fullTextResponse, titleResponse] = await Promise.all([
+                    fullTextPromise,
+                    fetch(`${this.cfSearchUrl}?${titleSearchParams}`, {
+                        headers: this.headers,
+                        signal: abortController?.signal,
+                    }),
+                ]);
+
+                if (!fullTextResponse.ok) {
+                    throw new Error(`Search failed: ${fullTextResponse.status} ${fullTextResponse.statusText}`);
+                }
+                if (!titleResponse.ok) {
+                    throw new Error(`Search failed: ${titleResponse.status} ${titleResponse.statusText}`);
+                }
+
+                const fullTextData = await fullTextResponse.json();
+                const titleData = await titleResponse.json();
+                cursor = fullTextData.cursor;
+
+                const seenIds = new Set(fullTextData.items.map((item) => item.id));
+                const titleOnly = titleData.items.filter((item) => !seenIds.has(item.id));
+                items = [...fullTextData.items, ...titleOnly];
+            } else {
+                const response = await fullTextPromise;
+                if (!response.ok) {
+                    throw new Error(`Search failed: ${response.status} ${response.statusText}`);
+                }
+                ({ items, cursor } = await response.json());
+            }
+
+            firstPage = false;
+
             if (tags.length > 0) {
-                // filter items by tags
                 items = items.filter(filterByTags(tags));
             }
 
