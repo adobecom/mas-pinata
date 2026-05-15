@@ -34,6 +34,20 @@ describe('aem.js', () => {
     });
 
     describe('method: searchFragment', () => {
+        const parseFilter = (url) => {
+            const params = new URL(url, 'http://test').searchParams;
+            return JSON.parse(params.get('query')).filter;
+        };
+
+        const stubSinglePage = (items = []) => {
+            const calls = [];
+            window.fetch = async (url) => {
+                calls.push(url);
+                return { ok: true, json: async () => ({ items }) };
+            };
+            return calls;
+        };
+
         it('should fetch content fragments with multiple calls', async () => {
             window.fetch = async (url) => {
                 if (url.includes('cursor1')) {
@@ -76,6 +90,60 @@ describe('aem.js', () => {
                 { id: 1, fields: [{ name: 'variant', value: 'v1' }] },
                 { id: 2, fields: [{ name: 'variant', value: 'v2' }] },
             ]);
+        });
+
+        it('encodes the query against fullText, jcr:title, and title content field when query is non-empty', async () => {
+            const calls = stubSinglePage([]);
+            for await (const _ of aem.searchFragment({ path: '/x', query: 'photo' })) {
+                // drain
+            }
+            expect(calls).to.have.lengthOf(1);
+            const filter = parseFilter(calls[0]);
+            expect(filter.path).to.equal('/x');
+            expect(filter.any).to.be.an('array').with.lengthOf(3);
+
+            const fullTextBranch = filter.any.find((b) => b.fullText);
+            expect(fullTextBranch.fullText.text).to.equal(encodeURIComponent('photo'));
+            expect(fullTextBranch.fullText.queryMode).to.equal('EDGES');
+
+            const propBranch = filter.any.find((b) => b.properties);
+            expect(propBranch.properties).to.deep.equal([
+                { name: 'jcr:title', value: 'photo', operator: 'CONTAINS', caseSensitive: false },
+            ]);
+
+            const fieldBranch = filter.any.find((b) => b.fields);
+            expect(fieldBranch.fields).to.deep.equal([
+                { name: 'title', value: 'photo', operator: 'CONTAINS', caseSensitive: false },
+            ]);
+        });
+
+        it('omits title and fullText conditions when query is empty', async () => {
+            const calls = stubSinglePage([]);
+            for await (const _ of aem.searchFragment({ path: '/x' })) {
+                // drain
+            }
+            const filter = parseFilter(calls[0]);
+            expect(filter.any).to.equal(undefined);
+            expect(filter.fullText).to.equal(undefined);
+            expect(filter.path).to.equal('/x');
+        });
+
+        it('preserves tag, model, and status filters alongside the text OR branch', async () => {
+            const calls = stubSinglePage([]);
+            for await (const _ of aem.searchFragment({
+                path: '/x',
+                query: 'photo',
+                tags: ['mas:status/draft'],
+                modelIds: ['m1'],
+                status: 'PUBLISHED',
+            })) {
+                // drain
+            }
+            const filter = parseFilter(calls[0]);
+            expect(filter.any).to.be.an('array').with.lengthOf(3);
+            expect(filter.tags).to.deep.equal(['mas:status/draft']);
+            expect(filter.modelIds).to.deep.equal(['m1']);
+            expect(filter.status).to.deep.equal(['PUBLISHED']);
         });
     });
 
