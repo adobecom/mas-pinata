@@ -1,0 +1,62 @@
+name: Piñata SDLC
+
+# Triggers a full Piñata SDLC run on AWS Batch whenever a new issue is opened.
+#
+# Prerequisites (Settings → Secrets and variables → Actions → Variables):
+#   PINATA_JOBS_API_URL       — API Gateway endpoint for the ephemeral job dispatcher
+#   PINATA_JOBS_OIDC_AUDIENCE — JWT audience string expected by the API Gateway authorizer
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  id-token: write   # required to request the GitHub OIDC token
+  contents: read
+
+jobs:
+  trigger-pinata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Get GitHub OIDC token
+        id: oidc
+        run: |
+          TOKEN=$(curl --silent \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${{ vars.PINATA_JOBS_OIDC_AUDIENCE }}" \
+            | jq -r '.value')
+          echo "token=${TOKEN}" >> "$GITHUB_OUTPUT"
+
+      - name: Submit Piñata SDLC job
+        id: submit
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          OIDC_TOKEN:   ${{ steps.oidc.outputs.token }}
+          API_URL:      ${{ vars.PINATA_JOBS_API_URL }}
+        run: |
+          PAYLOAD=$(jq -n \
+            --arg issue_number "$ISSUE_NUMBER" \
+            '{params: {
+              PARAM_WORKFLOW:     "sdlc",
+              PARAM_ISSUE_NUMBER: $issue_number,
+              PARAM_GITHUB_REPO:  "adobecom/mas-pinata",
+              PARAM_APP:          "mas-pinata"
+            }}')
+
+          RESPONSE=$(curl --silent --fail-with-body \
+            --request POST \
+            --url "$API_URL" \
+            --header "Authorization: Bearer $OIDC_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data "$PAYLOAD")
+
+          echo "response=${RESPONSE}" >> "$GITHUB_OUTPUT"
+          echo "jobId=$(echo "${RESPONSE}" | jq -r '.jobId')" >> "$GITHUB_OUTPUT"
+
+      - name: Print job info
+        run: |
+          echo "Piñata job submitted for issue #${{ github.event.issue.number }}"
+          echo "Batch Job ID: ${{ steps.submit.outputs.jobId }}"
+          echo "Full response: ${{ steps.submit.outputs.response }}"
