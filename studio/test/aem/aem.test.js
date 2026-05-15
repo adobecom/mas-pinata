@@ -145,6 +145,20 @@ describe('aem.js', () => {
             expect(filter.modelIds).to.deep.equal(['m1']);
             expect(filter.status).to.deep.equal(['PUBLISHED']);
         });
+
+        it('preserves createdBy filter alongside the text OR branch', async () => {
+            const calls = stubSinglePage([]);
+            for await (const _ of aem.searchFragment({
+                path: '/x',
+                query: 'photo',
+                createdBy: ['user@adobe.com'],
+            })) {
+                // drain
+            }
+            const filter = parseFilter(calls[0]);
+            expect(filter.any).to.be.an('array').with.lengthOf(3);
+            expect(filter.created.by).to.deep.equal(['user@adobe.com', 'USER@ADOBE.COM']);
+        });
     });
 
     describe('method: getFragmentTranslations', () => {
