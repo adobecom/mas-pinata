@@ -69,5 +69,18 @@ export default {
             tags: '@mas-studio @translation-editor @regression',
             description: 'Translation Editor Actions: create project save, add languages overlay, add files overlay',
         },
+        {
+            tcid: '7',
+            name: '@translation-editor-content-search',
+            path: '/studio.html',
+            data: {
+                contentSearchTerm: 'nala',
+                titleSearchTerm: 'grouped',
+            },
+            browserParams: '#page=translation-editor&path=nala',
+            tags: '@mas-studio @translation-editor @search',
+            description:
+                'Search matches card content fields and studioPath, not just fragment title — verifies expanded haystack',
+        },
     ],
 };
