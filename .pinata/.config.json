@@ -57,5 +57,14 @@
     "review": {
         "start_recipe": "pinata-start",
         "stop_recipe": "pinata-stop"
+    },
+    "mental_models": {
+        "domains": ["mas-nala"],
+        "path_overrides": [
+            { "pattern": ".github/workflows/", "domains": ["mas-cicd"] },
+            { "pattern": "nala/",              "domains": ["mas-nala"] },
+            { "pattern": "studio/",            "domains": ["mas-studio", "mas-nala"] },
+            { "pattern": "web-components/",    "domains": ["mas-web-components", "mas-nala"] }
+        ]
     }
 }
