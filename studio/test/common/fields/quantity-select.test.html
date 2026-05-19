@@ -1,0 +1,227 @@
+<!doctype html>
+<html>
+    <head>
+        <script type="module">
+            window.process = { env: {} };
+            window.__swc = { warn: () => {} };
+        </script>
+        <title>quantity-select-field unit tests</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script src="../../../src/swc.js" type="module"></script>
+        <style>
+            main {
+                display: flex;
+                flex-direction: column;
+                gap: 32px;
+            }
+
+            sp-theme {
+                display: contents;
+            }
+
+            quantity-select-field {
+                max-width: 360px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <script type="module">
+            import { runTests } from '@web/test-runner-mocha';
+            import { expect } from '@esm-bundle/chai';
+            import { delay, initElementFromTemplate, oneEvent, triggerInput } from '../../utils.js';
+            import {
+                createQuantitySelectValue,
+                parseQuantitySelectValue,
+            } from '../../../src/common/fields/quantity-select.js';
+
+            async function initField(templateId, testTitle, value = '') {
+                const field = initElementFromTemplate(templateId, testTitle);
+                if (value) field.value = value;
+                await field.updateComplete;
+                return field;
+            }
+
+            const getInputs = (field) => ({
+                title: field.querySelector('#quantity-selector-title'),
+                start: field.querySelector('#quantity-selector-start'),
+                minimum: field.querySelector('#quantity-selector-minimum'),
+                step: field.querySelector('#quantity-selector-step'),
+            });
+
+            const getHelpTextInGroup = (input) => {
+                const group = input.closest('sp-field-group');
+                return group?.querySelector('sp-help-text[variant="negative"]');
+            };
+
+            const blur = async (input) => {
+                input.dispatchEvent(new FocusEvent('blur', { bubbles: true, composed: true }));
+                await delay(0);
+            };
+
+            runTests(async () => {
+                describe('quantity-select-field', () => {
+                    it('parseQuantitySelectValue returns defaults when value is empty', () => {
+                        expect(parseQuantitySelectValue('')).to.deep.equal({
+                            title: '',
+                            min: '1',
+                            step: '1',
+                            defaultValue: '',
+                        });
+                    });
+
+                    it('createQuantitySelectValue omits default-value when empty', () => {
+                        const html = createQuantitySelectValue({
+                            title: 't',
+                            min: '1',
+                            step: '1',
+                            defaultValue: '',
+                        });
+                        expect(html).to.not.include('default-value');
+                    });
+
+                    it('createQuantitySelectValue writes default-value when provided', () => {
+                        const html = createQuantitySelectValue({
+                            title: 't',
+                            min: '2',
+                            step: '1',
+                            defaultValue: '4',
+                        });
+                        expect(html).to.include('default-value="4"');
+                    });
+
+                    it('renders both inputs blank with no warning when value is empty', async function () {
+                        const field = await initField('quantitySelectBasic', this.test.title);
+                        await field.updateComplete;
+                        const { start, minimum } = getInputs(field);
+                        expect(start).to.not.be.null;
+                        expect(minimum).to.not.be.null;
+                        expect(field.shadowRoot.querySelector('sp-help-text[variant="negative"]')).to.be.null;
+                    });
+
+                    it('mounting with min and default-value shows both values without warning', async function () {
+                        const value =
+                            '<merch-quantity-select title="" min="5" max="10" step="1" default-value="3"></merch-quantity-select>';
+                        const field = await initField('quantitySelectBasic', this.test.title, value);
+                        await field.updateComplete;
+                        const { start, minimum } = getInputs(field);
+                        expect(minimum.value).to.equal('5');
+                        expect(start.value).to.equal('3');
+                        expect(field.shadowRoot.querySelector('sp-help-text[variant="negative"]')).to.be.null;
+                    });
+
+                    it('shows warning under Minimum after blurring Minimum when min > start', async function () {
+                        const field = await initField('quantitySelectBasic', this.test.title);
+                        await field.updateComplete;
+                        const { start, minimum } = getInputs(field);
+                        triggerInput(start, '3');
+                        triggerInput(minimum, '5');
+                        await field.updateComplete;
+                        await blur(minimum);
+                        await field.updateComplete;
+                        expect(getHelpTextInGroup(minimum)).to.not.be.null;
+                        expect(getHelpTextInGroup(start)).to.be.null;
+                    });
+
+                    it('shows warning under Start after blurring Start when min > start', async function () {
+                        const field = await initField('quantitySelectBasic', this.test.title);
+                        await field.updateComplete;
+                        const { start, minimum } = getInputs(field);
+                        triggerInput(start, '3');
+                        triggerInput(minimum, '5');
+                        await field.updateComplete;
+                        await blur(start);
+                        await field.updateComplete;
+                        expect(getHelpTextInGroup(start)).to.not.be.null;
+                        expect(getHelpTextInGroup(minimum)).to.be.null;
+                    });
+
+                    it('clears warning when Minimum is corrected', async function () {
+                        const field = await initField('quantitySelectBasic', this.test.title);
+                        await field.updateComplete;
+                        const { start, minimum } = getInputs(field);
+                        triggerInput(start, '3');
+                        triggerInput(minimum, '5');
+                        await field.updateComplete;
+                        await blur(minimum);
+                        await field.updateComplete;
+                        expect(getHelpTextInGroup(minimum)).to.not.be.null;
+
+                        triggerInput(minimum, '2');
+                        await field.updateComplete;
+                        expect(getHelpTextInGroup(minimum)).to.be.null;
+                        expect(getHelpTextInGroup(start)).to.be.null;
+                    });
+
+                    it('clears warning when Start is cleared to empty', async function () {
+                        const field = await initField('quantitySelectBasic', this.test.title);
+                        await field.updateComplete;
+                        const { start, minimum } = getInputs(field);
+                        triggerInput(start, '3');
+                        triggerInput(minimum, '5');
+                        await field.updateComplete;
+                        await blur(minimum);
+                        await field.updateComplete;
+                        expect(getHelpTextInGroup(minimum)).to.not.be.null;
+
+                        triggerInput(start, '');
+                        await field.updateComplete;
+                        expect(getHelpTextInGroup(minimum)).to.be.null;
+                        expect(getHelpTextInGroup(start)).to.be.null;
+                    });
+
+                    it('clears warning when Start is corrected to satisfy the rule', async function () {
+                        const field = await initField('quantitySelectBasic', this.test.title);
+                        await field.updateComplete;
+                        const { start, minimum } = getInputs(field);
+                        triggerInput(start, '3');
+                        triggerInput(minimum, '5');
+                        await field.updateComplete;
+                        await blur(minimum);
+                        await field.updateComplete;
+                        expect(getHelpTextInGroup(minimum)).to.not.be.null;
+
+                        triggerInput(start, '5');
+                        await field.updateComplete;
+                        expect(getHelpTextInGroup(minimum)).to.be.null;
+                        expect(getHelpTextInGroup(start)).to.be.null;
+                    });
+
+                    it('does not show warning on blur when one field is empty', async function () {
+                        const field = await initField('quantitySelectBasic', this.test.title);
+                        await field.updateComplete;
+                        const { start, minimum } = getInputs(field);
+                        triggerInput(minimum, '5');
+                        await field.updateComplete;
+                        await blur(minimum);
+                        await field.updateComplete;
+                        expect(field.shadowRoot.querySelector('sp-help-text[variant="negative"]')).to.be.null;
+                    });
+
+                    it('keeps dispatching change events even while warning is visible', async function () {
+                        const field = await initField('quantitySelectBasic', this.test.title);
+                        await field.updateComplete;
+                        const { start, minimum } = getInputs(field);
+                        triggerInput(start, '3');
+                        triggerInput(minimum, '5');
+                        await field.updateComplete;
+                        await blur(minimum);
+                        await field.updateComplete;
+                        expect(getHelpTextInGroup(minimum)).to.not.be.null;
+
+                        const changePromise = oneEvent(field, 'change');
+                        triggerInput(minimum, '6');
+                        const event = await changePromise;
+                        expect(event.detail?.value).to.include('min="6"');
+                    });
+                });
+            });
+        </script>
+        <main>
+            <sp-theme system="spectrum-two" color="light" scale="medium"></sp-theme>
+        </main>
+        <template id="quantitySelectBasic">
+            <quantity-select-field></quantity-select-field>
+        </template>
+    </body>
+</html>
