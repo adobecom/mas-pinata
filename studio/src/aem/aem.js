@@ -100,11 +100,26 @@ class AEM {
             path,
         };
         if (query) {
+            const encodedQuery = encodeURIComponent(query);
             filter.fullText = {
-                text: encodeURIComponent(query),
+                text: encodedQuery,
                 // For info about modes: https://adobe-sites.redoc.ly/tag/Search#operation/fragments/search!path=query/filter/fullText/queryMode&t=request
                 queryMode: 'EDGES',
             };
+            filter.properties = [
+                {
+                    property: 'jcr:title',
+                    value: encodedQuery,
+                    operation: 'CONTAINS',
+                },
+            ];
+            filter.fields = [
+                {
+                    name: 'title',
+                    value: encodedQuery,
+                    operation: 'CONTAINS',
+                },
+            ];
         }
         const searchQuery = { ...defaultSearchOptions, filter };
         if (sort) {
