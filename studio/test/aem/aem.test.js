@@ -77,6 +77,137 @@ describe('aem.js', () => {
                 { id: 2, fields: [{ name: 'variant', value: 'v2' }] },
             ]);
         });
+
+        it('should issue two fetch calls when query is 3+ chars and deduplicate results', async () => {
+            const fetchCalls = [];
+            window.fetch = async (url) => {
+                fetchCalls.push(url);
+                const params = new URLSearchParams(url.split('?')[1]);
+                const query = JSON.parse(params.get('query'));
+                if (query.filter.fullText) {
+                    return {
+                        ok: true,
+                        json: async () => ({
+                            items: [
+                                { id: 'frag-1', title: 'Photoshop Plans' },
+                                { id: 'frag-2', title: 'Lightroom' },
+                            ],
+                        }),
+                    };
+                }
+                if (query.filter.title) {
+                    return {
+                        ok: true,
+                        json: async () => ({
+                            items: [
+                                { id: 'frag-1', title: 'Photoshop Plans' },
+                                { id: 'frag-3', title: 'Photography Bundle' },
+                            ],
+                        }),
+                    };
+                }
+                return { ok: true, json: async () => ({ items: [] }) };
+            };
+
+            const result = aem.searchFragment({ path: '/content', query: 'Photo' });
+            const actual = [];
+            for await (const items of result) {
+                actual.push(...items);
+            }
+
+            expect(fetchCalls.length).to.equal(2);
+            expect(actual).to.deep.equal([
+                { id: 'frag-1', title: 'Photoshop Plans' },
+                { id: 'frag-2', title: 'Lightroom' },
+                { id: 'frag-3', title: 'Photography Bundle' },
+            ]);
+        });
+
+        it('should not issue title search when query is empty', async () => {
+            const fetchCalls = [];
+            window.fetch = async (url) => {
+                fetchCalls.push(url);
+                return {
+                    ok: true,
+                    json: async () => ({ items: [{ id: 'frag-1' }] }),
+                };
+            };
+
+            const result = aem.searchFragment({ path: '/content', query: '' });
+            const actual = [];
+            for await (const items of result) {
+                actual.push(...items);
+            }
+
+            expect(fetchCalls.length).to.equal(1);
+            expect(actual).to.deep.equal([{ id: 'frag-1' }]);
+        });
+
+        it('should not issue title search when query is shorter than 3 chars', async () => {
+            const fetchCalls = [];
+            window.fetch = async (url) => {
+                fetchCalls.push(url);
+                return {
+                    ok: true,
+                    json: async () => ({ items: [{ id: 'frag-1' }] }),
+                };
+            };
+
+            const result = aem.searchFragment({ path: '/content', query: 'ab' });
+            const actual = [];
+            for await (const items of result) {
+                actual.push(...items);
+            }
+
+            expect(fetchCalls.length).to.equal(1);
+            expect(actual).to.deep.equal([{ id: 'frag-1' }]);
+        });
+
+        it('should only paginate fullText search on subsequent pages', async () => {
+            const fetchCalls = [];
+            window.fetch = async (url) => {
+                fetchCalls.push(url);
+                const params = new URLSearchParams(url.split('?')[1]);
+                const query = JSON.parse(params.get('query'));
+                if (query.filter.title) {
+                    return {
+                        ok: true,
+                        json: async () => ({
+                            items: [{ id: 'title-1', title: 'Title Match' }],
+                        }),
+                    };
+                }
+                if (params.get('cursor') === 'page2') {
+                    return {
+                        ok: true,
+                        json: async () => ({
+                            items: [{ id: 'frag-3', title: 'Page 2' }],
+                        }),
+                    };
+                }
+                return {
+                    ok: true,
+                    json: async () => ({
+                        items: [{ id: 'frag-1', title: 'Page 1' }],
+                        cursor: 'page2',
+                    }),
+                };
+            };
+
+            const result = aem.searchFragment({ path: '/content', query: 'test' });
+            const actual = [];
+            for await (const items of result) {
+                actual.push(...items);
+            }
+
+            // First page: fullText + title (2 calls), second page: fullText only (1 call)
+            expect(fetchCalls.length).to.equal(3);
+            expect(actual).to.deep.equal([
+                { id: 'frag-1', title: 'Page 1' },
+                { id: 'title-1', title: 'Title Match' },
+                { id: 'frag-3', title: 'Page 2' },
+            ]);
+        });
     });
 
     describe('method: getFragmentTranslations', () => {
