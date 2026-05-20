@@ -430,4 +430,24 @@ export const styles = css`
         outline: 2px solid var(--spectrum-accent-content-color-key-focus, #2f55e0);
         outline-offset: 2px;
     }
+
+    .add-card-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 8px;
+    }
+
+    .add-card-button {
+        align-self: flex-start;
+    }
+
+    .add-card-input {
+        width: 100%;
+    }
+
+    .add-card-error {
+        color: var(--spectrum-red-700, #b60000);
+        font-size: 12px;
+    }
 `;

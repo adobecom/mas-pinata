@@ -9,7 +9,7 @@ import router from '../router.js';
 import { getFromFragmentCache } from '../mas-repository.js';
 import generateFragmentStore from '../reactivity/source-fragment-store.js';
 import ReactiveController from '../reactivity/reactive-controller.js';
-import { showToast } from '../utils.js';
+import { showToast, extractFragmentIdFromCardLink } from '../utils.js';
 import { renderSpIcon } from '../constants/icon-library.js';
 
 const CARDS_SECTION = 'cards-section';
@@ -24,6 +24,9 @@ class MerchCardCollectionEditor extends LitElement {
             isVariation: { type: Boolean },
             updateFragment: { type: Function },
             hideCards: { type: Boolean, state: true },
+            addCardInputOpen: { type: Boolean, state: true },
+            addCardError: { type: String, state: true },
+            isResolvingPastedCard: { type: Boolean, state: true },
         };
     }
 
@@ -37,6 +40,9 @@ class MerchCardCollectionEditor extends LitElement {
         super();
         this.draggingIndex = -1;
         this.hideCards = false;
+        this.addCardInputOpen = false;
+        this.addCardError = '';
+        this.isResolvingPastedCard = false;
     }
 
     connectedCallback() {
@@ -335,8 +341,110 @@ class MerchCardCollectionEditor extends LitElement {
                     ? this.getItems({ values: cardsValues }, inherited)
                     : html`<div class="empty-cards-placeholder"></div>`}
             </div>
+            ${inherited ? nothing : this.#addCardRow}
         `;
     }
+
+    get #addCardRow() {
+        return html`
+            <div class="add-card-row" @focusout=${this.#handleAddCardBlur}>
+                ${this.addCardInputOpen
+                    ? html`
+                          <sp-textfield
+                              class="add-card-input"
+                              placeholder="Paste card link…"
+                              ?invalid=${!!this.addCardError}
+                              ?disabled=${this.isResolvingPastedCard}
+                              @paste=${this.#handleAddCardPaste}
+                              @change=${this.#handleAddCardInput}
+                          ></sp-textfield>
+                          ${this.addCardError
+                              ? html`<div class="add-card-error" role="alert">${this.addCardError}</div>`
+                              : nothing}
+                      `
+                    : html`
+                          <sp-action-button quiet class="add-card-button" @click=${this.#openAddCardInput}>
+                              <sp-icon-add slot="icon"></sp-icon-add>
+                              Add card
+                          </sp-action-button>
+                      `}
+            </div>
+        `;
+    }
+
+    #openAddCardInput = async () => {
+        this.addCardInputOpen = true;
+        this.addCardError = '';
+        await this.updateComplete;
+        this.shadowRoot?.querySelector('.add-card-input')?.focus();
+    };
+
+    #closeAddCardInput = () => {
+        this.addCardInputOpen = false;
+        this.addCardError = '';
+        this.isResolvingPastedCard = false;
+        const input = this.shadowRoot?.querySelector('.add-card-input');
+        if (input) input.value = '';
+    };
+
+    #handleAddCardBlur = (event) => {
+        // Defer so focus moves between sibling elements inside the row aren't treated as blur-out.
+        setTimeout(() => {
+            const row = this.shadowRoot?.querySelector('.add-card-row');
+            const next = event.relatedTarget;
+            if (!row) return;
+            if (!next || !row.contains(next)) {
+                this.#closeAddCardInput();
+            }
+        }, 0);
+    };
+
+    #handleAddCardPaste = (event) => {
+        // Let the paste land in the input first, then resolve.
+        const target = event.target;
+        setTimeout(() => this.#handleAddCardInput({ target }), 0);
+    };
+
+    #handleAddCardInput = async (event) => {
+        const raw = event.target?.value ?? '';
+        this.addCardError = '';
+        const id = extractFragmentIdFromCardLink(raw);
+        if (!id) {
+            if (raw.trim()) this.addCardError = 'Paste a valid card link';
+            return;
+        }
+        this.isResolvingPastedCard = true;
+        try {
+            let fragmentData = await getFromFragmentCache(id);
+            if (!fragmentData) {
+                const repo = document.querySelector('mas-repository');
+                fragmentData = await repo?.aem?.sites?.cf?.fragments?.getById?.(id);
+            }
+            if (!fragmentData) {
+                this.addCardError = 'Card not found';
+                return;
+            }
+            if (fragmentData.model?.path !== CARD_MODEL_PATH) {
+                this.addCardError = 'Link does not point to a card';
+                return;
+            }
+            if (this.isFragmentAlreadyInCollection(fragmentData.path)) {
+                this.addCardError = 'Card already in collection';
+                showToast('Card already in collection', 'negative');
+                return;
+            }
+            const cardsField = this.#getField('cards');
+            const newValues = [...(cardsField?.values || []), fragmentData.path];
+            this.#updateFieldValues('cards', newValues);
+            this.#addFragmentReference(fragmentData);
+            this.#closeAddCardInput();
+            showToast('Card added', 'positive');
+        } catch (err) {
+            this.addCardError = 'Could not resolve card link';
+        } finally {
+            this.isResolvingPastedCard = false;
+        }
+    };
 
     get #defaultCardDropZone() {
         const hasDefaultCard = !!this.defaultChild;
