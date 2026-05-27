@@ -73,6 +73,9 @@ merch-card[variant="plans-education"] [slot="body-xs"] span.price.price-promo-st
 }
 
 merch-card[variant^="plans"] [slot="heading-m"] p {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
     font-size: var(--consonant-merch-card-heading-xxxs-font-size);
     line-height: var(--consonant-merch-card-body-xs-line-height);
 }
