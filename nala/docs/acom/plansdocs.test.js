@@ -91,6 +91,9 @@ test.describe('ACOM MAS cards feature test suite', () => {
             expect(await webUtil.verifyCSS(await acomPage.getCardTitle(data.id), acomPage.cssProp.title)).toBeTruthy();
             expect(await webUtil.verifyCSS(await acomPage.getCardPrice(data.id), acomPage.cssProp.price)).toBeTruthy();
             expect(
+                await webUtil.verifyCSS(await acomPage.getCardPriceLayout(data.id), acomPage.cssProp.priceLayout),
+            ).toBeTruthy();
+            expect(
                 await webUtil.verifyCSS(await acomPage.getCardStrikethroughPrice(data.id), acomPage.cssProp.strikethroughPrice),
             ).toBeTruthy();
             expect(await webUtil.verifyCSS(await acomPage.getCardPromoText(data.id), acomPage.cssProp.promoText)).toBeTruthy();

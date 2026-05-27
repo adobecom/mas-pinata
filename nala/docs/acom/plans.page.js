@@ -54,6 +54,11 @@ export default class MasPlans {
                 'font-weight': '700',
                 'line-height': '30px',
             },
+            priceLayout: {
+                display: 'flex',
+                'flex-wrap': 'wrap',
+                'align-items': 'baseline',
+            },
             strikethroughPrice: {
                 color: 'rgb(44, 44, 44)',
                 'font-size': '14px',
@@ -149,6 +154,11 @@ export default class MasPlans {
     getCardPrice(id) {
         const card = this.getCard(id);
         return card.locator('p[slot="heading-m"]');
+    }
+
+    getCardPriceLayout(id) {
+        const card = this.getCard(id);
+        return card.locator('[slot="heading-m"] p');
     }
 
     getCardStrikethroughPrice(id) {
