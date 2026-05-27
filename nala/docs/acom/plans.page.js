@@ -118,6 +118,11 @@ export default class MasPlans {
             },
         };
 
+        this.headingMSlotCssProp = {
+            display: 'flex',
+            'flex-direction': 'column',
+        };
+
         // Plans students card properties:
         this.studentsCssProp = { card: { width: '484px' } };
     }
@@ -149,6 +154,11 @@ export default class MasPlans {
     getCardPrice(id) {
         const card = this.getCard(id);
         return card.locator('p[slot="heading-m"]');
+    }
+
+    getCardHeadingMSlot(id) {
+        const card = this.getCard(id);
+        return card.locator('[slot="heading-m"]');
     }
 
     getCardStrikethroughPrice(id) {

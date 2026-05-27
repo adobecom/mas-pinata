@@ -159,4 +159,32 @@ test.describe('ACOM MAS cards feature test suite', () => {
             expect(await webUtil.verifyCSS(await acomPage.getCard(data.id), acomPage.studentsCssProp.card)).toBeTruthy();
         });
     });
+
+    // @MAS-Plans-HeadingM-FlexColumn
+    test(`${features[4].name},${features[4].tags}`, async () => {
+        const { data } = features[4];
+
+        await test.step('step-1: Go to Plans Merch Card feature test page', async () => {
+            const page = workerSetup.getPage('US');
+            acomPage = new MasPlans(page);
+            webUtil = new WebUtil(page);
+
+            await workerSetup.verifyPageURL('US', DOCS_GALLERY_PATH.PLANS.US, expect);
+        });
+
+        await test.step('step-2: Verify heading-m slot uses flex-column layout', async () => {
+            await expect(acomPage.getCard(data.id)).toBeVisible();
+            const headingMSlot = acomPage.getCardHeadingMSlot(data.id);
+            await expect(headingMSlot).toBeVisible();
+            expect(await webUtil.verifyCSS(headingMSlot, acomPage.headingMSlotCssProp)).toBeTruthy();
+        });
+
+        await test.step('step-3: Verify heading-m slot does not overflow card width', async () => {
+            const card = acomPage.getCard(data.id);
+            const headingMSlot = acomPage.getCardHeadingMSlot(data.id);
+            const cardBox = await card.boundingBox();
+            const slotBox = await headingMSlot.boundingBox();
+            expect(slotBox.width).toBeLessThanOrEqual(cardBox.width);
+        });
+    });
 });
