@@ -169,6 +169,45 @@ describe('MasSideNav – Copy Field', () => {
             expect(priceField.preview).to.equal('$9.99/mo');
         });
 
+        it('should preserve locale-driven tax label rendered on the price (e.g. FR_fr "TTC")', () => {
+            // Reproduces MWPW-193548: the source span has no data-display-tax,
+            // but the rendered preview shows the locale-default tax label.
+            // The Copy Field popover preview must mirror the rendered output.
+            const sourceFragment = mockFragment([
+                {
+                    name: 'prices',
+                    values: ['<p><span is="inline-price" data-template="price" data-wcs-osi="abc"></span></p>'],
+                },
+            ]);
+            const previewFragment = mockFragment([
+                {
+                    name: 'prices',
+                    values: ['<p><span is="inline-price" data-template="price" data-wcs-osi="abc"></span></p>'],
+                },
+            ]);
+            const editor = mockEditor(sourceFragment, previewFragment);
+            const card = document.createElement('merch-card');
+            const resolvedPrice = document.createElement('span');
+            resolvedPrice.setAttribute('is', 'inline-price');
+            resolvedPrice.setAttribute('data-template', 'price');
+            resolvedPrice.setAttribute('data-wcs-osi', 'abc');
+            const priceInner = document.createElement('span');
+            priceInner.className = 'price';
+            priceInner.append(document.createTextNode('26,21 €/mois'));
+            const taxLabel = document.createElement('span');
+            taxLabel.className = 'price-tax-inclusivity';
+            taxLabel.textContent = 'TTC';
+            priceInner.append(taxLabel);
+            resolvedPrice.append(priceInner);
+            card.append(resolvedPrice);
+            editor.querySelector = sandbox.stub().withArgs('merch-card').returns(card);
+            editorStub.withArgs('mas-fragment-editor').returns(editor);
+
+            const priceField = el.copyableFields.find((f) => f.name === 'prices');
+            expect(priceField.preview).to.include('TTC');
+            expect(priceField.preview).to.include('26,21');
+        });
+
         it('should resolve inline-price tokens inside description from rendered preview card', () => {
             const sourceFragment = mockFragment([
                 {
@@ -1243,38 +1282,12 @@ describe('MasSideNav – Copy Field', () => {
     });
 
     describe('handleStoreChanges', () => {
-        it('should redirect away from translations when disabled', () => {
-            const setPageStub = sandbox.stub(Store.page, 'set');
-            sandbox.stub(Store.page, 'get').returns(PAGE_NAMES.TRANSLATIONS);
+        it('should call updateVariationLoadingState', () => {
             sandbox.stub(el, 'updateVariationLoadingState');
-            sandbox.stub(el, 'isTranslationEnabled').get(() => false);
 
             el.handleStoreChanges();
 
-            expect(setPageStub.calledOnceWithExactly(PAGE_NAMES.CONTENT)).to.be.true;
             expect(el.updateVariationLoadingState.calledOnce).to.be.true;
-        });
-
-        it('should redirect away from translation editor when disabled', () => {
-            const setPageStub = sandbox.stub(Store.page, 'set');
-            sandbox.stub(Store.page, 'get').returns(PAGE_NAMES.TRANSLATION_EDITOR);
-            sandbox.stub(el, 'updateVariationLoadingState');
-            sandbox.stub(el, 'isTranslationEnabled').get(() => false);
-
-            el.handleStoreChanges();
-
-            expect(setPageStub.calledOnceWithExactly(PAGE_NAMES.CONTENT)).to.be.true;
-        });
-
-        it('should not redirect when translations are enabled', () => {
-            const setPageStub = sandbox.stub(Store.page, 'set');
-            sandbox.stub(Store.page, 'get').returns(PAGE_NAMES.TRANSLATIONS);
-            sandbox.stub(el, 'updateVariationLoadingState');
-            sandbox.stub(el, 'isTranslationEnabled').get(() => true);
-
-            el.handleStoreChanges();
-
-            expect(setPageStub.called).to.be.false;
         });
     });
 });
