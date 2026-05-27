@@ -47,4 +47,12 @@ export const features = [
         browserParams: '?theme=darkest',
         tags: '@mas-docs @mas-acom @mas-plans-card @commerce @smoke @regression @milo @regional-variation',
     },
+    {
+        tcid: '4',
+        name: '@MAS-Plans-HeadingM-FlexColumn',
+        path: DOCS_GALLERY_PATH.PLANS.US,
+        data: { id: '8373b5c2-69e6-4e9c-befc-b424dd33469b' },
+        browserParams: '?theme=darkest',
+        tags: '@mas-docs @mas-acom @mas-plans-card @commerce @regression @milo',
+    },
 ];

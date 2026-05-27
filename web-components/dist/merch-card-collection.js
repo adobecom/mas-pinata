@@ -2528,6 +2528,11 @@ merch-card[variant^="plans"] [slot="heading-m"] p {
     line-height: var(--consonant-merch-card-body-xs-line-height);
 }
 
+merch-card[variant^="plans"] [slot="heading-m"] {
+    display: flex;
+    flex-direction: column;
+}
+
 merch-card[variant^="plans"] [slot="heading-m"] span.price:not(.price-strikethrough):not(.price-promo-strikethrough):not(.price-legal) {
     font-size: var(--consonant-merch-card-heading-m-font-size);
     line-height: var(--consonant-merch-card-heading-m-line-height);
