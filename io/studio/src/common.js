@@ -23,8 +23,7 @@ async function postToOdinWithRetry(odinEndpoint, URI, authToken, payload, maxRet
     let lastError = null;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            await postToOdin(odinEndpoint, URI, authToken, payload);
-            return true;
+            return await postToOdin(odinEndpoint, URI, authToken, payload);
         } catch (error) {
             lastError = error.message || error.toString();
             logger.warn(`Error POSTing ${URI} (attempt ${attempt}/${maxRetries}): ${lastError}`);
