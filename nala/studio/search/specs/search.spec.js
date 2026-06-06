@@ -10,9 +10,9 @@ export default {
             path: '/studio.html',
             data: {
                 // Mid-word substring (>= 3 chars) of the target fragment's title.
-                query: 'TODO-replace-with-title-substring',
+                query: 'tomat',
                 // Fragment whose jcr:title / title field contains the substring above.
-                cardid: 'TODO-replace-with-actual-fragment-id',
+                cardid: '481a2002-9a4e-447b-a990-b3e56fdb2d14',
             },
             browserParams: '#path=nala&page=content',
             tags: '@mas-studio @search @search-substring',
@@ -25,8 +25,8 @@ export default {
             path: '/studio.html',
             data: {
                 // Same substring as tcid 0 but in a different case (e.g. uppercased).
-                query: 'TODO-replace-with-title-substring-uppercased',
-                cardid: 'TODO-replace-with-actual-fragment-id',
+                query: 'TOMAT',
+                cardid: '481a2002-9a4e-447b-a990-b3e56fdb2d14',
             },
             browserParams: '#path=nala&page=content',
             tags: '@mas-studio @search @search-case-insensitive',
@@ -40,9 +40,9 @@ export default {
             path: '/studio.html',
             data: {
                 // A 2-char mid-word fragment of the tcid 0 query (must be < 3 chars).
-                shortQuery: 'TODO-replace-with-2-char-substring',
+                shortQuery: 'to',
                 // The fragment that tcid 0 surfaces but this short query must NOT.
-                cardid: 'TODO-replace-with-actual-fragment-id',
+                cardid: '481a2002-9a4e-447b-a990-b3e56fdb2d14',
             },
             browserParams: '#path=nala&page=content',
             tags: '@mas-studio @search @search-min-length',
