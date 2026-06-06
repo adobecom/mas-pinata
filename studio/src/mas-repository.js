@@ -525,14 +525,16 @@ export class MasRepository extends LitElement {
         // tokens, so multi-word queries like "creative cloud" return zero on catalogs
         // where no card has both tokens at edge positions in metadata — even though
         // many cards have the phrase in body fields (cardTitle, description, etc.).
-        // To make search reliable, we route a single discriminative term to AEM and
-        // apply the user's full query client-side via #skipQuery() against an expanded
-        // haystack covering all string field values.
+        // EDGES also only matches at token edges in that metadata, so it can't surface
+        // mid-token substrings (e.g. "shop" in "Photoshop") or values that live solely
+        // in content fields like the `title` field. To make search reliable, we route
+        // recall to AEM and apply the user's full query client-side via #skipQuery()
+        // against an expanded haystack covering all string field values.
         //   - single variant chip: variant name → AEM
         //   - else multi-word query: longest token → AEM
-        //   - else (single-word or UUID): query unchanged
-        // The client-side #skipQuery is idempotent in the single-word case (matches
-        // exactly what AEM returned) and only narrows in the multi-word case.
+        //   - else single-word query: empty (browse the locale folder) → AEM
+        //   - else (UUID): handled by the fast path below
+        // The client-side #skipQuery then narrows each page to true substring matches.
         const userQuery = !isUUID(this.search.value.query) && query ? query : '';
         let clientQuery = '';
         if (variants.length === 1) {
@@ -541,9 +543,20 @@ export class MasRepository extends LitElement {
         } else if (userQuery) {
             const tokens = userQuery.match(/\S+/g) || [];
             if (tokens.length > 1) {
-                const longest = tokens.reduce((a, b) => (b.length > a.length ? b : a));
-                localSearch.query = longest;
+                // multi-word: route the longest token to AEM for recall, full query client-side
+                localSearch.query = tokens.reduce((a, b) => (b.length > a.length ? b : a));
                 clientQuery = userQuery;
+            } else if (tokens.length === 1) {
+                // single-word: AEM fullText (EDGES) only matches metadata jcr:title/description
+                // at token edges — it can't surface mid-token substrings (e.g. "shop" in
+                // "Photoshop") or matches that live in the `title` content field. Browse the
+                // locale folder (no fullText) and let #skipQuery substring-match the full haystack.
+                localSearch.query = '';
+                clientQuery = userQuery;
+            } else {
+                // whitespace-only: no searchable term — browse the locale folder with no
+                // client-side filter so the no-op query still returns the full folder.
+                localSearch.query = '';
             }
         }
         const lowerClientQuery = clientQuery.toLowerCase();

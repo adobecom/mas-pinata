@@ -948,7 +948,11 @@ describe('MasRepository dictionary helpers', () => {
             }
         });
 
-        it('leaves query unchanged when no variants are selected', async () => {
+        it('browses the locale folder (empty fullText) for a single-word query when no variants are selected', async () => {
+            // A single-word query can't be narrowed server-side: AEM's fullText/EDGES index
+            // only matches title/description metadata at token edges, so it misses mid-token
+            // substrings and content-field-only values. Recall is therefore an empty-fullText
+            // folder browse, with #skipQuery doing the substring matching client-side.
             const repository = createFullRepository();
             repository.page = { value: PAGE_NAMES.CONTENT };
             repository.search = { value: { path: 'acom', query: 'photoshop' } };
@@ -972,7 +976,7 @@ describe('MasRepository dictionary helpers', () => {
                 await repository.searchFragments();
                 expect(searchStub.calledOnce).to.be.true;
                 const callArg = searchStub.firstCall.args[0];
-                expect(callArg.query).to.equal('photoshop');
+                expect(callArg.query).to.equal('');
             } finally {
                 Store.profile.set(originalProfile);
                 Store.fragments.list.data = originalData;
@@ -2506,16 +2510,40 @@ describe('MasRepository dictionary helpers', () => {
             }
         });
 
-        it('single-word query: sends query unchanged to AEM (no client-side filter regression)', async () => {
+        it('single-word query: browses the folder (empty fullText) and substring-matches the title content field', async () => {
+            // Resolves adobecom/mas-pinata#365 (the tracked feature issue) client-side.
+            // AEM CF Search exposes no server-side substring/field matcher, so there is no
+            // deferred server-side follow-up to track — this is the full fix for #365.
+            // The exact gap #365 reported: a mid-token, content-field-only query —
+            // "shop" inside "Photoshop", living in the `title` field, not the jcr:title or
+            // description metadata that AEM's fullText/EDGES index covers. Proof of the fix:
+            // recall sends an empty query (folder browse) and #skipQuery surfaces the card
+            // via its expanded haystack while filtering out the non-matching card.
+            const contentFieldMatch = createFragment({
+                id: 'cf-match',
+                path: `${ROOT_PATH}/acom/en_US/cf-match`,
+                title: 'Creative Plans', // metadata jcr:title does NOT contain the query
+                description: '',
+                fields: [{ name: 'title', values: ['Photoshop Plans'] }], // only the content field does
+            });
+            const nonMatching = createFragment({
+                id: 'cf-nomatch',
+                path: `${ROOT_PATH}/acom/en_US/cf-nomatch`,
+                title: 'Creative Plans',
+                description: '',
+                fields: [{ name: 'title', values: ['Illustrator Plans'] }],
+            });
+            const mockCursor = createMockCursorFromPages([[contentFieldMatch, nonMatching]]);
             const repository = createFullRepository();
             repository.page = { value: PAGE_NAMES.CONTENT };
-            repository.search = { value: { path: 'acom', query: 'photoshop' } };
+            repository.search = { value: { path: 'acom', query: 'shop' } };
             repository.filters = { value: { locale: 'en_US', tags: '' } };
-            const searchStub = sandbox.stub().resolves(createMockCursorFromPages([[]]));
+            const searchStub = sandbox.stub().resolves(mockCursor);
             repository.aem = createAemMock({ fragments: { search: searchStub } });
             const { default: Store } = await import('../src/store.js');
             const originalProfile = Store.profile.value;
             Store.profile.set({ name: 'tester' });
+            Store.createdByUsers.set([]);
             const mockDataStore = {
                 get: sandbox.stub().returns([]),
                 getMeta: sandbox.stub().returns(null),
@@ -2526,7 +2554,101 @@ describe('MasRepository dictionary helpers', () => {
             Store.fragments.list.data = mockDataStore;
             try {
                 await repository.searchFragments();
-                expect(searchStub.firstCall.args[0].query).to.equal('photoshop');
+                // Recall: AEM is asked to browse the locale folder, not narrow by metadata title.
+                expect(searchStub.firstCall.args[0].query).to.equal('');
+                // Match: only the card whose `title` content field contains "shop" survives.
+                const finalSet = mockDataStore.set.lastCall.args[0];
+                expect(finalSet).to.have.lengthOf(1);
+                expect(finalSet[0].get().id).to.equal('cf-match');
+            } finally {
+                Store.profile.set(originalProfile);
+                Store.fragments.list.data = originalData;
+            }
+        });
+
+        it('single-word query: substring-matches the jcr:title metadata when no content field contains the term', async () => {
+            // The other surface adobecom/mas-pinata#365 names (also fully covered here — no
+            // follow-up): a mid-token query — "shop" inside "Photoshop" — living in the
+            // jcr:title metadata (`item.title`), with no content field carrying it. AEM's
+            // fullText/EDGES index can't express a substring, so recall is an empty-query
+            // folder browse and #queryHaystack surfaces the card via its `item.title`
+            // while filtering out the sibling.
+            const metadataMatch = createFragment({
+                id: 'jt-match',
+                path: `${ROOT_PATH}/acom/en_US/jt-match`,
+                title: 'Photoshop Plans', // jcr:title metadata contains the query
+                description: '',
+                fields: [{ name: 'title', values: ['Creative Plans'] }], // content field does NOT
+            });
+            const nonMatching = createFragment({
+                id: 'jt-nomatch',
+                path: `${ROOT_PATH}/acom/en_US/jt-nomatch`,
+                title: 'Creative Plans',
+                description: '',
+                fields: [{ name: 'title', values: ['Illustrator Plans'] }],
+            });
+            const mockCursor = createMockCursorFromPages([[metadataMatch, nonMatching]]);
+            const repository = createFullRepository();
+            repository.page = { value: PAGE_NAMES.CONTENT };
+            repository.search = { value: { path: 'acom', query: 'shop' } };
+            repository.filters = { value: { locale: 'en_US', tags: '' } };
+            const searchStub = sandbox.stub().resolves(mockCursor);
+            repository.aem = createAemMock({ fragments: { search: searchStub } });
+            const { default: Store } = await import('../src/store.js');
+            const originalProfile = Store.profile.value;
+            Store.profile.set({ name: 'tester' });
+            Store.createdByUsers.set([]);
+            const mockDataStore = {
+                get: sandbox.stub().returns([]),
+                getMeta: sandbox.stub().returns(null),
+                set: sandbox.stub(),
+                setMeta: sandbox.stub(),
+            };
+            const originalData = Store.fragments.list.data;
+            Store.fragments.list.data = mockDataStore;
+            try {
+                await repository.searchFragments();
+                // Recall: AEM is asked to browse the locale folder, not narrow by metadata title.
+                expect(searchStub.firstCall.args[0].query).to.equal('');
+                // Match: only the card whose jcr:title metadata contains "shop" survives.
+                const finalSet = mockDataStore.set.lastCall.args[0];
+                expect(finalSet).to.have.lengthOf(1);
+                expect(finalSet[0].get().id).to.equal('jt-match');
+            } finally {
+                Store.profile.set(originalProfile);
+                Store.fragments.list.data = originalData;
+            }
+        });
+
+        it('empty/whitespace query: browses the folder (no fullText) and returns all fragments unfiltered', async () => {
+            // A whitespace-only query carries no searchable term, so it must stay a no-op
+            // browse — empty recall to AEM and no client-side filtering — exactly as before.
+            const a = createFragment({ id: 'a', path: `${ROOT_PATH}/acom/en_US/a`, title: 'Photoshop', fields: [] });
+            const b = createFragment({ id: 'b', path: `${ROOT_PATH}/acom/en_US/b`, title: 'Illustrator', fields: [] });
+            const mockCursor = createMockCursorFromPages([[a, b]]);
+            const repository = createFullRepository();
+            repository.page = { value: PAGE_NAMES.CONTENT };
+            repository.search = { value: { path: 'acom', query: '   ' } };
+            repository.filters = { value: { locale: 'en_US', tags: '' } };
+            const searchStub = sandbox.stub().resolves(mockCursor);
+            repository.aem = createAemMock({ fragments: { search: searchStub } });
+            const { default: Store } = await import('../src/store.js');
+            const originalProfile = Store.profile.value;
+            Store.profile.set({ name: 'tester' });
+            Store.createdByUsers.set([]);
+            const mockDataStore = {
+                get: sandbox.stub().returns([]),
+                getMeta: sandbox.stub().returns(null),
+                set: sandbox.stub(),
+                setMeta: sandbox.stub(),
+            };
+            const originalData = Store.fragments.list.data;
+            Store.fragments.list.data = mockDataStore;
+            try {
+                await repository.searchFragments();
+                expect(searchStub.firstCall.args[0].query).to.equal('');
+                const finalSet = mockDataStore.set.lastCall.args[0];
+                expect(finalSet).to.have.lengthOf(2);
             } finally {
                 Store.profile.set(originalProfile);
                 Store.fragments.list.data = originalData;
