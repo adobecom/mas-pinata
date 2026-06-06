@@ -39,8 +39,12 @@ export default {
             name: '@studio-search-min-length',
             path: '/studio.html',
             data: {
-                // A 2-char mid-word fragment of the tcid 0 query (must be < 3 chars).
-                shortQuery: 'to',
+                // A 2-char query that is provably NOT a token-edge prefix of the target
+                // fragment's title, so AEM's EDGES (prefix) index cannot surface it. It is
+                // also < 3 chars, so the new client-side substring path is skipped (3-char
+                // guard) → the fragment must not appear. Avoids 'to', which would
+                // EDGES-prefix-match a "Tomato…" title token and flake in CI.
+                shortQuery: 'zx',
                 // The fragment that tcid 0 surfaces but this short query must NOT.
                 cardid: '481a2002-9a4e-447b-a990-b3e56fdb2d14',
             },
