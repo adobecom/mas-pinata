@@ -948,7 +948,9 @@ describe('MasRepository dictionary helpers', () => {
             }
         });
 
-        it('leaves query unchanged when no variants are selected', async () => {
+        it('browses (empty AEM query) for a single-word query when no variants are selected', async () => {
+            // No variant chip → no variant substitution. A single-word query (>= 3 chars)
+            // relaxes the AEM text filter to browse, then narrows by substring client-side.
             const repository = createFullRepository();
             repository.page = { value: PAGE_NAMES.CONTENT };
             repository.search = { value: { path: 'acom', query: 'photoshop' } };
@@ -972,7 +974,7 @@ describe('MasRepository dictionary helpers', () => {
                 await repository.searchFragments();
                 expect(searchStub.calledOnce).to.be.true;
                 const callArg = searchStub.firstCall.args[0];
-                expect(callArg.query).to.equal('photoshop');
+                expect(callArg.query).to.equal('');
             } finally {
                 Store.profile.set(originalProfile);
                 Store.fragments.list.data = originalData;
@@ -2506,10 +2508,75 @@ describe('MasRepository dictionary helpers', () => {
             }
         });
 
-        it('single-word query: sends query unchanged to AEM (no client-side filter regression)', async () => {
+        it('single-word query (>= 3 chars): browses folder and narrows by substring client-side', async () => {
+            // AEM's fullText.EDGES only prefix-matches title+description, so "shop" never
+            // surfaces "Photoshop Plans". For single-word queries we relax the AEM text filter
+            // (browse the folder) and let skipQuery narrow by case-insensitive substring across
+            // the haystack: jcr:title (item.title), the title content field, and every string field.
+            const titleMatch = createFragment({
+                id: 'photoshop-plans',
+                path: `${ROOT_PATH}/acom/en_US/frag-a`, // "shop" lives ONLY in jcr:title
+                title: 'Photoshop Plans',
+                fields: [{ name: 'variant', values: ['plans'] }],
+            });
+            const fieldMatch = createFragment({
+                id: 'workshop-card',
+                path: `${ROOT_PATH}/acom/en_US/frag-b`, // "shop" lives ONLY in a content field
+                title: 'Plans Card',
+                fields: [
+                    { name: 'variant', values: ['plans'] },
+                    { name: 'cardTitle', values: ['Creative Workshop'] },
+                ],
+            });
+            const nonMatch = createFragment({
+                id: 'illustrator-card',
+                path: `${ROOT_PATH}/acom/en_US/frag-c`,
+                title: 'Illustrator',
+                fields: [
+                    { name: 'variant', values: ['plans'] },
+                    { name: 'cardTitle', values: ['Illustrator'] },
+                ],
+            });
+            const mockCursor = createMockCursorFromPages([[titleMatch, fieldMatch, nonMatch]]);
             const repository = createFullRepository();
             repository.page = { value: PAGE_NAMES.CONTENT };
-            repository.search = { value: { path: 'acom', query: 'photoshop' } };
+            repository.search = { value: { path: 'acom', query: 'shop' } };
+            repository.filters = { value: { locale: 'en_US', tags: '' } };
+            const searchStub = sandbox.stub().resolves(mockCursor);
+            repository.aem = createAemMock({ fragments: { search: searchStub } });
+            const { default: Store } = await import('../src/store.js');
+            const originalProfile = Store.profile.value;
+            Store.profile.set({ name: 'tester' });
+            Store.createdByUsers.set([]);
+            const mockDataStore = {
+                get: sandbox.stub().returns([]),
+                getMeta: sandbox.stub().returns(null),
+                set: sandbox.stub(),
+                setMeta: sandbox.stub(),
+            };
+            const originalData = Store.fragments.list.data;
+            Store.fragments.list.data = mockDataStore;
+            try {
+                await repository.searchFragments();
+                // Relaxed term sent to AEM is empty (browse), not "shop".
+                expect(searchStub.firstCall.args[0].query).to.equal('');
+                const finalSet = mockDataStore.set.lastCall.args[0];
+                const ids = finalSet.map((s) => s.get().id);
+                expect(ids).to.include('photoshop-plans');
+                expect(ids).to.include('workshop-card');
+                expect(ids).to.not.include('illustrator-card');
+            } finally {
+                Store.profile.set(originalProfile);
+                Store.fragments.list.data = originalData;
+            }
+        });
+
+        it('short single-word query (< 3 chars): sends query unchanged to AEM (3-char guard)', async () => {
+            // 1–2 char queries must not trigger the full-folder browse; they stay on AEM's
+            // prefix index so the candidate set stays bounded.
+            const repository = createFullRepository();
+            repository.page = { value: PAGE_NAMES.CONTENT };
+            repository.search = { value: { path: 'acom', query: 'ps' } };
             repository.filters = { value: { locale: 'en_US', tags: '' } };
             const searchStub = sandbox.stub().resolves(createMockCursorFromPages([[]]));
             repository.aem = createAemMock({ fragments: { search: searchStub } });
@@ -2526,7 +2593,44 @@ describe('MasRepository dictionary helpers', () => {
             Store.fragments.list.data = mockDataStore;
             try {
                 await repository.searchFragments();
-                expect(searchStub.firstCall.args[0].query).to.equal('photoshop');
+                expect(searchStub.firstCall.args[0].query).to.equal('ps');
+            } finally {
+                Store.profile.set(originalProfile);
+                Store.fragments.list.data = originalData;
+            }
+        });
+
+        it('empty query: browses the full folder unchanged (no substring narrowing)', async () => {
+            const folder = [
+                createFragment({ id: 'a', path: `${ROOT_PATH}/acom/en_US/a`, title: 'Photoshop', fields: [] }),
+                createFragment({ id: 'b', path: `${ROOT_PATH}/acom/en_US/b`, title: 'Illustrator', fields: [] }),
+            ];
+            const mockCursor = createMockCursorFromPages([folder]);
+            const repository = createFullRepository();
+            repository.page = { value: PAGE_NAMES.CONTENT };
+            repository.search = { value: { path: 'acom', query: '' } };
+            repository.filters = { value: { locale: 'en_US', tags: '' } };
+            const searchStub = sandbox.stub().resolves(mockCursor);
+            repository.aem = createAemMock({ fragments: { search: searchStub } });
+            const { default: Store } = await import('../src/store.js');
+            const originalProfile = Store.profile.value;
+            Store.profile.set({ name: 'tester' });
+            Store.createdByUsers.set([]);
+            const mockDataStore = {
+                get: sandbox.stub().returns([]),
+                getMeta: sandbox.stub().returns(null),
+                set: sandbox.stub(),
+                setMeta: sandbox.stub(),
+            };
+            const originalData = Store.fragments.list.data;
+            Store.fragments.list.data = mockDataStore;
+            try {
+                await repository.searchFragments();
+                expect(searchStub.firstCall.args[0].query).to.equal('');
+                const finalSet = mockDataStore.set.lastCall.args[0];
+                const ids = finalSet.map((s) => s.get().id);
+                expect(ids).to.include('a');
+                expect(ids).to.include('b');
             } finally {
                 Store.profile.set(originalProfile);
                 Store.fragments.list.data = originalData;

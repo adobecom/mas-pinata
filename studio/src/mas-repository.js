@@ -522,17 +522,23 @@ export class MasRepository extends LitElement {
         };
 
         // AEM's fullText.EDGES index only covers title+description and ANDs across
-        // tokens, so multi-word queries like "creative cloud" return zero on catalogs
-        // where no card has both tokens at edge positions in metadata — even though
-        // many cards have the phrase in body fields (cardTitle, description, etc.).
-        // To make search reliable, we route a single discriminative term to AEM and
-        // apply the user's full query client-side via #skipQuery() against an expanded
-        // haystack covering all string field values.
+        // tokens, so it prefix-matches at token edges only ("photo" finds "Photoshop",
+        // "shop" does not) and multi-word queries like "creative cloud" return zero on
+        // catalogs where no card has both tokens at edge positions in metadata — even
+        // though many cards have the phrase in body fields (cardTitle, description, etc.).
+        // To make search reliable, we route a single relaxed term to AEM and apply the
+        // user's full query client-side via #skipQuery() against an expanded haystack
+        // covering jcr:title (item.title), the title content field, and every string field.
         //   - single variant chip: variant name → AEM
         //   - else multi-word query: longest token → AEM
-        //   - else (single-word or UUID): query unchanged
-        // The client-side #skipQuery is idempotent in the single-word case (matches
-        // exactly what AEM returned) and only narrows in the multi-word case.
+        //   - else single-word query (>= SUBSTRING_SEARCH_MIN_LENGTH): browse → AEM
+        //   - else (1–2 chars or UUID): query unchanged
+        // This is a single request + client-side narrow (the same pattern already used
+        // for tags), not a second request or a merge. For single-word substring matching
+        // the AEM text filter is dropped entirely so EDGES cannot pre-filter out fragments
+        // the haystack would match; the cursor refill loop keeps the candidate volume
+        // bounded. Short queries (1–2 chars) stay on AEM's prefix index to avoid an
+        // unbounded full-folder browse.
         const userQuery = !isUUID(this.search.value.query) && query ? query : '';
         let clientQuery = '';
         if (variants.length === 1) {
@@ -543,6 +549,9 @@ export class MasRepository extends LitElement {
             if (tokens.length > 1) {
                 const longest = tokens.reduce((a, b) => (b.length > a.length ? b : a));
                 localSearch.query = longest;
+                clientQuery = userQuery;
+            } else if (userQuery.trim().length >= MasRepository.SUBSTRING_SEARCH_MIN_LENGTH) {
+                localSearch.query = '';
                 clientQuery = userQuery;
             }
         }
@@ -684,6 +693,12 @@ export class MasRepository extends LitElement {
     }
 
     static MIN_PAGE_SIZE = 10;
+    /**
+     * Minimum trimmed length for the single-word substring search path. Queries shorter
+     * than this stay on AEM's fullText.EDGES prefix index instead of triggering a
+     * full-folder browse + client-side substring narrow, keeping the candidate set bounded.
+     */
+    static SUBSTRING_SEARCH_MIN_LENGTH = 3;
     /**
      * Soft cap on the eager personalization-page loop in #eagerLoadAllPznPages.
      * Once the cap is hit, hasMore is set to true and the rest is delivered on
