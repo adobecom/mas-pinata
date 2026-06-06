@@ -14,6 +14,7 @@ import VersionPage from '../studio/versions/versions.page.js';
 import PlaceholdersPage from '../studio/placeholders/placeholders.page.js';
 import TranslationsPage from '../studio/translations/translations.page.js';
 import TranslationEditorPage from '../studio/translations/translation-editor.page.js';
+import SearchPage from '../studio/search/search.page.js';
 import OSTPage from '../studio/ost.page.js';
 import WebUtil from './webutil.js';
 
@@ -31,6 +32,7 @@ let placeholders;
 let versions;
 let translations;
 let translationEditor;
+let search;
 let ost;
 let webUtil;
 let clonedCardID = '';
@@ -76,6 +78,7 @@ const masTest = base.extend({
         ost = new OSTPage(page);
         translationEditor = new TranslationEditorPage(page);
         translations = new TranslationsPage(page);
+        search = new SearchPage(page);
         webUtil = new WebUtil(page);
         versions = new VersionPage(page);
         placeholders = new PlaceholdersPage(page);
@@ -130,6 +133,7 @@ export {
     translations,
     translationEditor,
     placeholders,
+    search,
     webUtil,
     versions,
     setClonedCardID,
