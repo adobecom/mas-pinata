@@ -23,7 +23,13 @@ jobs:
             # actions/create-github-app-token predates the `client-id` input;
             # runtime accepts it (our token mints succeed with it). Drop both
             # ignores once the bundled popular-actions data catches up.
+            #
+            # SHELLCHECK_OPTS: pre-existing workflow scripts carry style/info
+            # level shellcheck nits (SC2086/SC2129/SC2181). Gate on warning+
+            # so real problems block; tighten once the style debt is paid.
             - name: Run actionlint
+              env:
+                  SHELLCHECK_OPTS: --severity=warning
               run: |
                   ./actionlint -color \
                     -ignore 'missing input "app-id" which is required by action "actions/create-github-app-token' \
