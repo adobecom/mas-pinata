@@ -51,11 +51,16 @@ jobs:
 
             - name: Determine MasLibs parameter
               id: maslibs
+              # head_ref is attacker-controlled on PRs — route it through env
+              # instead of inlining it into the script (shell-injection guard).
+              env:
+                  HEAD_REF: ${{ github.head_ref }}
+                  HEAD_REPO_OWNER: ${{ github.event.pull_request.head.repo.owner.login }}
               run: |
                   # Get current repository info for maslibs parameter (from mas repo)
                   if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-                      BRANCH_NAME="${{ github.head_ref }}"
-                      REPO_OWNER="${{ github.event.pull_request.head.repo.owner.login }}"
+                      BRANCH_NAME="$HEAD_REF"
+                      REPO_OWNER="$HEAD_REPO_OWNER"
                   else
                       BRANCH_NAME="${{ github.ref_name }}"
                       REPO_OWNER="${{ github.repository_owner }}"
@@ -66,10 +71,11 @@ jobs:
                   echo "maslibs_param=${MASLIBS_PARAM}" >> $GITHUB_OUTPUT
                   echo "MasLibs parameter: ${MASLIBS_PARAM}"
 
-            - name: Set up Node.js ${{ matrix.node-version }}
+            - name: Set up Node.js
               uses: actions/setup-node@v4
               with:
-                  node-version: ${{ matrix.node-version }}
+                  # the job matrix defines project/browser only — pin Node explicitly
+                  node-version: 20
                   cache: npm
                   cache-dependency-path: |
                       **/package-lock.json
