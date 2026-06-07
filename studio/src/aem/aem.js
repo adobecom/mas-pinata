@@ -6,6 +6,9 @@ const MAX_POLL_ATTEMPTS = 10;
 const POLL_TIMEOUT = 250;
 const MAX_NAME_ATTEMPTS = 10;
 const COPY_WAIT_TIME = 1000;
+// Minimum query length before the substring jcr:title/title OR branch is added. Queries of
+// 1–2 chars stay on fullText-only to avoid expensive repository-wide substring scans.
+const MIN_TITLE_QUERY_LENGTH = 3;
 
 const defaultSearchOptions = {
     sort: [{ on: 'created', order: 'ASC' }],
@@ -91,7 +94,11 @@ class AEM {
      * @param {string} [params.path] - The path to search in
      * @param {Array} [params.tags] - The tags
      * @param {Array} [params.modelIds] - The model ids
-     * @param {string} [params.query] - The search query
+     * @param {string} [params.query] - The search query. When it is at least
+     *   {@link MIN_TITLE_QUERY_LENGTH} chars, it is OR-matched against three surfaces in a single
+     *   AEM CF search request: fullText content (EDGES mode), the `jcr:title` metadata property
+     *   (substring/CONTAINS) and the `title` content field (substring/CONTAINS). A 1–2 char query
+     *   falls back to fullText-only, and an empty query is a no-op browse with no text conditions.
      * @param {AbortController} abortController used for cancellation
      * @returns A generator function that fetches all the matching data using a cursor that is returned by the search API
      */
@@ -99,10 +106,33 @@ class AEM {
         const filter = {
             path,
         };
-        if (query) {
+        if (query && query.length >= MIN_TITLE_QUERY_LENGTH) {
+            // Single-request OR composition: AEM's fullText.EDGES index requires the query to
+            // appear at a word edge in indexed content, so substring lookups like "Photo" miss
+            // fragments named "Photoshop Plans". We OR fullText with explicit substring matches
+            // on the jcr:title metadata property and the `title` content field to cover both.
+            // Filter schema: https://adobe-sites.redoc.ly/tag/Search
+            filter.any = [
+                {
+                    fullText: {
+                        text: encodeURIComponent(query),
+                        // For info about modes: https://adobe-sites.redoc.ly/tag/Search#operation/fragments/search!path=query/filter/fullText/queryMode&t=request
+                        queryMode: 'EDGES',
+                    },
+                },
+                {
+                    // Raw query value: URLSearchParams encodes the whole query JSON for transport,
+                    // so a second encodeURIComponent here would double-encode the substring.
+                    properties: [{ name: 'jcr:title', value: query, operator: 'CONTAINS', caseSensitive: false }],
+                },
+                {
+                    fields: [{ name: 'title', value: query, operator: 'CONTAINS', caseSensitive: false }],
+                },
+            ];
+        } else if (query) {
+            // 1–2 char query: keep today's behavior (fullText only) to avoid huge substring scans.
             filter.fullText = {
                 text: encodeURIComponent(query),
-                // For info about modes: https://adobe-sites.redoc.ly/tag/Search#operation/fragments/search!path=query/filter/fullText/queryMode&t=request
                 queryMode: 'EDGES',
             };
         }
@@ -135,15 +165,31 @@ class AEM {
         }
 
         let cursor;
+        let firstFetch = true;
         while (true) {
             if (cursor) {
                 params.cursor = cursor;
             }
             const searchParams = new URLSearchParams(params).toString();
-            const response = await fetch(`${this.cfSearchUrl}?${searchParams}`, {
+            let response = await fetch(`${this.cfSearchUrl}?${searchParams}`, {
                 headers: this.headers,
                 signal: abortController?.signal,
             });
+
+            // Graceful degradation: the OR/property filter schema is only verifiable at runtime.
+            // If AEM rejects the mixed `any` body on the first request, drop to a fullText-only
+            // search and retry once, so search keeps working (client-side #skipQuery in
+            // mas-repository.js still provides partial title matching) instead of erroring out.
+            if (firstFetch && filter.any && (response.status === 400 || response.status === 422)) {
+                delete filter.any;
+                filter.fullText = { text: encodeURIComponent(query), queryMode: 'EDGES' };
+                params.query = JSON.stringify(searchQuery);
+                response = await fetch(`${this.cfSearchUrl}?${new URLSearchParams(params).toString()}`, {
+                    headers: this.headers,
+                    signal: abortController?.signal,
+                });
+            }
+            firstFetch = false;
 
             if (!response.ok) {
                 throw new Error(`Search failed: ${response.status} ${response.statusText}`);
