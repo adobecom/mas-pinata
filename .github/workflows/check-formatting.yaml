@@ -20,8 +20,9 @@ jobs:
             - name: Set up Node.js
               uses: actions/setup-node@v4
               with:
-                  # no matrix in this job — pin Node explicitly
-                  node-version: 20
+                  # no matrix in this job — pin what the job already ran via the
+                  # runner-image default (v22), so the version stops floating
+                  node-version: 22
 
             - name: Install dependencies
               run: npm ci
