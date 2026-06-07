@@ -49,6 +49,19 @@ jobs:
                   client-id: ${{ secrets.PINATA_APP_ID }}
                   private-key: ${{ secrets.PINATA_APP_PRIVATE_KEY }}
 
+            # Separate token for the tool-shelf clone: app-token is scoped to this
+            # repository only and harness-token to Adobe-acom/pinata, so neither can
+            # read Adobe-acom/pinata-tool-shelf. fetch_shelf.sh (invoked by
+            # pinata-install.sh) clones the shelf with this one.
+            - name: Generate shelf token
+              id: shelf-token
+              uses: actions/create-github-app-token@v3
+              with:
+                  client-id: ${{ secrets.PINATA_APP_ID }}
+                  private-key: ${{ secrets.PINATA_APP_PRIVATE_KEY }}
+                  owner: Adobe-acom
+                  repositories: pinata-tool-shelf
+
             - name: Checkout pinata-harness
               uses: actions/checkout@v6
               with:
@@ -60,6 +73,11 @@ jobs:
                   ref: ${{ github.event.pull_request.base.repo.full_name == 'Adobe-acom/pinata' && github.event.pull_request.base.ref || '' }}
 
             - name: Install Piñata runtime
+              env:
+                  # Shelf-scoped token — fetch_shelf.sh clones pinata-tool-shelf with it.
+                  GITHUB_TOKEN: ${{ steps.shelf-token.outputs.token }}
+                  TENANT_DIR: ${{ github.workspace }}
+                  CLAUDE_DIR: ${{ github.workspace }}/harness/.claude
               run: harness/scripts/pinata-install.sh
 
             - name: Validate inputs
