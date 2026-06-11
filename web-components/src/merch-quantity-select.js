@@ -66,10 +66,6 @@ export class MerchQuantitySelect extends LitElement {
         );
     }
 
-    get button() {
-        return this.shadowRoot.querySelector('button');
-    }
-
     handleKeyup(e) {
         if (e.key === ARROW_DOWN || e.key === ARROW_UP) return;
         this.handleInput();
@@ -119,8 +115,7 @@ export class MerchQuantitySelect extends LitElement {
                 break;
             case ENTER:
                 this.selectValue();
-                if (this.button.classList.contains('focused'))
-                    e.preventDefault();
+                e.preventDefault();
                 break;
         }
         if (e.composedPath().includes(this)) e.stopPropagation();
@@ -299,14 +294,6 @@ export class MerchQuantitySelect extends LitElement {
         }
     }
 
-    onButtonFocus(e) {
-        e.target.classList.add('focused');
-    }
-
-    onButtonBlur(e) {
-        e.target.classList.remove('focused');
-    }
-
     render() {
         if (!this.configured) return nothing;
 
@@ -318,6 +305,7 @@ export class MerchQuantitySelect extends LitElement {
                     aria-labelledby="qsLabel"
                     name="quantity"
                     role="combobox"
+                    aria-haspopup="listbox"
                     aria-expanded=${!this.closed}
                     aria-controls="qsPopover"
                     aria-activedescendant="${!this.closed
@@ -331,15 +319,12 @@ export class MerchQuantitySelect extends LitElement {
                 />
                 <button
                     class="picker-button"
-                    aria-activedescendant="${!this.closed
-                        ? `qs-item-${this.highlightedIndex}`
-                        : nothing}"
-                    @focus="${this.onButtonFocus}"
-                    @blur="${this.onButtonBlur}"
-                    aria-controls="qsPopover"
-                    aria-expanded=${!this.closed}
-                    aria-labelledby="qsLabel"
-                    @click="${this.toggleMenu}"
+                    aria-hidden="true"
+                    tabindex="-1"
+                    @mousedown="${(e) => {
+                        e.preventDefault();
+                        this.toggleMenu();
+                    }}"
                 >
                     <div
                         class="picker-button-fill ${this.closed
