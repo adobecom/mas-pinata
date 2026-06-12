@@ -79,6 +79,65 @@ describe('aem.js', () => {
         });
     });
 
+    describe('method: searchFragment - title filters', () => {
+        it('should include properties and fields filters when query is provided', async () => {
+            let capturedUrl;
+            window.fetch = async (url) => {
+                capturedUrl = url;
+                return {
+                    ok: true,
+                    json: async () => ({ items: [] }),
+                };
+            };
+
+            const result = aem.searchFragment({ path: '/content/dam', query: 'photo' });
+            for await (const _ of result) { /* consume generator */ }
+
+            const searchParams = new URLSearchParams(capturedUrl.split('?')[1]);
+            const parsedQuery = JSON.parse(searchParams.get('query'));
+
+            expect(parsedQuery.filter.fullText).to.deep.equal({
+                text: 'photo',
+                queryMode: 'EDGES',
+            });
+            expect(parsedQuery.filter.properties).to.deep.equal([
+                {
+                    property: 'jcr:title',
+                    value: 'photo',
+                    operation: 'CONTAINS',
+                },
+            ]);
+            expect(parsedQuery.filter.fields).to.deep.equal([
+                {
+                    name: 'title',
+                    value: 'photo',
+                    operation: 'CONTAINS',
+                },
+            ]);
+        });
+
+        it('should not include properties or fields filters when query is empty', async () => {
+            let capturedUrl;
+            window.fetch = async (url) => {
+                capturedUrl = url;
+                return {
+                    ok: true,
+                    json: async () => ({ items: [] }),
+                };
+            };
+
+            const result = aem.searchFragment({ path: '/content/dam' });
+            for await (const _ of result) { /* consume generator */ }
+
+            const searchParams = new URLSearchParams(capturedUrl.split('?')[1]);
+            const parsedQuery = JSON.parse(searchParams.get('query'));
+
+            expect(parsedQuery.filter.properties).to.be.undefined;
+            expect(parsedQuery.filter.fields).to.be.undefined;
+            expect(parsedQuery.filter.fullText).to.be.undefined;
+        });
+    });
+
     describe('method: getFragmentTranslations', () => {
         it('should fetch translations', async () => {
             window.fetch = async () => ({
