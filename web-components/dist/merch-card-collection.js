@@ -1290,6 +1290,13 @@ merch-card[variant="mini-compare-chart"] merch-mnemonic-list:nth-child(8) {
             padding-inline-start: var(--consonant-merch-spacing-xs);
         }
 
+        :host([variant='mini-compare-chart']) slot[name='icons'] {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+        }
+
         :host([variant='mini-compare-chart'].bullet-list)
             .secure-transaction-label {
             align-self: flex-start;
@@ -2248,6 +2255,13 @@ merch-card .footer-row-cell:nth-child(8) {
         `}async postCardUpdateHook(){if(await super.postCardUpdateHook(),this.legalAdjusted||await this.adjustLegal(),this.setupToggle(),C.isMobile)this.removeEmptyRows();else{this.adjustMiniCompareFooterRows();let t=this.getContainer();if(!t)return;requestAnimationFrame(()=>{t.querySelectorAll('merch-card[variant="mini-compare-chart-mweb"]').forEach(a=>{a.variantLayout?.adjustMiniCompareBodySlots?.(),a.variantLayout?.adjustMiniCompareFooterRows?.()})})}}};g(tt,"variantStyle",Ls`
         :host([variant='mini-compare-chart-mweb']) .body > slot {
             display: block;
+        }
+
+        :host([variant='mini-compare-chart-mweb']) .body > slot[name='icons'] {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
         }
 
         :host([variant='mini-compare-chart-mweb'])

@@ -344,6 +344,13 @@ export class MiniCompareChartMweb extends VariantLayout {
             display: block;
         }
 
+        :host([variant='mini-compare-chart-mweb']) .body > slot[name='icons'] {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+        }
+
         :host([variant='mini-compare-chart-mweb'])
             .body
             > slot[name='heading-m-price'] {
