@@ -26,6 +26,11 @@ export default class EditorPage {
         this.calloutRTE = this.panel.locator('sp-field-group#callout div[contenteditable="true"]');
         this.calloutRTEIcon = this.panel.locator('sp-field-group#callout .icon-button');
 
+        this.cardNameFieldGroup = this.panel.locator('sp-field-group#cardName');
+        this.cardNameLabel = this.cardNameFieldGroup.locator('sp-field-label[for="card-name"]');
+        this.cardName = this.cardNameFieldGroup.locator('sp-textfield#card-name');
+        this.cardNameInput = this.cardName.locator('input');
+
         this.descriptionFieldGroup = this.panel.locator('sp-field-group#description');
         this.description = this.panel.locator('sp-field-group#description div[contenteditable="true"]');
 
