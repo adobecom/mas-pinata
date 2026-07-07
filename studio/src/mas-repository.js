@@ -40,6 +40,8 @@ import {
 } from './constants.js';
 import { applyFragmentListFilters } from './fragments/fragment-list-filters.js';
 import * as promotionsRepository from './promotions/promotions-repository.js';
+import { mergePromoVariationReferences } from './promotions/promotion-variations.js';
+import { isPromoVariationPath } from './promotions/promotion-model.js';
 import {
     clearDictionaryCache,
     fetchDictionary,
@@ -657,7 +659,9 @@ export class MasRepository extends LitElement {
                         Store.fragments.list.loading.set(false);
                         return;
                     }
-                    displayFragment = parentData;
+                    displayFragment = tab === VARIATION_SEARCH_TABS.PROMOTION
+                        ? mergePromoVariationReferences(parentData, [fragmentData])
+                        : parentData;
                     Store.fragments.expandedId.set(parentData.id);
                     Store.fragments.highlightedVariationId.set(query);
                     Store.fragments.variationSearchTab.set(tab);
@@ -874,8 +878,13 @@ export class MasRepository extends LitElement {
         const page = await cursor.next();
         if (page.done) return true;
         const fgStores = [];
+        const promoVariationItems = [];
         for await (const item of page.value) {
             if (this.#skipVariant(variants, item)) continue;
+            if (isPromoVariationPath(item.path)) {
+                promoVariationItems.push(item);
+                continue;
+            }
             if (!matchesContentTypeFilter(contentTypes, item)) continue;
             const match = this.#queryMatches(lowerClientQuery, item);
             if (!match) continue;
@@ -889,6 +898,37 @@ export class MasRepository extends LitElement {
                     fgStores.push(fgStore);
                 }
             }
+        }
+        const orphansByParent = new Map();
+        for (const promoItem of promoVariationItems) {
+            const parentPath = resolvePromoVariationParentPath(promoItem.path);
+            if (!parentPath) continue;
+            const allStores = [...fragmentStores, ...fgStores];
+            const parentStore = allStores.find((fs) => {
+                const frag = fs.get?.() ?? fs.value;
+                return frag?.path === parentPath;
+            });
+            if (parentStore) {
+                const parent = parentStore.get?.() ?? parentStore.value;
+                if (!parent) continue;
+                const merged = mergePromoVariationReferences(parent, [promoItem]);
+                parentStore.set?.(merged);
+            } else {
+                const group = orphansByParent.get(parentPath) || [];
+                group.push(promoItem);
+                orphansByParent.set(parentPath, group);
+            }
+        }
+        for (const [parentPath, promoItems] of orphansByParent) {
+            if (fragmentStores.some((f) => f.value?.path === parentPath)) continue;
+            if (fgStores.some((f) => f.value?.path === parentPath)) continue;
+            const parentData = await this.aem.sites.cf.fragments.getByPath(parentPath).catch(() => null);
+            if (!parentData) continue;
+            applyCorrectorToFragment(parentData, surface);
+            const merged = mergePromoVariationReferences(parentData, promoItems);
+            const fragment = await this.#addToCache(merged);
+            const fgStore = generateFragmentStore(fragment, null, { lazy: true });
+            fgStores.push(fgStore);
         }
         fragmentStores.push(...fgStores);
         return false;

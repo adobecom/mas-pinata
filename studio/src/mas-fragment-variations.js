@@ -307,6 +307,9 @@ class MasFragmentVariations extends LitElement {
                 <sp-table-body>
                     ${this.localeVariations.map((variationFragment) => {
                         const mergedData = createPreviewDataWithParent(variationFragment, this.fragment);
+                        if (!mergedData.model && this.fragment.model) {
+                            mergedData.model = this.fragment.model;
+                        }
                         const fragmentStore = new FragmentStore(new Fragment(mergedData));
                         const editStore = generateFragmentStore(variationFragment, this.fragment);
                         const isHighlighted = this.isVariationHighlighted(variationFragment.id);
@@ -345,6 +348,9 @@ class MasFragmentVariations extends LitElement {
                 <sp-table-body>
                     ${this.groupedVariations.map((variationFragment) => {
                         const mergedData = createPreviewDataWithParent(variationFragment, this.fragment);
+                        if (!mergedData.model && this.fragment.model) {
+                            mergedData.model = this.fragment.model;
+                        }
                         const fragmentStore = new FragmentStore(new Fragment(mergedData));
                         const editStore = generateFragmentStore(variationFragment, this.fragment);
                         const tagsValue = getGroupedVariationTagsValue(variationFragment);
@@ -420,6 +426,9 @@ class MasFragmentVariations extends LitElement {
                 <sp-table-body>
                     ${this.promoVariations.map((variationFragment) => {
                         const mergedData = createPreviewDataWithParent(variationFragment, this.fragment);
+                        if (!mergedData.model && this.fragment.model) {
+                            mergedData.model = this.fragment.model;
+                        }
                         const fragmentStore = new FragmentStore(new Fragment(mergedData));
                         const editStore = generateFragmentStore(variationFragment, this.fragment);
                         const isExpanded = this.isPromoVariationExpanded(variationFragment.id);
