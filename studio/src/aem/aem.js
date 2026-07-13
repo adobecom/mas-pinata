@@ -105,6 +105,7 @@ class AEM {
                 // For info about modes: https://adobe-sites.redoc.ly/tag/Search#operation/fragments/search!path=query/filter/fullText/queryMode&t=request
                 queryMode: 'EDGES',
             };
+            filter.title = encodeURIComponent(query);
         }
         const searchQuery = { ...defaultSearchOptions, filter };
         if (sort) {

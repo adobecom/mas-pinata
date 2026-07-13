@@ -79,6 +79,46 @@ describe('aem.js', () => {
         });
     });
 
+    describe('method: searchFragment title filter', () => {
+        it('should include title filter when query is provided', async () => {
+            let capturedUrl;
+            window.fetch = async (url) => {
+                capturedUrl = url;
+                return {
+                    ok: true,
+                    json: async () => ({ items: [] }),
+                };
+            };
+
+            const generator = aem.searchFragment({ path: '/content/dam', query: 'Photo' });
+            for await (const _ of generator) { /* consume */ }
+
+            const params = new URLSearchParams(capturedUrl.split('?')[1]);
+            const query = JSON.parse(params.get('query'));
+            expect(query.filter.fullText.text).to.equal('Photo');
+            expect(query.filter.title).to.equal('Photo');
+        });
+
+        it('should not include title filter when query is empty', async () => {
+            let capturedUrl;
+            window.fetch = async (url) => {
+                capturedUrl = url;
+                return {
+                    ok: true,
+                    json: async () => ({ items: [] }),
+                };
+            };
+
+            const generator = aem.searchFragment({ path: '/content/dam', query: '' });
+            for await (const _ of generator) { /* consume */ }
+
+            const params = new URLSearchParams(capturedUrl.split('?')[1]);
+            const query = JSON.parse(params.get('query'));
+            expect(query.filter.fullText).to.be.undefined;
+            expect(query.filter.title).to.be.undefined;
+        });
+    });
+
     describe('method: getFragmentTranslations', () => {
         it('should fetch translations', async () => {
             window.fetch = async () => ({
