@@ -65,6 +65,16 @@ describe('class "CheckoutLink"', () => {
         expect(checkoutLink.options).to.be.not.empty;
     });
 
+    it('keeps an externally set aria-label after render', async () => {
+        initMasCommerceService();
+        const checkoutLink = mockCheckoutLink('abm');
+        checkoutLink.setAttribute('aria-label', 'Free trial for Photoshop');
+        await checkoutLink.onceSettled();
+        expect(checkoutLink.getAttribute('aria-label')).to.equal(
+            'Free trial for Photoshop',
+        );
+    });
+
     it('renders link with workflow step from settings', async () => {
         await initMasCommerceService({
             'checkout-workflow-step': CheckoutWorkflowStep.SEGMENTATION,

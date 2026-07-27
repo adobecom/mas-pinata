@@ -518,6 +518,12 @@ function transformLinkToButton(linkElement, merchCard, aemFragmentMapping) {
                       isCheckoutLink,
                   );
     }
+    // Checkout buttons are rebuilt from the authored link's dataset only;
+    // aria-label is a plain attribute, so forward it explicitly.
+    const ariaLabel = linkElement.getAttribute('aria-label');
+    if (ariaLabel && !newButtonElement.hasAttribute('aria-label')) {
+        newButtonElement.setAttribute('aria-label', ariaLabel);
+    }
     return newButtonElement;
 }
 

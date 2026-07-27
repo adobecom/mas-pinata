@@ -59,6 +59,17 @@ describe('mas-field – ctas rendering', () => {
         expect(link.getAttribute('data-analytics-id')).to.equal('buy-now');
     });
 
+    it('preserves the authored aria-label on checkout CTAs', () => {
+        const el = makeField(
+            'ctas',
+            '<a data-wcs-osi="ABC123" aria-label="Free trial for Photoshop" class="accent">Free Trial</a>',
+        );
+        const link = el.querySelector('[slot="footer"] a');
+        expect(link.getAttribute('aria-label')).to.equal(
+            'Free trial for Photoshop',
+        );
+    });
+
     it('applies con-button blue classes for accent variant', () => {
         const el = makeField('ctas', CTA_HTML);
         const link = el.querySelector('[slot="footer"] a');
