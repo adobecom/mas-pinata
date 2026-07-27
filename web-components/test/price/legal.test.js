@@ -63,6 +63,42 @@ describe('function "createLegalTemplate"', () => {
         );
     });
 
+    it('displays legal template with per unit and plan type labels separated by a non-breaking space', () => {
+        renderAndComparePrice(
+            'createLegalTemplate5',
+            legalTemplate(
+                {
+                    country: 'US',
+                    language: 'en',
+                    displayPerUnit: true,
+                    displayPlanType: true,
+                },
+                {
+                    planType: 'ABM',
+                },
+                {},
+            ),
+        );
+    });
+
+    it('does not add spacing when displayPlanType is false', () => {
+        renderAndComparePrice(
+            'createLegalTemplate6',
+            legalTemplate(
+                {
+                    country: 'US',
+                    language: 'en',
+                    displayPerUnit: true,
+                    displayPlanType: false,
+                },
+                {
+                    planType: 'ABM',
+                },
+                {},
+            ),
+        );
+    });
+
     it('displays legal template with plan type text and hides tax text when country is US and language is en', () => {
         renderAndComparePrice(
             'createLegalTemplate3',
