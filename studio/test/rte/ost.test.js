@@ -2,8 +2,31 @@ import { expect } from '@esm-bundle/chai';
 import sinon from 'sinon';
 import '../../../web-components/dist/mas.js';
 
+import { attributeFilter } from '../../src/rte/ost.js';
 import { EVENT_OST_SELECT } from '../../src/constants.js';
 import Store from '../../src/store.js';
+
+describe('attributeFilter', () => {
+    it('passes class, data-*, is, href, title, target', () => {
+        expect(attributeFilter('class')).to.be.true;
+        expect(attributeFilter('data-wcs-osi')).to.be.true;
+        expect(attributeFilter('is')).to.be.true;
+        expect(attributeFilter('href')).to.be.true;
+        expect(attributeFilter('title')).to.be.true;
+        expect(attributeFilter('target')).to.be.true;
+    });
+
+    it('passes aria-label and other aria-* attributes', () => {
+        expect(attributeFilter('aria-label')).to.be.true;
+        expect(attributeFilter('aria-describedby')).to.be.true;
+    });
+
+    it('rejects unrelated attributes', () => {
+        expect(attributeFilter('id')).to.be.false;
+        expect(attributeFilter('style')).to.be.false;
+        expect(attributeFilter('tabindex')).to.be.false;
+    });
+});
 
 describe('onPlaceholderSelect', () => {
     let dispatchEventStub;
@@ -45,10 +68,8 @@ describe('onPlaceholderSelect', () => {
             });
         }
 
-        ostRoot = document.createElement('div');
-        ostRoot.id = 'ost';
-        document.body.appendChild(ostRoot);
         ({ onPlaceholderSelect } = await import('../../src/rte/ost.js'));
+        ostRoot = document.querySelector('[data-ost-root]');
         dispatchEventStub = sinon.stub(ostRoot, 'dispatchEvent');
     });
 
@@ -214,7 +235,7 @@ describe('onPlaceholderSelect with mas-ff-defaults on', () => {
         resolvePriceTaxFlagsStub = sinon.stub(masCommerceService, 'resolvePriceTaxFlags').resolves({});
 
         ({ onPlaceholderSelect } = await import('../../src/rte/ost.js'));
-        dispatchEventStub = document.getElementById('ost').dispatchEvent;
+        dispatchEventStub = document.querySelector('[data-ost-root]').dispatchEvent;
     });
 
     after(() => {
