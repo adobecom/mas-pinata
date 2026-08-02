@@ -5,12 +5,13 @@ import {
     AEM_TAG_PATH_PRODUCT_CODE_ROOT,
     COMPARE_CHART_CREATE_TYPE,
     EVENT_OST_OFFER_SELECT,
+    MAS_PRODUCT_CODE_PREFIX,
     TAG_COMPARE_CHART_PATH,
 } from '../constants.js';
 import { isPznCountryTagPath } from '../common/utils/personalization-utils.js';
 import { VARIANTS } from '../editors/variant-picker.js';
 import { getItemFieldState } from '../utils/field-state.js';
-import { getService } from '../utils.js';
+import { getService, showToast, UserFriendlyError } from '../utils.js';
 import { AEM_TAG_PATTERN, fromAttribute, toAttribute } from './tag-path-utils.js';
 import { ensureNamespaceTags, getNamespaceCache } from './tag-cache.js';
 
@@ -63,6 +64,12 @@ class AemTagPickerField extends LitElement {
         disabled: { type: Boolean, reflect: true },
         /** When set, overrides the selection-derived quiet styling of the trigger button. */
         quiet: { type: Boolean },
+        /** When true, shows a "Create product code" button in hierarchical mode. */
+        allowCreate: { type: Boolean, attribute: 'allow-create' },
+        createDialogOpen: { type: Boolean, state: true },
+        createDialogCode: { type: String, state: true },
+        createDialogTitle: { type: String, state: true },
+        createDialogBusy: { type: Boolean, state: true },
     };
 
     static styles = css`
@@ -171,6 +178,13 @@ class AemTagPickerField extends LitElement {
             opacity: 0.45;
             pointer-events: none;
         }
+
+        .create-tag-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spectrum-spacing-200);
+            padding-block-end: var(--spectrum-spacing-200);
+        }
     `;
 
     #aem;
@@ -196,6 +210,11 @@ class AemTagPickerField extends LitElement {
         this.personalizationToggle = false;
         this.personalizationEnabled = false;
         this.disabled = false;
+        this.allowCreate = false;
+        this.createDialogOpen = false;
+        this.createDialogCode = '';
+        this.createDialogTitle = '';
+        this.createDialogBusy = false;
     }
 
     async #getOfferProductArrangementCode(offerSelectorId, offer) {
@@ -966,6 +985,89 @@ class AemTagPickerField extends LitElement {
         `;
     }
 
+    #openCreateDialog() {
+        this.createDialogCode = '';
+        this.createDialogTitle = '';
+        this.createDialogBusy = false;
+        this.createDialogOpen = true;
+    }
+
+    #closeCreateDialog() {
+        this.createDialogOpen = false;
+    }
+
+    async #handleCreateTag() {
+        const code = this.createDialogCode.trim().toLowerCase();
+        const title = this.createDialogTitle.trim();
+        if (!code || !title) return;
+
+        const tagPath = `${AEM_TAG_PATH_PRODUCT_CODE_ROOT}/${code}`;
+        this.createDialogBusy = true;
+        try {
+            await this.#aem.tags.create(tagPath, title);
+        } catch (err) {
+            this.createDialogBusy = false;
+            const message = err instanceof UserFriendlyError ? err.message : 'Failed to create product code tag.';
+            showToast(message, 'negative');
+            return;
+        }
+
+        const cache = getNamespaceCache(this.namespace);
+        if (cache) {
+            cache.set(tagPath, { name: code, title, path: tagPath });
+        }
+
+        this.createDialogOpen = false;
+        this.createDialogBusy = false;
+
+        await this.loadTags();
+
+        const tagId = `${MAS_PRODUCT_CODE_PREFIX}${code}`;
+        this.value = this.#normalizeProductCodeTags([...this.#asValueArray(), tagId]);
+        await this.#notifyChange();
+
+        showToast(`Product code tag "${title}" created.`, 'positive');
+    }
+
+    get createDialog() {
+        if (!this.createDialogOpen) return nothing;
+        return html`
+            <sp-dialog-wrapper
+                open
+                underlay
+                headline="Create product code tag"
+                confirm-label="Create"
+                cancel-label="Cancel"
+                ?loading=${this.createDialogBusy}
+                @confirm=${this.#handleCreateTag}
+                @cancel=${this.#closeCreateDialog}
+            >
+                <div class="create-tag-form">
+                    <sp-field-label for="create-code">Product code</sp-field-label>
+                    <sp-textfield
+                        id="create-code"
+                        placeholder="e.g. acrobat"
+                        .value=${this.createDialogCode}
+                        ?disabled=${this.createDialogBusy}
+                        @input=${(e) => {
+                            this.createDialogCode = e.target.value;
+                        }}
+                    ></sp-textfield>
+                    <sp-field-label for="create-title">Title</sp-field-label>
+                    <sp-textfield
+                        id="create-title"
+                        placeholder="e.g. Acrobat"
+                        .value=${this.createDialogTitle}
+                        ?disabled=${this.createDialogBusy}
+                        @input=${(e) => {
+                            this.createDialogTitle = e.target.value;
+                        }}
+                    ></sp-textfield>
+                </div>
+            </sp-dialog-wrapper>
+        `;
+    }
+
     render() {
         if (this.readonly) {
             return this.readonlyTags;
@@ -989,7 +1091,21 @@ class AemTagPickerField extends LitElement {
                         </sp-dialog>
                     </sp-popover>
                 </overlay-trigger>
+                ${this.allowCreate
+                    ? html`
+                          <sp-action-button
+                              aria-label="Create product code tag"
+                              title="Create product code tag"
+                              ?disabled=${this.disabled}
+                              @click=${this.#openCreateDialog}
+                          >
+                              <sp-icon-add size="m" slot="icon"></sp-icon-add>
+                              Create
+                          </sp-action-button>
+                      `
+                    : nothing}
             </sp-tags>
+            ${this.createDialog}
         `;
     }
 }

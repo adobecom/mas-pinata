@@ -1339,6 +1339,7 @@ class MerchCardEditor extends LitElement {
                         label="Tags"
                         namespace="/content/cq:tags/mas"
                         multiple
+                        allow-create
                         class="tags-spacing"
                         data-field-state="${this.getTagsFieldState()}"
                         value="${(this.fragment.newTags || this.fragment.tags.map((tag) => tag.id)).join(',')}"
