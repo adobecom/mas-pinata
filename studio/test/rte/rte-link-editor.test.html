@@ -94,6 +94,26 @@
                         });
                     });
 
+                    it('should include ariaLabel in save event when set', async function () {
+                        const linkEditor = await createFromTemplate('default', this.test.title);
+                        linkEditor.ariaLabel = 'Buy Adobe Acrobat';
+                        await linkEditor.updateComplete;
+
+                        const listener = oneEvent(linkEditor, 'save').then((e) => e.detail);
+                        linkEditor.shadowRoot.getElementById('saveButton').click();
+                        const detail = await listener;
+                        expect(detail.ariaLabel).to.equal('Buy Adobe Acrobat');
+                    });
+
+                    it('should omit ariaLabel from save event when empty', async function () {
+                        const linkEditor = await createFromTemplate('default', this.test.title);
+
+                        const listener = oneEvent(linkEditor, 'save').then((e) => e.detail);
+                        linkEditor.shadowRoot.getElementById('saveButton').click();
+                        const detail = await listener;
+                        expect(detail).to.not.have.property('ariaLabel');
+                    });
+
                     it('should emit close event', async function () {
                         const linkEditor = await createFromTemplate('default', this.test.title);
                         const listener = oneEvent(linkEditor, 'close');
