@@ -310,6 +310,94 @@
                             expect(versionPage.hydratedCards).to.be.an.instanceof(Set);
                         });
                     });
+
+                    describe('author attribution', () => {
+                        beforeEach(async () => {
+                            versionPage = await fixture(html`<version-page></version-page>`);
+                            await versionPage.updateComplete;
+                            Store.users.set([]);
+                        });
+
+                        afterEach(() => {
+                            Store.users.set([]);
+                        });
+
+                        it('should prefer the full name recorded by AEM', () => {
+                            const version = { createdBy: 'alice@example.com', createdByName: 'Alice Smith' };
+                            expect(versionPage.authorName(version)).to.equal('Alice Smith');
+                            expect(versionPage.authorEmail(version)).to.equal('alice@example.com');
+                        });
+
+                        it('should resolve the display name from the loaded users', () => {
+                            Store.users.set([{ userPrincipalName: 'Alice@Example.com', displayName: 'Alice Smith' }]);
+                            const version = { createdBy: 'alice@example.com' };
+                            expect(versionPage.authorName(version)).to.equal('Alice Smith');
+                            expect(versionPage.authorEmail(version)).to.equal('alice@example.com');
+                        });
+
+                        it('should fall back to the user id and not repeat it as the email', () => {
+                            const version = { createdBy: 'alice@example.com' };
+                            expect(versionPage.authorName(version)).to.equal('alice@example.com');
+                            expect(versionPage.authorEmail(version)).to.equal('');
+                        });
+
+                        it('should report an unknown author when no id is recorded', () => {
+                            expect(versionPage.authorName({})).to.equal('Unknown');
+                            expect(versionPage.authorEmail({})).to.equal('');
+                        });
+
+                        it('should resolve the publisher the same way', () => {
+                            Store.users.set([{ userPrincipalName: 'bob@example.com', displayName: 'Bob Jones' }]);
+                            const version = { publishedBy: 'bob@example.com' };
+                            expect(versionPage.publisherName(version)).to.equal('Bob Jones');
+                            expect(versionPage.publisherEmail(version)).to.equal('bob@example.com');
+                        });
+
+                        it('should render the author email and publisher in the version list', async () => {
+                            versionPage.versions = [
+                                {
+                                    id: 'current',
+                                    version: 'Current',
+                                    created: '2024-01-15T10:00:00Z',
+                                    createdBy: 'alice@example.com',
+                                    createdByName: 'Alice Smith',
+                                    publishedBy: 'bob@example.com',
+                                    publishedByName: 'Bob Jones',
+                                    isCurrent: true,
+                                },
+                            ];
+                            Store.page.set('version');
+                            versionPage.requestUpdate();
+                            await versionPage.updateComplete;
+
+                            const emails = [...versionPage.querySelectorAll('.version-author-email')].map((el) =>
+                                el.textContent.trim(),
+                            );
+                            expect(emails).to.include('alice@example.com');
+                            expect(emails).to.include('bob@example.com');
+
+                            const publishedBy = versionPage.querySelector('.version-published-by');
+                            expect(publishedBy).to.exist;
+                            expect(publishedBy.textContent).to.contain('Bob Jones');
+                        });
+
+                        it('should omit publisher attribution when the version was never published', async () => {
+                            versionPage.versions = [
+                                {
+                                    id: 'current',
+                                    version: 'Current',
+                                    created: '2024-01-15T10:00:00Z',
+                                    createdBy: 'alice@example.com',
+                                    isCurrent: true,
+                                },
+                            ];
+                            Store.page.set('version');
+                            versionPage.requestUpdate();
+                            await versionPage.updateComplete;
+
+                            expect(versionPage.querySelector('.version-published-by')).to.not.exist;
+                        });
+                    });
                 });
             });
         </script>

@@ -1,6 +1,63 @@
 import Events from './events.js';
 
 /**
+ * Publishing goes through an AEM activation workflow, so AEM stamps the publish audit trail with
+ * the workflow's own service account instead of the author who triggered it. Version history has to
+ * recognise those accounts to avoid presenting them as authors.
+ */
+const SYSTEM_ACCOUNTS = new Set(['workflow-process-service', 'workflow-service', 'workflow-user', 'system', 'admin']);
+
+/**
+ * @param {string} [userId] - User id recorded by AEM
+ * @returns {boolean} Whether the id belongs to a system account rather than an author
+ */
+export function isSystemAccount(userId) {
+    if (!userId) return false;
+    return SYSTEM_ACCOUNTS.has(`${userId}`.trim().toLowerCase());
+}
+
+/**
+ * AEM reports audit metadata either nested (`modified: { at, by, fullName }`) or flattened
+ * (`modifiedBy`), depending on the endpoint. Read either shape into one.
+ * @param {Object|string} [entry] - Nested audit entry, or a bare timestamp
+ * @param {string} [flatBy] - User id from the flattened form
+ * @returns {{ at: string|undefined, by: string|undefined, fullName: string|undefined }}
+ */
+export function readAudit(entry, flatBy) {
+    if (entry && typeof entry === 'object') {
+        return { at: entry.at, by: entry.by ?? flatBy, fullName: entry.fullName };
+    }
+    return { at: typeof entry === 'string' ? entry : undefined, by: flatBy, fullName: undefined };
+}
+
+/** @returns {boolean} Whether `at` is a valid timestamp no later than `limit` */
+function isNotNewerThan(at, limit) {
+    const time = Date.parse(at);
+    const limitTime = Date.parse(limit);
+    if (Number.isNaN(time) || Number.isNaN(limitTime)) return false;
+    return time <= limitTime;
+}
+
+/**
+ * Resolve the author behind an audited action. A system account means AEM recorded the workflow
+ * instead of the user who triggered it; the author is then the user whose content modification the
+ * workflow acted on. That substitution is only trusted when the modification is not newer than the
+ * action, so a later edit is never credited with an earlier publish.
+ * @param {{ at: string|undefined, by: string|undefined, fullName: string|undefined }} action
+ * @param {{ at: string|undefined, by: string|undefined, fullName: string|undefined }} [modification]
+ * @returns {{ by: string|undefined, fullName: string|undefined, system: boolean }}
+ */
+export function resolveActor(action, modification) {
+    if (action.by && !isSystemAccount(action.by)) {
+        return { by: action.by, fullName: action.fullName, system: false };
+    }
+    if (modification?.by && !isSystemAccount(modification.by) && isNotNewerThan(modification.at, action.at)) {
+        return { by: modification.by, fullName: modification.fullName, system: false };
+    }
+    return { by: action.by, fullName: action.fullName, system: true };
+}
+
+/**
  * Repository for version-related data operations.
  * Handles loading, saving, and restoring fragment versions.
  */
@@ -20,31 +77,26 @@ export class VersionRepository {
             const fragment = await this.repository.aem.sites.cf.fragments.getById(fragmentId);
 
             // Create a "current version" from the live fragment
-            // Handle different formats of modified date (could be string, object with 'at' property, or undefined)
-            let modifiedDate;
-            if (fragment.modified) {
-                if (typeof fragment.modified === 'object' && fragment.modified.at) {
-                    modifiedDate = fragment.modified.at;
-                } else if (typeof fragment.modified === 'string') {
-                    modifiedDate = fragment.modified;
-                } else {
-                    modifiedDate = new Date().toISOString();
-                }
-            } else {
-                modifiedDate = new Date().toISOString();
-            }
+            const modified = readAudit(fragment.modified, fragment.modifiedBy);
+            const published = readAudit(fragment.published, fragment.publishedBy);
+            const modifiedActor = resolveActor(modified, modified);
+            const publishedActor = resolveActor(published, modified);
 
             const currentVersion = {
                 id: 'current',
                 version: 'Current',
-                created: modifiedDate,
-                createdBy: fragment.modifiedBy || fragment.modified?.by || 'System',
+                created: modified.at || new Date().toISOString(),
+                createdBy: modifiedActor.by || 'System',
+                createdByName: modifiedActor.fullName,
+                publishedAt: published.at,
+                publishedBy: published.at ? publishedActor.by : undefined,
+                publishedByName: published.at ? publishedActor.fullName : undefined,
                 isCurrent: true,
             };
 
             // Load version history
             const versionsResponse = await this.repository.aem.sites.cf.fragments.getVersions(fragmentId);
-            const historicalVersions = versionsResponse?.items || [];
+            const historicalVersions = (versionsResponse?.items || []).map((version) => this.normalizeVersion(version));
 
             // Combine current version with historical versions
             const versions = [currentVersion, ...historicalVersions];
@@ -58,6 +110,25 @@ export class VersionRepository {
             console.error('Failed to load version history:', error);
             throw error;
         }
+    }
+
+    /**
+     * Normalize a historical version so authorship reads the same as the current version, whichever
+     * audit shape AEM returned and whether or not a workflow account created the version.
+     * @param {Object} version - Raw version item from AEM
+     * @returns {Object} Version with `created`, `createdBy` and `createdByName` resolved
+     */
+    normalizeVersion(version) {
+        const created = readAudit(version.created, version.createdBy);
+        const modified = readAudit(version.modified, version.modifiedBy);
+        const actor = resolveActor(created, modified);
+
+        return {
+            ...version,
+            created: created.at ?? version.created,
+            createdBy: actor.by,
+            createdByName: actor.fullName,
+        };
     }
 
     /**
@@ -148,6 +219,9 @@ export class VersionRepository {
             return (
                 version.version?.toLowerCase().includes(lowerQuery) ||
                 version.createdBy?.toLowerCase().includes(lowerQuery) ||
+                version.createdByName?.toLowerCase().includes(lowerQuery) ||
+                version.publishedBy?.toLowerCase().includes(lowerQuery) ||
+                version.publishedByName?.toLowerCase().includes(lowerQuery) ||
                 version.created?.toLowerCase().includes(lowerQuery) ||
                 version.comment?.toLowerCase().includes(lowerQuery)
             );
