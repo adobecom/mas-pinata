@@ -1,6 +1,6 @@
 import { expect } from '@esm-bundle/chai';
 import sinon from 'sinon';
-import { VersionRepository } from '../src/version-repository.js';
+import { VersionRepository, isSystemAccount, readAudit, resolveActor } from '../src/version-repository.js';
 import Events from '../src/events.js';
 
 describe('VersionRepository', () => {
@@ -82,6 +82,227 @@ describe('VersionRepository', () => {
 
             expect(result.currentVersion.created).to.be.a('string');
             expect(result.currentVersion.createdBy).to.equal('System');
+        });
+
+        it('should expose the full name alongside the user id when AEM provides it', async () => {
+            const fragment = {
+                id: 'fragment-1',
+                modified: { at: '2024-01-15T10:00:00Z', by: 'alice@example.com', fullName: 'Alice Smith' },
+            };
+
+            mockRepository.aem.sites.cf.fragments.getById.resolves(fragment);
+            mockRepository.aem.sites.cf.fragments.getVersions.resolves({ items: [] });
+
+            const result = await versionRepository.loadVersionHistory('fragment-1');
+
+            expect(result.currentVersion.createdBy).to.equal('alice@example.com');
+            expect(result.currentVersion.createdByName).to.equal('Alice Smith');
+        });
+
+        it('should attribute publishing to the triggering user instead of the workflow service account', async () => {
+            const fragment = {
+                id: 'fragment-1',
+                modified: { at: '2024-01-15T10:00:00Z', by: 'alice@example.com', fullName: 'Alice Smith' },
+                published: { at: '2024-01-15T10:05:00Z', by: 'workflow-process-service' },
+            };
+
+            mockRepository.aem.sites.cf.fragments.getById.resolves(fragment);
+            mockRepository.aem.sites.cf.fragments.getVersions.resolves({ items: [] });
+
+            const result = await versionRepository.loadVersionHistory('fragment-1');
+
+            expect(result.currentVersion.publishedAt).to.equal('2024-01-15T10:05:00Z');
+            expect(result.currentVersion.publishedBy).to.equal('alice@example.com');
+            expect(result.currentVersion.publishedByName).to.equal('Alice Smith');
+        });
+
+        it('should keep the real publisher when AEM already records a user', async () => {
+            const fragment = {
+                id: 'fragment-1',
+                modified: { at: '2024-01-15T10:00:00Z', by: 'alice@example.com' },
+                published: { at: '2024-01-15T10:05:00Z', by: 'bob@example.com', fullName: 'Bob Jones' },
+            };
+
+            mockRepository.aem.sites.cf.fragments.getById.resolves(fragment);
+            mockRepository.aem.sites.cf.fragments.getVersions.resolves({ items: [] });
+
+            const result = await versionRepository.loadVersionHistory('fragment-1');
+
+            expect(result.currentVersion.publishedBy).to.equal('bob@example.com');
+            expect(result.currentVersion.publishedByName).to.equal('Bob Jones');
+        });
+
+        it('should not credit a publish to an edit made after it', async () => {
+            const fragment = {
+                id: 'fragment-1',
+                modified: { at: '2024-01-16T09:00:00Z', by: 'alice@example.com' },
+                published: { at: '2024-01-15T10:05:00Z', by: 'workflow-process-service' },
+            };
+
+            mockRepository.aem.sites.cf.fragments.getById.resolves(fragment);
+            mockRepository.aem.sites.cf.fragments.getVersions.resolves({ items: [] });
+
+            const result = await versionRepository.loadVersionHistory('fragment-1');
+
+            expect(result.currentVersion.publishedBy).to.equal('workflow-process-service');
+        });
+
+        it('should leave publish attribution unset when the fragment was never published', async () => {
+            const fragment = {
+                id: 'fragment-1',
+                modified: { at: '2024-01-15T10:00:00Z', by: 'alice@example.com' },
+            };
+
+            mockRepository.aem.sites.cf.fragments.getById.resolves(fragment);
+            mockRepository.aem.sites.cf.fragments.getVersions.resolves({ items: [] });
+
+            const result = await versionRepository.loadVersionHistory('fragment-1');
+
+            expect(result.currentVersion.publishedAt).to.be.undefined;
+            expect(result.currentVersion.publishedBy).to.be.undefined;
+        });
+
+        it('should normalize historical versions recorded in the nested audit shape', async () => {
+            const fragment = { id: 'fragment-1', modified: '2024-01-15T10:00:00Z', modifiedBy: 'alice@example.com' };
+            const versionsResponse = {
+                items: [
+                    {
+                        id: 'v1',
+                        version: '1.0',
+                        created: { at: '2024-01-14T10:00:00Z', by: 'bob@example.com', fullName: 'Bob Jones' },
+                    },
+                ],
+            };
+
+            mockRepository.aem.sites.cf.fragments.getById.resolves(fragment);
+            mockRepository.aem.sites.cf.fragments.getVersions.resolves(versionsResponse);
+
+            const result = await versionRepository.loadVersionHistory('fragment-1');
+
+            expect(result.versions[1].created).to.equal('2024-01-14T10:00:00Z');
+            expect(result.versions[1].createdBy).to.equal('bob@example.com');
+            expect(result.versions[1].createdByName).to.equal('Bob Jones');
+        });
+
+        it('should attribute a workflow-created version to the user who modified it', async () => {
+            const fragment = { id: 'fragment-1', modified: '2024-01-15T10:00:00Z', modifiedBy: 'alice@example.com' };
+            const versionsResponse = {
+                items: [
+                    {
+                        id: 'v1',
+                        version: '1.0',
+                        created: { at: '2024-01-14T10:05:00Z', by: 'workflow-process-service' },
+                        modified: { at: '2024-01-14T10:00:00Z', by: 'carol@example.com', fullName: 'Carol Ray' },
+                    },
+                ],
+            };
+
+            mockRepository.aem.sites.cf.fragments.getById.resolves(fragment);
+            mockRepository.aem.sites.cf.fragments.getVersions.resolves(versionsResponse);
+
+            const result = await versionRepository.loadVersionHistory('fragment-1');
+
+            expect(result.versions[1].createdBy).to.equal('carol@example.com');
+            expect(result.versions[1].createdByName).to.equal('Carol Ray');
+        });
+
+        it('should preserve flat historical version fields', async () => {
+            const fragment = { id: 'fragment-1', modified: '2024-01-15T10:00:00Z', modifiedBy: 'alice@example.com' };
+            const versionsResponse = {
+                items: [{ id: 'v1', version: '1.0', created: '2024-01-14T10:00:00Z', createdBy: 'bob@example.com' }],
+            };
+
+            mockRepository.aem.sites.cf.fragments.getById.resolves(fragment);
+            mockRepository.aem.sites.cf.fragments.getVersions.resolves(versionsResponse);
+
+            const result = await versionRepository.loadVersionHistory('fragment-1');
+
+            expect(result.versions[1].created).to.equal('2024-01-14T10:00:00Z');
+            expect(result.versions[1].createdBy).to.equal('bob@example.com');
+            expect(result.versions[1].createdByName).to.be.undefined;
+        });
+    });
+
+    describe('isSystemAccount', () => {
+        it('should recognize workflow service accounts regardless of casing or padding', () => {
+            expect(isSystemAccount('workflow-process-service')).to.be.true;
+            expect(isSystemAccount('  Workflow-Process-Service ')).to.be.true;
+            expect(isSystemAccount('workflow-service')).to.be.true;
+        });
+
+        it('should not treat real users or missing ids as system accounts', () => {
+            expect(isSystemAccount('alice@example.com')).to.be.false;
+            expect(isSystemAccount(undefined)).to.be.false;
+            expect(isSystemAccount('')).to.be.false;
+        });
+    });
+
+    describe('readAudit', () => {
+        it('should read the nested audit shape', () => {
+            const audit = readAudit({ at: '2024-01-15T10:00:00Z', by: 'alice@example.com', fullName: 'Alice Smith' });
+            expect(audit).to.deep.equal({
+                at: '2024-01-15T10:00:00Z',
+                by: 'alice@example.com',
+                fullName: 'Alice Smith',
+            });
+        });
+
+        it('should read the flattened audit shape', () => {
+            const audit = readAudit('2024-01-15T10:00:00Z', 'alice@example.com');
+            expect(audit.at).to.equal('2024-01-15T10:00:00Z');
+            expect(audit.by).to.equal('alice@example.com');
+            expect(audit.fullName).to.be.undefined;
+        });
+
+        it('should fall back to the flattened user id when the nested entry omits it', () => {
+            const audit = readAudit({ at: '2024-01-15T10:00:00Z' }, 'alice@example.com');
+            expect(audit.by).to.equal('alice@example.com');
+        });
+
+        it('should return an empty audit for missing metadata', () => {
+            expect(readAudit(undefined, undefined)).to.deep.equal({ at: undefined, by: undefined, fullName: undefined });
+        });
+    });
+
+    describe('resolveActor', () => {
+        it('should keep a real user recorded on the action', () => {
+            const actor = resolveActor(
+                { at: '2024-01-15T10:05:00Z', by: 'bob@example.com', fullName: 'Bob Jones' },
+                { at: '2024-01-15T10:00:00Z', by: 'alice@example.com' },
+            );
+            expect(actor).to.deep.equal({ by: 'bob@example.com', fullName: 'Bob Jones', system: false });
+        });
+
+        it('should substitute the modifying user for a system account', () => {
+            const actor = resolveActor(
+                { at: '2024-01-15T10:05:00Z', by: 'workflow-process-service' },
+                { at: '2024-01-15T10:00:00Z', by: 'alice@example.com', fullName: 'Alice Smith' },
+            );
+            expect(actor).to.deep.equal({ by: 'alice@example.com', fullName: 'Alice Smith', system: false });
+        });
+
+        it('should report a system actor when no modification precedes the action', () => {
+            const actor = resolveActor({ at: '2024-01-15T10:05:00Z', by: 'workflow-process-service' }, undefined);
+            expect(actor.by).to.equal('workflow-process-service');
+            expect(actor.system).to.be.true;
+        });
+
+        it('should not substitute another system account', () => {
+            const actor = resolveActor(
+                { at: '2024-01-15T10:05:00Z', by: 'workflow-process-service' },
+                { at: '2024-01-15T10:00:00Z', by: 'admin' },
+            );
+            expect(actor.by).to.equal('workflow-process-service');
+            expect(actor.system).to.be.true;
+        });
+
+        it('should not substitute when timestamps are unusable', () => {
+            const actor = resolveActor(
+                { at: undefined, by: 'workflow-process-service' },
+                { at: '2024-01-15T10:00:00Z', by: 'alice@example.com' },
+            );
+            expect(actor.by).to.equal('workflow-process-service');
+            expect(actor.system).to.be.true;
         });
     });
 
@@ -363,6 +584,19 @@ describe('VersionRepository', () => {
             const result = versionRepository.searchVersions(versions, 'features');
             expect(result).to.have.lengthOf(1);
             expect(result[0].comment).to.include('features');
+        });
+
+        it('should filter by author display name', () => {
+            const named = [...versions, { version: '4.0', createdBy: 'dan@example.com', createdByName: 'Dan Fox' }];
+            const result = versionRepository.searchVersions(named, 'dan fox');
+            expect(result).to.have.lengthOf(1);
+            expect(result[0].version).to.equal('4.0');
+        });
+
+        it('should filter by publisher', () => {
+            const published = [...versions, { version: '4.0', publishedBy: 'erin@example.com', publishedByName: 'Erin Lee' }];
+            expect(versionRepository.searchVersions(published, 'erin@example.com')).to.have.lengthOf(1);
+            expect(versionRepository.searchVersions(published, 'Erin Lee')).to.have.lengthOf(1);
         });
     });
 });

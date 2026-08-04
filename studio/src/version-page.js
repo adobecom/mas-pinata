@@ -219,6 +219,21 @@ class VersionPage extends LitElement {
             font-size: 18px;
             margin-bottom: 8px;
         }
+        .version-author-email {
+            display: block;
+            font-size: 13px;
+            color: #6e6e6e;
+            word-break: break-all;
+        }
+        .version-published-by {
+            font-size: 13px;
+            color: #494949;
+            margin-top: 6px;
+        }
+        .version-published-by .version-author-name {
+            font-size: 13px;
+            margin-bottom: 0;
+        }
 
         .version-description {
             font-size: 13px;
@@ -604,6 +619,40 @@ class VersionPage extends LitElement {
         return `${day} ${month}, ${year} at ${time}`;
     }
 
+    /**
+     * AEM records the user id, which for Studio authors is their email. Prefer a human name when one
+     * is available — from the audit entry, or from the loaded directory — and fall back to the id so
+     * the attribution is never blank.
+     */
+    resolveUserName(userId, fullName) {
+        if (fullName) return fullName;
+        if (!userId) return 'Unknown';
+        const user = Store.users.get().find((u) => u.userPrincipalName?.toLowerCase() === userId.toLowerCase());
+        return user?.displayName || userId;
+    }
+
+    /** The email is only worth revealing alongside a name that isn't already the email itself. */
+    resolveUserEmail(userId, displayedName) {
+        if (!userId || userId === displayedName) return '';
+        return userId;
+    }
+
+    authorName(version) {
+        return this.resolveUserName(version.createdBy, version.createdByName);
+    }
+
+    authorEmail(version) {
+        return this.resolveUserEmail(version.createdBy, this.authorName(version));
+    }
+
+    publisherName(version) {
+        return this.resolveUserName(version.publishedBy, version.publishedByName);
+    }
+
+    publisherEmail(version) {
+        return this.resolveUserEmail(version.publishedBy, this.publisherName(version));
+    }
+
     get versionListPanel() {
         return html`
             <div class="version-list-panel">
@@ -650,8 +699,20 @@ class VersionPage extends LitElement {
                                 <sp-icon-calendar slot="icon"></sp-icon-calendar>${this.formatVersionDate(version.created)}
                             </div>
                             <div class="version-author">
-                                By <span class="version-author-name">${version.createdBy || 'Unknown'}</span>
+                                By <span class="version-author-name">${this.authorName(version)}</span>
+                                ${this.authorEmail(version)
+                                    ? html`<span class="version-author-email">${this.authorEmail(version)}</span>`
+                                    : nothing}
                             </div>
+                            ${version.publishedBy
+                                ? html`<div class="version-published-by">
+                                      Published by
+                                      <span class="version-author-name">${this.publisherName(version)}</span>
+                                      ${this.publisherEmail(version)
+                                          ? html`<span class="version-author-email">${this.publisherEmail(version)}</span>`
+                                          : nothing}
+                                  </div>`
+                                : nothing}
                             ${version.title
                                 ? html`<div class="version-description"><strong>${version.title}</strong></div>`
                                 : nothing}
