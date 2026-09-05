@@ -86,6 +86,47 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
         });
     });
 
+    // Test 3: @studio-placeholders-copy-code - Validate Copy Code action copies placeholder token
+    test(`${features[3].name},${features[3].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[3];
+        const testPage = `${baseURL}${features[3].path}${miloLibs}${features[3].browserParams}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Navigate to placeholders page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+        });
+
+        await test.step('step-2: Wait for placeholders table to load', async () => {
+            await placeholders.waitForTableToLoad();
+        });
+
+        await test.step('step-3: Grant clipboard permissions and open the first row action menu', async () => {
+            await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+
+            const firstRow = placeholders.placeholderRows.first();
+            const actionMenuButton = firstRow.locator('.action-menu-button');
+            await expect(actionMenuButton).toBeVisible();
+            await actionMenuButton.click();
+        });
+
+        await test.step('step-4: Click the Copy Code dropdown item', async () => {
+            const firstRow = placeholders.placeholderRows.first();
+            const copyCodeItem = firstRow.locator('.dropdown-item', { hasText: 'Copy Code' });
+            await expect(copyCodeItem).toBeVisible();
+            await copyCodeItem.click();
+        });
+
+        await test.step('step-5: Verify positive toast is visible', async () => {
+            await expect(placeholders.toastPositive).toBeVisible({ timeout: 10000 });
+        });
+
+        await test.step('step-6: Verify clipboard contains the placeholder code', async () => {
+            const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+            expect(clipboardText).toBe(data.code);
+        });
+    });
+
     // Test 2: @studio-placeholders-search-field - Validate search field functionality
     test(`${features[2].name},${features[2].tags}`, async ({ page, baseURL }) => {
         const { data } = features[2];
