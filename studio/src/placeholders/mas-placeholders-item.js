@@ -10,6 +10,10 @@ import { FragmentStore } from '../reactivity/fragment-store.js';
 import { Placeholder } from '../aem/placeholder.js';
 import '../rte/rte-field.js';
 
+export function getPlaceholderCode(key) {
+    return `{{${key}}}`;
+}
+
 class MasPlaceholdersItem extends LitElement {
     static properties = {
         placeholderStore: { type: Object, reflect: false },
@@ -134,6 +138,17 @@ class MasPlaceholdersItem extends LitElement {
 
     preventSelection(event) {
         event.stopPropagation();
+    }
+
+    async onCopyCode(event) {
+        event.stopPropagation();
+        this.toggleDropdown(this.placeholder.key, event);
+        try {
+            await navigator.clipboard.writeText(getPlaceholderCode(this.placeholder.key));
+            showToast('Placeholder code copied to clipboard', 'positive');
+        } catch {
+            showToast('Failed to copy placeholder code.', 'negative');
+        }
     }
 
     // #endregion
@@ -299,6 +314,10 @@ class MasPlaceholdersItem extends LitElement {
                                       >
                                           <sp-icon-publish size="m"></sp-icon-publish>
                                           <span>Publish</span>
+                                      </div>
+                                      <div class="dropdown-item" @click=${this.onCopyCode}>
+                                          <sp-icon-copy size="m"></sp-icon-copy>
+                                          <span>Copy Code</span>
                                       </div>
                                       <div class="dropdown-item" @click="${this.onDelete}">
                                           <sp-icon-delete size="m"></sp-icon-delete>
