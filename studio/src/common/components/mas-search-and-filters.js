@@ -8,6 +8,7 @@ import { AEM_TAG_PATH_PRODUCT_CODE_ROOT, FILTER_TYPE, FRAGMENT_STATUS, PAGE_NAME
 import ReactiveController from '../../reactivity/reactive-controller.js';
 import { AEM } from '../../aem/aem.js';
 import { ensureNamespaceTags, getNamespaceCache, getNamespaceInflight } from '../../aem/tag-cache.js';
+import { fragmentMatchesVariationFilter, VARIATION_FILTER_OPTIONS } from '../../fragments/variation-filter.js';
 import '../../aem/aem-tag-picker-field.js';
 
 const MAS_TAG_NAMESPACE = '/content/cq:tags/mas';
@@ -63,6 +64,7 @@ class MasSearchAndFilters extends LitElement {
         pznFilter: { type: Array, state: true },
         tagFilter: { type: Array, state: true },
         statusFilter: { type: Array, state: true },
+        variationFilter: { type: String, state: true },
         templateOptions: { type: Array },
         marketSegmentOptions: { type: Array },
         customerSegmentOptions: { type: Array },
@@ -95,6 +97,7 @@ class MasSearchAndFilters extends LitElement {
         this.pznFilter = [];
         this.tagFilter = [];
         this.statusFilter = [];
+        this.variationFilter = '';
         this.templateOptions = [];
         this.marketSegmentOptions = [];
         this.customerSegmentOptions = [];
@@ -181,6 +184,19 @@ class MasSearchAndFilters extends LitElement {
         this.#setFilterIfChanged('marketSegmentFilter', tagsByType.market_segments);
         this.#setFilterIfChanged('customerSegmentFilter', tagsByType.customer_segment);
         this.#setFilterIfChanged('productFilter', tagsByType.product_code);
+        const storeVariationFilter = this.#filtersStore.get()?.variationFilter || '';
+        if (this.variationFilter !== storeVariationFilter) this.variationFilter = storeVariationFilter;
+    }
+
+    #syncVariationFilterToStore() {
+        if (this.type !== TABLE_TYPE.CARDS) return;
+        const currentFilters = this.#filtersStore.get() || {};
+        const nextValue = this.variationFilter || undefined;
+        if (currentFilters.variationFilter === nextValue) return;
+        this.#filtersStore.set({
+            ...currentFilters,
+            variationFilter: nextValue,
+        });
     }
 
     #syncRepositorySearch() {
@@ -508,7 +524,8 @@ class MasSearchAndFilters extends LitElement {
             changed.has('planTypeFilter') ||
             changed.has('pznFilter') ||
             changed.has('tagFilter') ||
-            changed.has('statusFilter')
+            changed.has('statusFilter') ||
+            changed.has('variationFilter')
         ) {
             if (
                 changed.has('searchQuery') ||
@@ -519,6 +536,9 @@ class MasSearchAndFilters extends LitElement {
                 changed.has('productFilter')
             ) {
                 this.#syncRepositorySearch();
+            }
+            if (changed.has('variationFilter')) {
+                this.#syncVariationFilterToStore();
             }
             this.#applyFilters();
         }
@@ -682,6 +702,7 @@ class MasSearchAndFilters extends LitElement {
         this.pznFilter = [];
         this.tagFilter = [];
         this.statusFilter = [];
+        this.variationFilter = '';
     }
 
     resetFilters() {
@@ -827,6 +848,23 @@ class MasSearchAndFilters extends LitElement {
         </sp-picker>`;
     }
 
+    #renderVariationFilterPicker() {
+        if (this.type !== TABLE_TYPE.CARDS) return nothing;
+        return html`<sp-picker
+            class="variation-filter"
+            size="m"
+            label="Has variation?"
+            .value=${this.variationFilter}
+            @change=${(e) => {
+                e.stopPropagation();
+                this.variationFilter = e.target.value || '';
+            }}
+        >
+            <sp-menu-item value="">All</sp-menu-item>
+            ${VARIATION_FILTER_OPTIONS.map(({ value, label }) => html`<sp-menu-item value=${value}>${label}</sp-menu-item>`)}
+        </sp-picker>`;
+    }
+
     #fragmentMatchesAnyTag(fragment, selectedIds) {
         return fragment.tags?.some((tag) => selectedIds.some((sel) => tag.id === sel || tag.id?.startsWith(`${sel}/`)));
     }
@@ -843,6 +881,7 @@ class MasSearchAndFilters extends LitElement {
         const hasPzn = this.pznFilter?.length > 0;
         const hasTag = this.tagFilter?.length > 0;
         const hasStatus = this.statusFilter?.length > 0;
+        const hasVariationFilter = Boolean(this.variationFilter);
 
         const result = source.filter((fragment) => {
             if (query) {
@@ -898,6 +937,9 @@ class MasSearchAndFilters extends LitElement {
             if (hasTag) {
                 if (!this.#fragmentMatchesAnyTag(fragment, this.tagFilter)) return false;
             }
+            if (hasVariationFilter) {
+                if (!fragmentMatchesVariationFilter(fragment, this.variationFilter)) return false;
+            }
             return true;
         });
 
@@ -945,7 +987,7 @@ class MasSearchAndFilters extends LitElement {
                 ${this.#renderTagPicker('Tag', 'custom', this.tagFilter, FILTER_TYPE.TAG)}
                 ${this.#renderFilterPicker('Status', this.statusOptions, this.statusFilter, FILTER_TYPE.STATUS)}
                 ${this.#renderTagPicker('Personalization', 'pzn', this.pznFilter, FILTER_TYPE.PZN)} ${this.#renderOfferPicker()}
-                ${surfacePicker}
+                ${this.#renderVariationFilterPicker()} ${surfacePicker}
             </div>
             ${this.#renderAppliedFilters()}
         `;

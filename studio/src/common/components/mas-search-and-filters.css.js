@@ -75,7 +75,8 @@ export const styles = css`
         gap: 8px;
     }
 
-    .offer-filter {
+    .offer-filter,
+    .variation-filter {
         width: fit-content;
         --mod-picker-inline-size: auto;
     }
