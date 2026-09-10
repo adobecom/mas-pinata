@@ -112,7 +112,7 @@ describe('MasTranslation', () => {
             const el = await fixture(html`<mas-translation></mas-translation>`);
             const search = el.shadowRoot.querySelector('sp-search');
             expect(search).to.exist;
-            expect(search.disabled).to.be.true;
+            expect(search.disabled).to.be.false;
         });
 
         it('should render result count', async () => {
@@ -124,6 +124,64 @@ describe('MasTranslation', () => {
             const el = await fixture(html`<mas-translation></mas-translation>`);
             const toolbar = el.shadowRoot.querySelector('.translation-toolbar');
             expect(toolbar.textContent).to.include('2 result(s)');
+        });
+    });
+
+    describe('search filtering', () => {
+        const seedProjects = () => {
+            const mockProjects = [
+                createMockTranslationProject('1', 'Alpha Project'),
+                createMockTranslationProject('2', 'Beta Project'),
+                createMockTranslationProject('3', 'Gamma Initiative'),
+            ];
+            Store.translationProjects.list.data.value = mockProjects;
+            return mockProjects;
+        };
+
+        const setSearchValue = async (el, value) => {
+            const search = el.shadowRoot.querySelector('sp-search');
+            search.value = value;
+            search.dispatchEvent(new CustomEvent('input', { bubbles: true }));
+            await el.updateComplete;
+        };
+
+        it('should filter rows by a substring match of the project title', async () => {
+            seedProjects();
+            const el = await fixture(html`<mas-translation></mas-translation>`);
+            await setSearchValue(el, 'beta');
+            const rows = el.shadowRoot.querySelectorAll('sp-table-row');
+            expect(rows.length).to.equal(1);
+            expect(rows[0].textContent).to.include('Beta Project');
+        });
+
+        it('should match regardless of letter case', async () => {
+            seedProjects();
+            const el = await fixture(html`<mas-translation></mas-translation>`);
+            await setSearchValue(el, 'BETA');
+            const rows = el.shadowRoot.querySelectorAll('sp-table-row');
+            expect(rows.length).to.equal(1);
+            expect(rows[0].textContent).to.include('Beta Project');
+        });
+
+        it('should restore the full list when the query is cleared', async () => {
+            seedProjects();
+            const el = await fixture(html`<mas-translation></mas-translation>`);
+            await setSearchValue(el, 'beta');
+            expect(el.shadowRoot.querySelectorAll('sp-table-row').length).to.equal(1);
+            await setSearchValue(el, '');
+            const rows = el.shadowRoot.querySelectorAll('sp-table-row');
+            expect(rows.length).to.equal(3);
+            expect(Store.translationProjects.list.data.get().length).to.equal(3);
+        });
+
+        it('should render zero rows without an error state when nothing matches', async () => {
+            seedProjects();
+            const el = await fixture(html`<mas-translation></mas-translation>`);
+            await setSearchValue(el, 'nonexistent-project-name');
+            const rows = el.shadowRoot.querySelectorAll('sp-table-row');
+            expect(rows.length).to.equal(0);
+            expect(Store.translationProjects.list.data.get().length).to.equal(3);
+            expect(el.shadowRoot.querySelector('.translation-empty-state')).to.be.null;
         });
     });
 
