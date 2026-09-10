@@ -166,6 +166,7 @@ export class MasRepository extends LitElement {
         return applyFragmentListFilters(fragmentStores, {
             page: this.page.value,
             personalizationFilterEnabled: this.filters.value.personalizationFilterEnabled,
+            variationFilter: this.filters.value.variationFilter,
         });
     }
 

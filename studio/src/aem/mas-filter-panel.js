@@ -4,6 +4,7 @@ import Store from '../store.js';
 import { isPznCountryTagPath } from '../common/utils/personalization-utils.js';
 import ReactiveController from '../reactivity/reactive-controller.js';
 import router from '../router.js';
+import { VARIATION_FILTER_OPTIONS } from '../fragments/variation-filter.js';
 
 function pathToTagId(path) {
     return `mas:${path.replace('/content/cq:tags/mas/', '')}`;
@@ -172,6 +173,28 @@ class MasFilterPanel extends LitElement {
         return Store.filters.get().personalizationFilterEnabled === true;
     }
 
+    get #variationFilter() {
+        return Store.filters.get().variationFilter || '';
+    }
+
+    get #variationFilterLabel() {
+        return VARIATION_FILTER_OPTIONS.find((option) => option.value === this.#variationFilter)?.label || '';
+    }
+
+    #onVariationFilterChange(e) {
+        Store.filters.set((prev) => ({
+            ...prev,
+            variationFilter: e.target.value || undefined,
+        }));
+    }
+
+    #handleVariationFilterDelete() {
+        Store.filters.set((prev) => ({
+            ...prev,
+            variationFilter: undefined,
+        }));
+    }
+
     #onPersonalizationToggleEnabled(e) {
         const enabled = e.detail.enabled;
         Store.filters.set((prev) => ({
@@ -254,6 +277,7 @@ class MasFilterPanel extends LitElement {
             ...prev,
             tags: '',
             personalizationFilterEnabled: false,
+            variationFilter: undefined,
         }));
 
         Store.createdByUsers.set([]);
@@ -276,6 +300,13 @@ class MasFilterPanel extends LitElement {
     #handleUserDelete(e) {
         const value = e.target.value;
         Store.createdByUsers.set(Store.createdByUsers.value.filter((user) => user.userPrincipalName !== value));
+    }
+
+    get variationFilterTag() {
+        if (!this.#variationFilter) return nothing;
+        return html`
+            <sp-tag size="s" deletable @delete=${this.#handleVariationFilterDelete}>${this.#variationFilterLabel}</sp-tag>
+        `;
     }
 
     get createdByUsersTags() {
@@ -398,6 +429,19 @@ class MasFilterPanel extends LitElement {
                     @personalization-toggle-change=${this.#onPersonalizationToggleEnabled}
                 ></aem-tag-picker-field>
 
+                <sp-picker
+                    size="m"
+                    class="variation-filter"
+                    label="Has variation?"
+                    .value=${this.#variationFilter}
+                    @change=${this.#onVariationFilterChange}
+                >
+                    <sp-menu-item value="">All</sp-menu-item>
+                    ${VARIATION_FILTER_OPTIONS.map(
+                        ({ value, label }) => html`<sp-menu-item value=${value}>${label}</sp-menu-item>`,
+                    )}
+                </sp-picker>
+
                 <mas-user-picker
                     label="Created by"
                     .currentUser=${Store.profile}
@@ -422,7 +466,7 @@ class MasFilterPanel extends LitElement {
                         >
                     `,
                 )}
-                ${this.createdByUsersTags}
+                ${this.createdByUsersTags} ${this.variationFilterTag}
             </sp-tags>
         `;
     }
