@@ -22,6 +22,7 @@ class MasTranslation extends LitElement {
         isDialogOpen: { type: Boolean, state: true },
         confirmDialogConfig: { type: Object, state: true },
         columns: { type: Set, state: true },
+        searchQuery: { type: String, state: true },
     };
 
     constructor() {
@@ -32,6 +33,7 @@ class MasTranslation extends LitElement {
         ]);
         this.isDialogOpen = false;
         this.confirmDialogConfig = null;
+        this.searchQuery = '';
         this.columns = new Set([
             { key: 'title', label: 'Translation Project' },
             { key: 'status', label: 'Status' },
@@ -51,6 +53,14 @@ class MasTranslation extends LitElement {
 
     get translationProjectsData() {
         return Store.translationProjects?.list?.data?.get() || [];
+    }
+
+    get filteredTranslationProjects() {
+        const query = (this.searchQuery ?? '').trim().toLowerCase();
+        if (!query) return this.translationProjectsData;
+        return this.translationProjectsData.filter((translationProject) =>
+            (translationProject.get().title ?? '').toString().toLowerCase().includes(query),
+        );
     }
 
     get confirmDialog() {
@@ -114,7 +124,7 @@ class MasTranslation extends LitElement {
                 ${this.translationProjectsTableHead}
                 <sp-table-body>
                     ${repeat(
-                        this.translationProjectsData,
+                        this.filteredTranslationProjects,
                         (translationProject) => translationProject.get().id,
                         (translationProject) => html`
                             <sp-table-row
@@ -277,6 +287,15 @@ class MasTranslation extends LitElement {
         }
     }
 
+    #handleSearchInput(event) {
+        this.searchQuery = event.target.value ?? '';
+    }
+
+    #handleSearchSubmit(event) {
+        event.preventDefault();
+        this.searchQuery = event.target.value ?? '';
+    }
+
     #sortBySentOn({ detail: { sortKey, sortDirection } }) {
         const translationProjects = [...this.translationProjectsData].sort((a, b) => {
             const dateA = a.get().getFieldValue('submissionDate');
@@ -303,8 +322,14 @@ class MasTranslation extends LitElement {
                     </sp-button>
                 </div>
                 <div class="translation-toolbar">
-                    <sp-search size="m" placeholder="Search" disabled></sp-search>
-                    <div>${this.translationProjectsData.length} result(s)</div>
+                    <sp-search
+                        size="m"
+                        placeholder="Search"
+                        .value=${this.searchQuery}
+                        @input=${this.#handleSearchInput}
+                        @submit=${this.#handleSearchSubmit}
+                    ></sp-search>
+                    <div>${this.filteredTranslationProjects.length} result(s)</div>
                 </div>
                 ${this.confirmDialog}
                 <div class="translation-content">${this.translationsProjectsContent}</div>
