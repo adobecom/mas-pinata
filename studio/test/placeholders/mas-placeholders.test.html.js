@@ -8,6 +8,8 @@ import Store from '../../src/store.js';
 // Import the component being tested
 import '../../src/placeholders/mas-placeholders.js';
 // Import necessary dependencies potentially used by the component or tests
+import '../../src/placeholders/mas-placeholders-item.js';
+import Events from '../../src/events.js';
 import '../../src/mas-repository.js';
 import '../../src/rte/rte-field.js';
 import '../../src/mas-fragment-status.js';
@@ -170,6 +172,44 @@ runTests(async () => {
 
             const base = `${window.location.origin}${window.location.pathname}#page=placeholders&path=test-folder&query=`;
             expect(writeText.calledOnceWithExactly(`${base}id-1\n${base}id-2`)).to.be.true;
+        });
+    });
+
+    describe('mas-placeholders-item handleCopyCode', () => {
+        let item;
+        let toastStub;
+
+        beforeEach(() => {
+            Store.search.set({ path: 'test-folder' });
+            toastStub = sinon.stub(Events.toast, 'emit');
+            item = document.createElement('mas-placeholders-item');
+            item.placeholderStore = { get: () => ({ id: 'id-1', key: 'a' }) };
+        });
+
+        afterEach(() => {
+            sinon.restore();
+        });
+
+        it('should write the placeholder url to the clipboard and show a positive toast', async function () {
+            const writeText = sinon.stub().resolves();
+            sinon.stub(navigator, 'clipboard').value({ writeText });
+
+            await item.handleCopyCode();
+
+            const url = `${window.location.origin}${window.location.pathname}#page=placeholders&path=test-folder&query=id-1`;
+            expect(writeText.calledOnceWithExactly(url)).to.be.true;
+            expect(toastStub.calledOnceWithExactly({ variant: 'positive', content: 'Copied!' })).to.be.true;
+        });
+
+        it('should show a negative toast and no positive toast when the clipboard write fails', async function () {
+            const writeText = sinon.stub().rejects(new Error('denied'));
+            sinon.stub(navigator, 'clipboard').value({ writeText });
+
+            await item.handleCopyCode();
+
+            expect(toastStub.calledOnce).to.be.true;
+            expect(toastStub.firstCall.args[0].variant).to.equal('negative');
+            expect(toastStub.calledWithMatch({ variant: 'positive' })).to.be.false;
         });
     });
 });
