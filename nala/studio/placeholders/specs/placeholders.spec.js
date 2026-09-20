@@ -30,5 +30,19 @@ export default {
             browserParams: '#page=placeholders&path=nala&locale=en_US',
             tags: '@mas-studio @placeholders',
         },
+        {
+            tcid: '3',
+            name: '@studio-placeholders-copy-code-single',
+            path: '/studio.html',
+            browserParams: '#page=placeholders&path=nala&locale=en_US',
+            tags: '@mas-studio @placeholders',
+        },
+        {
+            tcid: '4',
+            name: '@studio-placeholders-copy-code-bulk',
+            path: '/studio.html',
+            browserParams: '#page=placeholders&path=nala&locale=en_US',
+            tags: '@mas-studio @placeholders',
+        },
     ],
 };

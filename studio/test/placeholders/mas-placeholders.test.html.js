@@ -12,6 +12,7 @@ import '../../src/mas-repository.js';
 import '../../src/rte/rte-field.js';
 import '../../src/mas-fragment-status.js';
 import { PAGE_NAMES } from '../../src/constants.js';
+import Events from '../../src/events.js';
 
 runTests(async () => {
     describe('mas-placeholders component - UI Tests', () => {
@@ -155,6 +156,54 @@ runTests(async () => {
             element.onSave();
             await elementUpdated(element);
             expect(refreshSpy.calledOnce).to.be.true;
+        });
+
+        describe('handleCopyCode', () => {
+            const makeStore = (key, path, locale) => ({ get: () => ({ key, path, locale }) });
+            let writeText;
+
+            beforeEach(() => {
+                writeText = sinon.stub().resolves();
+                Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+                Store.placeholders.list.data.value = [
+                    makeStore('one', '/content/dam/mas/test-folder/en_US/dictionary/one', 'en_US'),
+                    makeStore('two', '/content/dam/mas/test-folder/en_US/dictionary/two', ''),
+                    makeStore('three', '/content/dam/mas/test-folder/en_US/dictionary/three', 'en_US'),
+                ];
+            });
+
+            afterEach(() => {
+                Store.placeholders.list.data.value = [];
+            });
+
+            it('copies a single deep link without trailing newline', async () => {
+                Store.placeholders.selection.set(['one']);
+                expect(await element.handleCopyCode()).to.be.true;
+                expect(writeText.calledOnce).to.be.true;
+                const [text] = writeText.firstCall.args;
+                expect(text).to.equal(
+                    'studio.html#content-type=placeholder&page=placeholders&path=%2Fcontent%2Fdam%2Fmas%2Ftest-folder%2Fen_US%2Fdictionary%2Fone&locale=en_US&search=one',
+                );
+            });
+
+            it('joins multiple deep links with a newline and falls back to the current locale', async () => {
+                Store.placeholders.selection.set(['one', 'two']);
+                await element.handleCopyCode();
+                const lines = writeText.firstCall.args[0].split('\n');
+                expect(lines).to.have.length(2);
+                expect(lines[0]).to.include('search=one');
+                expect(lines[1]).to.include('search=two');
+                expect(lines[1]).to.include(`locale=${Store.localeOrRegion()}`);
+            });
+
+            it('shows a negative toast when the clipboard write fails', async () => {
+                writeText.rejects(new Error('denied'));
+                sinon.stub(console, 'warn');
+                const toast = sinon.stub(Events.toast, 'emit');
+                Store.placeholders.selection.set(['one']);
+                expect(await element.handleCopyCode()).to.be.false;
+                expect(toast.calledWith(sinon.match({ variant: 'negative' }))).to.be.true;
+            });
         });
     });
 });

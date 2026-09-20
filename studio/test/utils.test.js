@@ -1,6 +1,7 @@
 import { expect } from '@open-wc/testing';
 import {
     buildCardsDeepLink,
+    buildPlaceholderDeepLink,
     generateCodeToUse,
     generateFieldLink,
     getFragmentPartsToUse,
@@ -224,6 +225,24 @@ describe('previewValue', () => {
     it('converts non-string values to string', () => {
         expect(previewValue([42])).to.equal('42');
         expect(previewValue([true])).to.equal('true');
+    });
+});
+
+describe('buildPlaceholderDeepLink', () => {
+    it('builds the placeholders deep link', () => {
+        const href = buildPlaceholderDeepLink({
+            path: '/content/dam/mas/acom/en_US/dictionary/test',
+            locale: 'en_US',
+            key: 'buy-now',
+        });
+        expect(href).to.equal(
+            'studio.html#content-type=placeholder&page=placeholders&path=%2Fcontent%2Fdam%2Fmas%2Facom%2Fen_US%2Fdictionary%2Ftest&locale=en_US&search=buy-now',
+        );
+    });
+
+    it('percent-encodes special characters in the key', () => {
+        const href = buildPlaceholderDeepLink({ path: 'p', locale: 'en_US', key: 'a b&c' });
+        expect(href).to.include('search=a+b%26c');
     });
 });
 

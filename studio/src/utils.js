@@ -285,6 +285,22 @@ function buildStudioFragmentHref({ webComponentName, fragmentId, page, path, fie
 }
 
 /**
+ * Studio deep link that opens the placeholders page searching for a single placeholder key
+ * @param {{ path: string, locale: string, key: string }} placeholder
+ * @returns {string}
+ */
+export function buildPlaceholderDeepLink({ path, locale, key }) {
+    const params = new URLSearchParams({
+        'content-type': 'placeholder',
+        page: 'placeholders',
+        path,
+        locale,
+        search: key,
+    });
+    return `studio.html#${params.toString()}`;
+}
+
+/**
  * Cards deep link for a merch card or merch-card-collection
  * @param {{ id: string, model?: { path?: string } }} fragment
  * @param {string} [path] surface path

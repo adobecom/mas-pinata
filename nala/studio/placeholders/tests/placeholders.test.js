@@ -122,4 +122,57 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
             expect(rowCount).toBeGreaterThan(1); // Should show more than just the test placeholder
         });
     });
+
+    // Test 3: @studio-placeholders-copy-code-single - Copy Code for one selected placeholder
+    test(`${features[3].name},${features[3].tags}`, async ({ page, baseURL, context }) => {
+        const testPage = `${baseURL}${features[3].path}${miloLibs}${features[3].browserParams}`;
+        setTestPage(testPage);
+        await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+        await test.step('step-1: Navigate to placeholders page and select one row', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await placeholders.waitForTableToLoad();
+            await placeholders.tableRows.locator('sp-table-checkbox-cell').nth(0).click();
+        });
+
+        await test.step('step-2: Click Copy Code and validate feedback and clipboard', async () => {
+            await expect(placeholders.copyCodeButton).toBeVisible();
+            await expect(placeholders.copyCodeButton).toBeEnabled();
+            await placeholders.copyCodeButton.click();
+            await expect(placeholders.copiedLabel).toBeVisible();
+
+            const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+            expect(clipboard).toMatch(/studio\.html#content-type=placeholder&page=placeholders&path=.+&locale=.+&search=.+/);
+            expect(clipboard).not.toContain('\n');
+        });
+    });
+
+    // Test 4: @studio-placeholders-copy-code-bulk - Copy Code for multiple selected placeholders
+    test(`${features[4].name},${features[4].tags}`, async ({ page, baseURL, context }) => {
+        const testPage = `${baseURL}${features[4].path}${miloLibs}${features[4].browserParams}`;
+        setTestPage(testPage);
+        await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+        await test.step('step-1: Navigate to placeholders page and select two rows', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await placeholders.waitForTableToLoad();
+            await placeholders.tableRows.locator('sp-table-checkbox-cell').nth(0).click();
+            await placeholders.tableRows.locator('sp-table-checkbox-cell').nth(1).click();
+        });
+
+        await test.step('step-2: Click Copy Code and validate clipboard contains two links', async () => {
+            await placeholders.copyCodeButton.click();
+            await expect(placeholders.copiedLabel).toBeVisible();
+
+            const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+            const links = clipboard.split('\n');
+            expect(links).toHaveLength(2);
+            for (const link of links) {
+                expect(link).toMatch(/studio\.html#content-type=placeholder&page=placeholders&path=.+&locale=.+&search=.+/);
+            }
+            expect(links[0]).not.toBe(links[1]);
+        });
+    });
 });

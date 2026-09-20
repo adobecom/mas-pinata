@@ -237,6 +237,42 @@ describe('MasSelectionPanel', () => {
         });
     });
 
+    describe('handleCopyCode', () => {
+        it('calls onCopyCode instead of handleCopyFragmentUrls and shows Copied! temporarily', async () => {
+            const clock = sandbox.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+            const el = await createPanel([makeFragmentStore(makeCardFragment('uuid-1'))]);
+            const onCopyCode = sandbox.stub().resolves(true);
+            const fragmentUrls = sandbox.stub(el, 'handleCopyFragmentUrls');
+            el.onCopyCode = onCopyCode;
+
+            await el.handleCopyCode();
+
+            expect(onCopyCode.calledOnce).to.be.true;
+            expect(fragmentUrls.called).to.be.false;
+            expect(el.copyCodeLabel).to.equal('Copied!');
+            clock.tick(2000);
+            expect(el.copyCodeLabel).to.equal('Copy Code');
+        });
+
+        it('does not show Copied! when onCopyCode reports failure', async () => {
+            const el = await createPanel([makeFragmentStore(makeCardFragment('uuid-1'))]);
+            el.onCopyCode = sandbox.stub().resolves(false);
+
+            await el.handleCopyCode();
+
+            expect(el.copyCodeLabel).to.equal('Copy Code');
+        });
+
+        it('falls back to handleCopyFragmentUrls without onCopyCode', async () => {
+            const el = await createPanel([makeFragmentStore(makeCardFragment('uuid-1'))]);
+            const fragmentUrls = sandbox.stub(el, 'handleCopyFragmentUrls').resolves();
+
+            await el.handleCopyCode();
+
+            expect(fragmentUrls.calledOnce).to.be.true;
+        });
+    });
+
     describe('render', () => {
         it('shows Copy URLs button when items are selected', async () => {
             const fragment = { id: 'uuid-1', model: { path: CARD_MODEL_PATH } };
