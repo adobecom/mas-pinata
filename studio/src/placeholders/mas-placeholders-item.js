@@ -10,6 +10,16 @@ import { FragmentStore } from '../reactivity/fragment-store.js';
 import { Placeholder } from '../aem/placeholder.js';
 import '../rte/rte-field.js';
 
+/**
+ * Builds the shareable Studio link that opens the placeholders page on the given placeholder.
+ * @param {string} id placeholder fragment id
+ * @returns {string} full browser URL
+ */
+export function getPlaceholderUrl(id) {
+    const path = encodeURIComponent(Store.search.value.path);
+    return `${window.location.origin}${window.location.pathname}#page=placeholders&path=${path}&query=${id}`;
+}
+
 class MasPlaceholdersItem extends LitElement {
     static properties = {
         placeholderStore: { type: Object, reflect: false },
@@ -130,6 +140,16 @@ class MasPlaceholdersItem extends LitElement {
             };
             this.placeholderStore.refreshFrom(updatedPlaceholder);
         }
+    }
+
+    async handleCopyCode() {
+        try {
+            await navigator.clipboard.writeText(getPlaceholderUrl(this.placeholder.id));
+        } catch {
+            showToast('Failed to copy link to clipboard', 'negative');
+            return;
+        }
+        showToast('Copied!', 'positive');
     }
 
     preventSelection(event) {
@@ -270,6 +290,14 @@ class MasPlaceholdersItem extends LitElement {
         return html`
             <sp-table-cell class="action-cell">
                 <div class="action-buttons">
+                    <button
+                        class="action-button copy-code-button"
+                        @click=${this.handleCopyCode}
+                        @mousedown=${this.preventSelection}
+                        aria-label="Copy Code"
+                    >
+                        <sp-icon-copy size="m"></sp-icon-copy>
+                    </button>
                     <button
                         class="action-button approve-button"
                         @click=${(event) => this.toggleEditing(this.placeholder.key, event)}

@@ -122,4 +122,36 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
             expect(rowCount).toBeGreaterThan(1); // Should show more than just the test placeholder
         });
     });
+
+    // Test 3: @studio-placeholders-copy-code - Copy Code per row and in bulk
+    test(`${features[3].name},${features[3].tags}`, async ({ page, baseURL }) => {
+        const testPage = `${baseURL}${features[3].path}${miloLibs}${features[3].browserParams}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Navigate to placeholders page', async () => {
+            await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await placeholders.waitForTableToLoad();
+        });
+
+        await test.step('step-2: Copy Code on a single row copies its URL', async () => {
+            await placeholders.copyCodeButton.first().click();
+            await expect(placeholders.toastPositive).toContainText('Copied');
+            const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+            expect(clipboard).toContain('#page=placeholders');
+            expect(clipboard).toContain('query=');
+            await expect(page.locator('sp-dialog, [role="dialog"]')).toHaveCount(0);
+        });
+
+        await test.step('step-3: Bulk Copy Code copies one URL per line', async () => {
+            await placeholders.placeholderRows.nth(0).locator('sp-checkbox').click();
+            await placeholders.placeholderRows.nth(1).locator('sp-checkbox').click();
+            await placeholders.bulkCopyCodeButton.click();
+            await expect(placeholders.toastPositive).toContainText('Copied');
+            const lines = (await page.evaluate(() => navigator.clipboard.readText())).split('\n');
+            expect(lines).toHaveLength(2);
+            for (const line of lines) expect(line).toContain('#page=placeholders');
+        });
+    });
 });

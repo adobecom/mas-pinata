@@ -156,5 +156,20 @@ runTests(async () => {
             await elementUpdated(element);
             expect(refreshSpy.calledOnce).to.be.true;
         });
+
+        it('should copy newline-separated placeholder urls on bulk copy code', async function () {
+            const writeText = sinon.stub().resolves();
+            sinon.stub(navigator, 'clipboard').value({ writeText });
+            Store.placeholders.list.data.set([
+                { get: () => ({ id: 'id-1', key: 'a' }) },
+                { get: () => ({ id: 'id-2', key: 'b' }) },
+                { get: () => ({ id: 'id-3', key: 'c' }) },
+            ]);
+
+            await element.onBulkCopyCode(['a', 'b']);
+
+            const base = `${window.location.origin}${window.location.pathname}#page=placeholders&path=test-folder&query=`;
+            expect(writeText.calledOnceWithExactly(`${base}id-1\n${base}id-2`)).to.be.true;
+        });
     });
 });

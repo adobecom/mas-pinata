@@ -104,7 +104,7 @@ export default [
 
         .placeholders-table sp-table-head-cell:last-child,
         .placeholders-table sp-table-cell:last-child {
-            max-width: 100px;
+            max-width: 140px;
             justify-content: flex-end;
         }
 
