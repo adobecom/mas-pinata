@@ -140,7 +140,8 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
             await expect(placeholders.copyCodeButton).toBeVisible();
             await expect(placeholders.copyCodeButton).toBeEnabled();
             await placeholders.copyCodeButton.click();
-            await expect(placeholders.copiedLabel).toBeVisible();
+            await expect(placeholders.toastPositive).toBeVisible();
+            await expect(placeholders.toastPositive).toContainText('Copied 1 links');
 
             const clipboard = await page.evaluate(() => navigator.clipboard.readText());
             expect(clipboard).toMatch(/studio\.html#content-type=placeholder&page=placeholders&path=.+&locale=.+&search=.+/);
@@ -164,7 +165,8 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
 
         await test.step('step-2: Click Copy Code and validate clipboard contains two links', async () => {
             await placeholders.copyCodeButton.click();
-            await expect(placeholders.copiedLabel).toBeVisible();
+            await expect(placeholders.toastPositive).toBeVisible();
+            await expect(placeholders.toastPositive).toContainText('Copied 2 links');
 
             const clipboard = await page.evaluate(() => navigator.clipboard.readText());
             const links = clipboard.split('\n');

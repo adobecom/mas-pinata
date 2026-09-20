@@ -292,6 +292,7 @@ class MasPlaceholders extends LitElement {
 
         try {
             await navigator.clipboard.writeText(links.join('\n'));
+            showToast(`Copied ${links.length} links`, 'positive');
             return true;
         } catch (error) {
             console.warn('Failed to copy placeholder links', error);

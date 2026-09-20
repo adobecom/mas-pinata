@@ -27,7 +27,6 @@ class MasSelectionPanel extends LitElement {
         onCopyToFolder: { type: Function, attribute: false },
         onCopyStudioLinks: { type: Function, attribute: false },
         onCopyCode: { type: Function, attribute: false },
-        copyCodeLabel: { type: String, state: true },
     };
 
     constructor() {
@@ -43,7 +42,6 @@ class MasSelectionPanel extends LitElement {
         this.onCopyToFolder = null;
         this.onCopyStudioLinks = null;
         this.onCopyCode = null;
-        this.copyCodeLabel = 'Copy Code';
 
         this.close = this.close.bind(this);
     }
@@ -57,7 +55,6 @@ class MasSelectionPanel extends LitElement {
     disconnectedCallback() {
         super.disconnectedCallback();
         window.removeEventListener(EVENT_KEYDOWN, this.close);
-        clearTimeout(this.copyCodeTimeout);
     }
 
     close(event) {
@@ -140,14 +137,7 @@ class MasSelectionPanel extends LitElement {
     async handleCopyCode() {
         if (!this.onCopyCode) return this.handleCopyFragmentUrls();
 
-        const copied = await this.onCopyCode();
-        if (copied === false) return;
-
-        this.copyCodeLabel = 'Copied!';
-        clearTimeout(this.copyCodeTimeout);
-        this.copyCodeTimeout = setTimeout(() => {
-            this.copyCodeLabel = 'Copy Code';
-        }, 2000);
+        await this.onCopyCode();
     }
 
     async handleCopyFragmentUrls() {
@@ -245,7 +235,6 @@ class MasSelectionPanel extends LitElement {
             ${count > 0
                 ? html`<sp-action-button slot="buttons" label="Copy Code" @click=${this.handleCopyCode}>
                       <sp-icon-code slot="icon"></sp-icon-code>
-                      ${this.copyCodeLabel === 'Copied!' ? this.copyCodeLabel : nothing}
                       <sp-tooltip self-managed placement="top">Copy Code</sp-tooltip>
                   </sp-action-button>`
                 : nothing}

@@ -196,6 +196,13 @@ runTests(async () => {
                 expect(lines[1]).to.include(`locale=${Store.localeOrRegion()}`);
             });
 
+            it('shows a positive toast with the link count when the clipboard write succeeds', async () => {
+                const toast = sinon.stub(Events.toast, 'emit');
+                Store.placeholders.selection.set(['one', 'two']);
+                expect(await element.handleCopyCode()).to.be.true;
+                expect(toast.calledWith(sinon.match({ variant: 'positive', content: 'Copied 2 links' }))).to.be.true;
+            });
+
             it('shows a negative toast when the clipboard write fails', async () => {
                 writeText.rejects(new Error('denied'));
                 sinon.stub(console, 'warn');

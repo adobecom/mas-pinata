@@ -238,8 +238,7 @@ describe('MasSelectionPanel', () => {
     });
 
     describe('handleCopyCode', () => {
-        it('calls onCopyCode instead of handleCopyFragmentUrls and shows Copied! temporarily', async () => {
-            const clock = sandbox.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        it('calls onCopyCode instead of handleCopyFragmentUrls', async () => {
             const el = await createPanel([makeFragmentStore(makeCardFragment('uuid-1'))]);
             const onCopyCode = sandbox.stub().resolves(true);
             const fragmentUrls = sandbox.stub(el, 'handleCopyFragmentUrls');
@@ -249,18 +248,19 @@ describe('MasSelectionPanel', () => {
 
             expect(onCopyCode.calledOnce).to.be.true;
             expect(fragmentUrls.called).to.be.false;
-            expect(el.copyCodeLabel).to.equal('Copied!');
-            clock.tick(2000);
-            expect(el.copyCodeLabel).to.equal('Copy Code');
         });
 
-        it('does not show Copied! when onCopyCode reports failure', async () => {
+        it('keeps the Copy Code label and does not fall back when onCopyCode reports failure', async () => {
             const el = await createPanel([makeFragmentStore(makeCardFragment('uuid-1'))]);
+            const fragmentUrls = sandbox.stub(el, 'handleCopyFragmentUrls');
             el.onCopyCode = sandbox.stub().resolves(false);
 
             await el.handleCopyCode();
+            await el.updateComplete;
 
-            expect(el.copyCodeLabel).to.equal('Copy Code');
+            expect(fragmentUrls.called).to.be.false;
+            const button = el.shadowRoot.querySelector('sp-action-button[label="Copy Code"]');
+            expect(button.textContent).to.not.contain('Copied');
         });
 
         it('falls back to handleCopyFragmentUrls without onCopyCode', async () => {
