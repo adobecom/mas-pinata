@@ -35,7 +35,7 @@ class MasToast extends LitElement {
     }
 
     render() {
-        return html`<sp-toast timeout="6000"></sp-toast>`;
+        return html`<sp-toast timeout="2000"></sp-toast>`;
     }
 }
 
