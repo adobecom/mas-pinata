@@ -1,6 +1,7 @@
 import { expect } from '@esm-bundle/chai';
 import sinon from 'sinon';
 import '../../src/placeholders/mas-placeholders.js';
+import Events from '../../src/events.js';
 
 const makeStore = (key) => ({ get: () => ({ key }) });
 
@@ -9,9 +10,11 @@ describe('MasPlaceholders handleCopyPlaceholderUrls', () => {
     let writeText;
     let context;
     let handle;
+    let toastStub;
 
     beforeEach(async () => {
         sandbox = sinon.createSandbox();
+        toastStub = sandbox.stub(Events.toast, 'emit');
         const { default: Store } = await import('../../src/store.js');
         Store.search.set({ path: 'sandbox' });
         Store.filters.set((prev) => ({ ...prev, locale: 'en_US' }));
@@ -37,6 +40,8 @@ describe('MasPlaceholders handleCopyPlaceholderUrls', () => {
         expect(writeText.calledOnce).to.be.true;
         const url = writeText.firstCall.args[0];
         expect(url).to.include('#content-type=placeholder&page=placeholders&path=sandbox&locale=en_US&search=key-one');
+        expect(toastStub.calledOnce).to.be.true;
+        expect(toastStub.firstCall.args[0]).to.deep.equal({ variant: 'positive', content: 'Copied 1 link' });
     });
 
     it('copies newline-separated links for multiple placeholders', async () => {
@@ -46,12 +51,15 @@ describe('MasPlaceholders handleCopyPlaceholderUrls', () => {
         expect(urls).to.have.length(2);
         expect(urls[0]).to.include('search=key-one');
         expect(urls[1]).to.include('search=key-three');
+        expect(toastStub.calledOnce).to.be.true;
+        expect(toastStub.firstCall.args[0]).to.deep.equal({ variant: 'positive', content: 'Copied 2 links' });
     });
 
     it('does not write to the clipboard for an empty selection', async () => {
         await handle([]);
 
         expect(writeText.called).to.be.false;
+        expect(toastStub.called).to.be.false;
     });
 
     it('percent-encodes special characters in the key', async () => {

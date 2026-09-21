@@ -295,7 +295,7 @@ class MasPlaceholders extends LitElement {
 
         try {
             await navigator.clipboard.writeText(urls.join('\n'));
-            showToast(`Copied ${urls.length} placeholder link${urls.length > 1 ? 's' : ''} to clipboard`, 'positive');
+            showToast(urls.length === 1 ? 'Copied 1 link' : `Copied ${urls.length} links`, 'positive');
         } catch {
             showToast('Failed to copy code to clipboard', 'negative');
         }
