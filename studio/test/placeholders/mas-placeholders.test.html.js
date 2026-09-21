@@ -12,6 +12,7 @@ import '../../src/mas-repository.js';
 import '../../src/rte/rte-field.js';
 import '../../src/mas-fragment-status.js';
 import { PAGE_NAMES } from '../../src/constants.js';
+import Events from '../../src/events.js';
 
 runTests(async () => {
     describe('mas-placeholders component - UI Tests', () => {
@@ -155,6 +156,48 @@ runTests(async () => {
             element.onSave();
             await elementUpdated(element);
             expect(refreshSpy.calledOnce).to.be.true;
+        });
+
+        describe('copy placeholder links', () => {
+            const baseUrl = `${window.location.origin}/studio.html#content-type=placeholder&page=placeholders&path=test-folder&locale=en_US`;
+            let writeText;
+            let toasts;
+            const onToast = (toast) => toasts.push(toast);
+
+            beforeEach(() => {
+                toasts = [];
+                writeText = sinon.stub().resolves();
+                sinon.stub(navigator, 'clipboard').value({ writeText });
+                Events.toast.subscribe(onToast);
+            });
+
+            afterEach(() => {
+                Events.toast.unsubscribe(onToast);
+            });
+
+            it('should copy a single URL to clipboard for one selected placeholder', async function () {
+                await element.handleCopyPlaceholderLinks(['key-a']);
+                expect(writeText.calledOnceWithExactly(`${baseUrl}&search=key-a`)).to.be.true;
+                expect(toasts[0].variant).to.equal('positive');
+            });
+
+            it('should copy newline-separated URLs for multiple selected placeholders', async function () {
+                await element.handleCopyPlaceholderLinks(['key-a', 'key-b']);
+                expect(writeText.calledOnceWithExactly(`${baseUrl}&search=key-a\n${baseUrl}&search=key-b`)).to.be.true;
+            });
+
+            it('should not write to clipboard when path is missing', async function () {
+                Store.search.set({});
+                await element.handleCopyPlaceholderLinks(['key-a']);
+                expect(writeText.called).to.be.false;
+                expect(toasts[0].variant).to.equal('negative');
+            });
+
+            it('should show negative toast on clipboard write failure', async function () {
+                writeText.rejects(new Error('denied'));
+                await element.handleCopyPlaceholderLinks(['key-a']);
+                expect(toasts[0].variant).to.equal('negative');
+            });
         });
     });
 });

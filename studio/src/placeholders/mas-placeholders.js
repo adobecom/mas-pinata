@@ -56,6 +56,7 @@ class MasPlaceholders extends LitElement {
         this.toggleCreationModal = this.toggleCreationModal.bind(this);
         this.onDeleted = this.onDeleted.bind(this);
         this.onBulkDelete = this.onBulkDelete.bind(this);
+        this.handleCopyPlaceholderLinks = this.handleCopyPlaceholderLinks.bind(this);
         this.updatePending = this.updatePending.bind(this);
     }
 
@@ -273,6 +274,32 @@ class MasPlaceholders extends LitElement {
         this.handleSelectionPanelClose();
     }
 
+    /** @param {string[]} keys selected placeholder keys */
+    async handleCopyPlaceholderLinks(keys) {
+        const { path } = Store.search.get();
+        const locale = Store.localeOrRegion();
+        if (!path || !locale) {
+            showToast('Failed to copy placeholder links', 'negative');
+            return;
+        }
+        const links = keys.map((key) => {
+            const params = new URLSearchParams({
+                'content-type': 'placeholder',
+                page: 'placeholders',
+                path,
+                locale,
+                search: key,
+            });
+            return `${window.location.origin}/studio.html#${params}`;
+        });
+        try {
+            await navigator.clipboard.writeText(links.join('\n'));
+            showToast('Copied!', 'positive');
+        } catch {
+            showToast('Failed to copy to clipboard', 'negative');
+        }
+    }
+
     handleSelectionPanelClose() {
         Store.placeholders.selection.set([]);
         this.refresh();
@@ -349,6 +376,7 @@ class MasPlaceholders extends LitElement {
                 ?open=${this.selection.length > 0}
                 .selectionStore=${Store.placeholders.selection}
                 .onDelete=${this.onBulkDelete}
+                .onCopyStudioLinks=${this.handleCopyPlaceholderLinks}
                 @close=${this.handleSelectionPanelClose}
             ></mas-selection-panel>
         `;
