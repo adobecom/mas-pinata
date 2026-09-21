@@ -27,7 +27,7 @@ describe('mas-placeholders-item onCopyCode', () => {
     it('shows "Copied 1 link" when the clipboard write succeeds', async () => {
         writeTextStub.resolves();
         await element.onCopyCode({ stopPropagation: () => {} });
-        expect(toastStub.calledOnceWith({ variant: 'positive', content: 'Copied 1 link' })).to.be.true;
+        expect(toastStub.calledOnceWith({ variant: 'positive', content: 'Copied 1 link', timeout: 3000 })).to.be.true;
     });
 
     it('shows the failure toast when the clipboard write fails', async () => {

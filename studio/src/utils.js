@@ -425,11 +425,13 @@ export function previewValue(values) {
  * Helper method to show toast messages with consistent formatting
  * @param {string} message - The message to display
  * @param {string} variant - The toast variant (positive, negative, info)
+ * @param {number} [timeout] - Display duration in ms; omitted to use the default
  */
-export function showToast(message, variant = 'info') {
+export function showToast(message, variant = 'info', timeout = undefined) {
     Events.toast.emit({
         variant,
         content: message,
+        ...(timeout !== undefined && { timeout }),
     });
 }
 

@@ -173,7 +173,7 @@ runTests(async () => {
             it('should show the copied link count when the clipboard write succeeds', async function () {
                 sinon.stub(navigator.clipboard, 'writeText').resolves();
                 await element.onCopyCode();
-                expect(toastStub.calledOnceWith({ variant: 'positive', content: 'Copied 2 links' })).to.be.true;
+                expect(toastStub.calledOnceWith({ variant: 'positive', content: 'Copied 2 links', timeout: 3000 })).to.be.true;
             });
 
             it('should show the failure toast when the clipboard write fails', async function () {

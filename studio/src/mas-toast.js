@@ -1,6 +1,8 @@
 import { LitElement, html, css } from 'lit';
 import Events from './events.js';
 
+const DEFAULT_TIMEOUT = 6000;
+
 class MasToast extends LitElement {
     static styles = css`
         :host {
@@ -25,17 +27,19 @@ class MasToast extends LitElement {
         Events.toast.unsubscribe(this.show);
     }
 
-    show({ variant, content }) {
+    show({ variant, content, timeout }) {
         const toast = this.shadowRoot.querySelector('sp-toast');
         if (toast) {
             toast.textContent = content;
             toast.variant = variant;
+            // The element is reused, so reset to the default when no timeout is given.
+            toast.timeout = timeout ?? DEFAULT_TIMEOUT;
             toast.open = true;
         }
     }
 
     render() {
-        return html`<sp-toast timeout="6000"></sp-toast>`;
+        return html`<sp-toast timeout=${DEFAULT_TIMEOUT}></sp-toast>`;
     }
 }
 

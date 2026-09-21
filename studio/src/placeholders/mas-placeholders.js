@@ -293,7 +293,7 @@ class MasPlaceholders extends LitElement {
         }
         try {
             await navigator.clipboard.writeText(text);
-            showToast(`Copied ${count} links`, 'positive');
+            showToast(`Copied ${count} links`, 'positive', 3000);
         } catch {
             showToast('Failed to copy to clipboard', 'negative');
         }
