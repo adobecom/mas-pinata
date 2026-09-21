@@ -9,7 +9,7 @@ import Events from '../events.js';
 import { MasRepository } from '../mas-repository.js';
 import { removeFromIndexFragment } from './mas-placeholders-repository.js';
 import '../mas-selection-panel.js';
-import { showToast } from '../utils.js';
+import { buildPlaceholderCopyUrl, showToast } from '../utils.js';
 import { confirmation } from '../mas-confirm-dialog.js';
 import { FragmentStore } from '../reactivity/fragment-store.js';
 import { clearCaches } from '../../libs/fragment-client.js';
@@ -56,6 +56,7 @@ class MasPlaceholders extends LitElement {
         this.toggleCreationModal = this.toggleCreationModal.bind(this);
         this.onDeleted = this.onDeleted.bind(this);
         this.onBulkDelete = this.onBulkDelete.bind(this);
+        this.onCopyCode = this.onCopyCode.bind(this);
         this.updatePending = this.updatePending.bind(this);
     }
 
@@ -273,6 +274,19 @@ class MasPlaceholders extends LitElement {
         this.handleSelectionPanelClose();
     }
 
+    async onCopyCode(keys) {
+        const { path } = Store.search.get();
+        const locale = Store.localeOrRegion();
+        const urls = keys.map((key) => buildPlaceholderCopyUrl(key, path, locale));
+        try {
+            await navigator.clipboard.writeText(urls.join('\n'));
+            return true;
+        } catch {
+            showToast('Failed to copy', 'negative');
+            return false;
+        }
+    }
+
     handleSelectionPanelClose() {
         Store.placeholders.selection.set([]);
         this.refresh();
@@ -349,6 +363,7 @@ class MasPlaceholders extends LitElement {
                 ?open=${this.selection.length > 0}
                 .selectionStore=${Store.placeholders.selection}
                 .onDelete=${this.onBulkDelete}
+                .onCopyCode=${this.onCopyCode}
                 @close=${this.handleSelectionPanelClose}
             ></mas-selection-panel>
         `;

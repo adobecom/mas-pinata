@@ -1,6 +1,7 @@
 import { expect } from '@open-wc/testing';
 import {
     buildCardsDeepLink,
+    buildPlaceholderCopyUrl,
     generateCodeToUse,
     generateFieldLink,
     getFragmentPartsToUse,
@@ -662,5 +663,18 @@ describe('getCreateProjectErrorMessage', () => {
 
     it('returns the generic message when error is undefined', () => {
         expect(getCreateProjectErrorMessage(undefined)).to.equal('Failed to create project.');
+    });
+});
+
+describe('buildPlaceholderCopyUrl', () => {
+    it('builds the placeholders search hash url', () => {
+        expect(buildPlaceholderCopyUrl('my-key', '/content/acom', 'en_US')).to.equal(
+            'studio.html#content-type=placeholder&page=placeholders&path=%2Fcontent%2Facom&locale=en_US&search=my-key',
+        );
+    });
+
+    it('percent-encodes special characters', () => {
+        const url = buildPlaceholderCopyUrl('key with spaces&more', '/path', 'fr_FR');
+        expect(url).to.include('search=key%20with%20spaces%26more');
     });
 });

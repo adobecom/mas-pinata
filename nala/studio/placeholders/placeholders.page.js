@@ -22,6 +22,8 @@ export default class PlaceholdersPage {
             action: page.locator('sp-table-head-cell:has-text("Action")'),
         };
 
+        this.copyCodeButton = page.locator('mas-selection-panel sp-action-button[label="Copy Code"]');
+
         // Table rows
         this.placeholderRows = page.locator('mas-placeholders-item');
         this.tableRows = page.locator('sp-table-row');

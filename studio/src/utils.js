@@ -298,6 +298,17 @@ export function buildCardsDeepLink(fragment, path, page = 'content') {
 }
 
 /**
+ * Studio link that opens the placeholders page filtered on a single placeholder key
+ * @param {string} key placeholder key
+ * @param {string} path surface path
+ * @param {string} locale locale or region
+ * @returns {string}
+ */
+export function buildPlaceholderCopyUrl(key, path, locale) {
+    return `studio.html#content-type=placeholder&page=placeholders&path=${encodeURIComponent(path)}&locale=${encodeURIComponent(locale)}&search=${encodeURIComponent(key)}`;
+}
+
+/**
  * Parses pasted multi-line URLs
  * @param {string} text
  * @returns {{ contentType: string, fragmentId: string }[]}

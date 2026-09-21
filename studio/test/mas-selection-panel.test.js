@@ -265,4 +265,46 @@ describe('MasSelectionPanel', () => {
             expect(buttons.some((b) => b.getAttribute('label') === 'Copy Code')).to.be.true;
         });
     });
+
+    describe('onCopyCode', () => {
+        it('delegates to onCopyCode with the selection and skips the fragment path', async () => {
+            const onCopyCode = sandbox.stub().resolves(true);
+            const el = await createPanel(['key-a']);
+            el.onCopyCode = onCopyCode;
+            const fragmentsSpy = sandbox.spy(Store.fragments.list.data, 'get');
+
+            await el.handleCopyCode();
+
+            expect(onCopyCode.calledOnceWith(['key-a'])).to.be.true;
+            expect(fragmentsSpy.called).to.be.false;
+        });
+
+        it('shows Copied then reverts to Copy Code', async () => {
+            const clock = sandbox.useFakeTimers({ toFake: ['setTimeout'] });
+            const el = await createPanel(['key-a']);
+            el.onCopyCode = sandbox.stub().resolves(true);
+
+            await el.handleCopyCode();
+            expect(el.copyCodeLabel).to.equal('Copied');
+
+            clock.tick(2000);
+            expect(el.copyCodeLabel).to.equal('Copy Code');
+        });
+
+        it('keeps the label when the copy fails', async () => {
+            const el = await createPanel(['key-a']);
+            el.onCopyCode = sandbox.stub().resolves(false);
+
+            await el.handleCopyCode();
+            expect(el.copyCodeLabel).to.equal('Copy Code');
+        });
+
+        it('falls back to the fragment path without onCopyCode', async () => {
+            const el = await createPanel([]);
+            const spy = sandbox.spy(el, 'handleCopyFragmentUrls');
+
+            await el.handleCopyCode();
+            expect(spy.calledOnce).to.be.true;
+        });
+    });
 });
