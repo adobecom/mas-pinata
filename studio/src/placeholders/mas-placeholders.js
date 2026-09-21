@@ -439,6 +439,7 @@ class MasPlaceholders extends LitElement {
                                           .toggleEditing=${this.toggleEditing}
                                           .toggleDropdown=${this.toggleDropdown}
                                           .updatePending=${this.updatePending}
+                                          .onCopyCode=${(key) => this.onCopyCode([key])}
                                       ></mas-placeholders-item>
                                   `;
                               },
