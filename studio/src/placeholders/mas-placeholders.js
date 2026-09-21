@@ -56,6 +56,7 @@ class MasPlaceholders extends LitElement {
         this.toggleCreationModal = this.toggleCreationModal.bind(this);
         this.onDeleted = this.onDeleted.bind(this);
         this.onBulkDelete = this.onBulkDelete.bind(this);
+        this.handleCopyPlaceholderUrls = this.handleCopyPlaceholderUrls.bind(this);
         this.updatePending = this.updatePending.bind(this);
     }
 
@@ -273,6 +274,28 @@ class MasPlaceholders extends LitElement {
         this.handleSelectionPanelClose();
     }
 
+    async handleCopyPlaceholderUrls(keys = this.selection) {
+        const path = Store.search.get().path;
+        const locale = Store.localeOrRegion();
+        const selectedKeys = keys.map((item) => (typeof item === 'string' ? item : item?.get?.().key));
+        const base = `${window.location.origin}${window.location.pathname}`;
+        const urls = this.placeholders
+            .map((placeholderStore) => placeholderStore.get())
+            .filter((placeholder) => selectedKeys.includes(placeholder.key))
+            .map(
+                (placeholder) =>
+                    `${base}#content-type=placeholder&page=placeholders&path=${encodeURIComponent(path)}&locale=${encodeURIComponent(locale)}&search=${encodeURIComponent(placeholder.key)}`,
+            );
+        if (urls.length === 0) return;
+
+        try {
+            await navigator.clipboard.writeText(urls.join('\n'));
+            showToast(`Copied ${urls.length} placeholder link${urls.length > 1 ? 's' : ''} to clipboard`, 'positive');
+        } catch {
+            showToast('Failed to copy links to clipboard', 'negative');
+        }
+    }
+
     handleSelectionPanelClose() {
         Store.placeholders.selection.set([]);
         this.refresh();
@@ -349,6 +372,7 @@ class MasPlaceholders extends LitElement {
                 ?open=${this.selection.length > 0}
                 .selectionStore=${Store.placeholders.selection}
                 .onDelete=${this.onBulkDelete}
+                .onCopyCode=${this.handleCopyPlaceholderUrls}
                 @close=${this.handleSelectionPanelClose}
             ></mas-selection-panel>
         `;

@@ -122,4 +122,41 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
             expect(rowCount).toBeGreaterThan(1); // Should show more than just the test placeholder
         });
     });
+
+    // Tests 3-4: @studio-placeholders-copy-code(-bulk) - Copy Code copies studio links for selected placeholders
+    [3, 4].forEach((index) => {
+        test(`${features[index].name},${features[index].tags}`, async ({ page, baseURL, context }) => {
+            const { data } = features[index];
+            const testPage = `${baseURL}${features[index].path}${miloLibs}${features[index].browserParams}`;
+            setTestPage(testPage);
+            await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+            await test.step('step-1: Navigate to placeholders page', async () => {
+                await page.goto(testPage);
+                await page.waitForLoadState('domcontentloaded');
+                await placeholders.waitForTableToLoad();
+            });
+
+            const keys = [];
+            await test.step('step-2: Select placeholder rows', async () => {
+                for (let i = 0; i < data.count; i++) {
+                    keys.push((await placeholders.getPlaceholderRowData(i)).key.trim());
+                    await placeholders.selectPlaceholderRow(i);
+                }
+                await expect(placeholders.copyCodeButton).toBeVisible();
+            });
+
+            await test.step('step-3: Click Copy Code and validate toast and clipboard', async () => {
+                await placeholders.copyCodeButton.click();
+                await expect(placeholders.toastPositive).toBeVisible();
+                const urls = (await page.evaluate(() => navigator.clipboard.readText())).split('\n');
+                expect(urls).toHaveLength(data.count);
+                for (const key of keys) {
+                    const url = urls.find((u) => u.endsWith(`&search=${encodeURIComponent(key)}`));
+                    expect(url).toBeTruthy();
+                    expect(url).toContain('#content-type=placeholder&page=placeholders&path=nala&locale=en_US');
+                }
+            });
+        });
+    });
 });

@@ -32,6 +32,7 @@ export default class PlaceholdersPage {
 
         // Selection panel
         this.selectionPanel = page.locator('mas-selection-panel');
+        this.copyCodeButton = this.selectionPanel.locator('sp-action-button[label="Copy Code"]');
 
         // Loading indicator
         this.progressBar = page.locator('sp-progress-bar');
@@ -45,6 +46,10 @@ export default class PlaceholdersPage {
     // Helper methods
     async getPlaceholderByKey(key) {
         return this.page.locator(`sp-table-row[value="${key}"]`);
+    }
+
+    async selectPlaceholderRow(index) {
+        await this.placeholderRows.nth(index).locator('sp-table-checkbox-cell').click();
     }
 
     async searchPlaceholder(searchTerm) {

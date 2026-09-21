@@ -26,6 +26,7 @@ class MasSelectionPanel extends LitElement {
         onUnpublish: { type: Function, attribute: false },
         onCopyToFolder: { type: Function, attribute: false },
         onCopyStudioLinks: { type: Function, attribute: false },
+        onCopyCode: { type: Function, attribute: false },
     };
 
     constructor() {
@@ -40,6 +41,7 @@ class MasSelectionPanel extends LitElement {
         this.onUnpublish = null;
         this.onCopyToFolder = null;
         this.onCopyStudioLinks = null;
+        this.onCopyCode = null;
 
         this.close = this.close.bind(this);
     }
@@ -132,7 +134,8 @@ class MasSelectionPanel extends LitElement {
         this.onCopyStudioLinks?.(this.selection, event);
     }
 
-    async handleCopyFragmentUrls() {
+    async handleCopyFragmentUrls(event) {
+        if (this.onCopyCode) return this.onCopyCode(this.selection, event);
         const selection = this.selection;
         if (!selection || selection.length === 0) return;
 

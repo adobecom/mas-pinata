@@ -12,6 +12,7 @@ import '../../src/mas-repository.js';
 import '../../src/rte/rte-field.js';
 import '../../src/mas-fragment-status.js';
 import { PAGE_NAMES } from '../../src/constants.js';
+import Events from '../../src/events.js';
 
 runTests(async () => {
     describe('mas-placeholders component - UI Tests', () => {
@@ -155,6 +156,36 @@ runTests(async () => {
             element.onSave();
             await elementUpdated(element);
             expect(refreshSpy.calledOnce).to.be.true;
+        });
+
+        describe('Copy Code', () => {
+            let writeStub;
+            let toastSpy;
+            const fakeStore = (key) => ({ get: () => ({ key }) });
+            const expectedUrl = (key) =>
+                `${window.location.origin}${window.location.pathname}#content-type=placeholder&page=placeholders&path=test-folder&locale=en_US&search=${key}`;
+
+            beforeEach(() => {
+                writeStub = sinon.stub(navigator.clipboard, 'writeText').resolves();
+                toastSpy = sinon.spy(Events.toast, 'emit');
+                Store.placeholders.list.data.set([fakeStore('alpha'), fakeStore('beta')]);
+            });
+
+            it('copies one URL for a single selected placeholder and shows a toast', async function () {
+                await element.handleCopyPlaceholderUrls(['alpha']);
+                expect(writeStub.calledOnceWith(expectedUrl('alpha'))).to.be.true;
+                expect(toastSpy.calledWithMatch({ variant: 'positive' })).to.be.true;
+            });
+
+            it('copies newline-separated URLs in a single write for multiple placeholders', async function () {
+                await element.handleCopyPlaceholderUrls(['alpha', 'beta']);
+                expect(writeStub.calledOnceWith(`${expectedUrl('alpha')}\n${expectedUrl('beta')}`)).to.be.true;
+            });
+
+            it('skips selected keys that have no matching placeholder', async function () {
+                await element.handleCopyPlaceholderUrls(['alpha', 'missing']);
+                expect(writeStub.calledOnceWith(expectedUrl('alpha'))).to.be.true;
+            });
         });
     });
 });
