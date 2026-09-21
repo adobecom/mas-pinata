@@ -12,6 +12,7 @@ import '../../src/mas-repository.js';
 import '../../src/rte/rte-field.js';
 import '../../src/mas-fragment-status.js';
 import { PAGE_NAMES } from '../../src/constants.js';
+import Events from '../../src/events.js';
 
 runTests(async () => {
     describe('mas-placeholders component - UI Tests', () => {
@@ -155,6 +156,31 @@ runTests(async () => {
             element.onSave();
             await elementUpdated(element);
             expect(refreshSpy.calledOnce).to.be.true;
+        });
+
+        describe('onCopyCode', function () {
+            let writeTextStub;
+            let toastStub;
+
+            beforeEach(function () {
+                writeTextStub = sinon.stub(navigator.clipboard, 'writeText').resolves();
+                toastStub = sinon.stub(Events.toast, 'emit');
+            });
+
+            it('should show a single-link toast for one selected placeholder', async function () {
+                const copied = await element.onCopyCode(['key-1']);
+
+                expect(copied).to.be.true;
+                expect(writeTextStub.calledOnce).to.be.true;
+                expect(toastStub.calledWith({ variant: 'positive', content: 'Copied 1 link' })).to.be.true;
+            });
+
+            it('should show a bulk toast for multiple selected placeholders', async function () {
+                const copied = await element.onCopyCode(['key-1', 'key-2', 'key-3']);
+
+                expect(copied).to.be.true;
+                expect(toastStub.calledWith({ variant: 'positive', content: 'Copied 3 links' })).to.be.true;
+            });
         });
     });
 });

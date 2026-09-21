@@ -280,6 +280,7 @@ class MasPlaceholders extends LitElement {
         const urls = keys.map((key) => buildPlaceholderCopyUrl(key, path, locale));
         try {
             await navigator.clipboard.writeText(urls.join('\n'));
+            showToast(urls.length === 1 ? 'Copied 1 link' : `Copied ${urls.length} links`, 'positive');
             return true;
         } catch {
             showToast('Failed to copy', 'negative');
