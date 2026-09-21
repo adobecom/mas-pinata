@@ -5,6 +5,7 @@ import { elementUpdated } from '@open-wc/testing-helpers';
 
 // Import Store first - component imports it directly
 import Store from '../../src/store.js';
+import Events from '../../src/events.js';
 // Import the component being tested
 import '../../src/placeholders/mas-placeholders.js';
 // Import necessary dependencies potentially used by the component or tests
@@ -155,6 +156,31 @@ runTests(async () => {
             element.onSave();
             await elementUpdated(element);
             expect(refreshSpy.calledOnce).to.be.true;
+        });
+
+        describe('onCopyCode', () => {
+            let toastStub;
+
+            beforeEach(() => {
+                // showToast is an ES module export and cannot be stubbed; it delegates to Events.toast.emit.
+                toastStub = sinon.stub(Events.toast, 'emit');
+                // Getters are stubbed so the fake stores never reach the render pipeline.
+                const stores = ['key-a', 'key-b'].map((key) => ({ get: () => ({ key, locale: 'en_US' }) }));
+                sinon.stub(element, 'placeholders').get(() => stores);
+                sinon.stub(element, 'selection').get(() => ['key-a', 'key-b']);
+            });
+
+            it('should show the copied link count when the clipboard write succeeds', async function () {
+                sinon.stub(navigator.clipboard, 'writeText').resolves();
+                await element.onCopyCode();
+                expect(toastStub.calledOnceWith({ variant: 'positive', content: 'Copied 2 links' })).to.be.true;
+            });
+
+            it('should show the failure toast when the clipboard write fails', async function () {
+                sinon.stub(navigator.clipboard, 'writeText').rejects(new Error('denied'));
+                await element.onCopyCode();
+                expect(toastStub.calledOnceWith({ variant: 'negative', content: 'Failed to copy to clipboard' })).to.be.true;
+            });
         });
     });
 });

@@ -279,12 +279,13 @@ class MasPlaceholders extends LitElement {
         if (keys.length === 0) return;
 
         const path = Store.search.get().path;
-        const text = this.placeholders
+        const urls = this.placeholders
             .map((placeholderStore) => placeholderStore.get())
             .filter((placeholder) => keys.includes(placeholder.key))
             .map((placeholder) => buildPlaceholderUrl({ key: placeholder.key, path, locale: placeholder.locale }))
-            .filter(Boolean)
-            .join('\n');
+            .filter(Boolean);
+        const count = urls.length;
+        const text = urls.join('\n');
 
         if (!text) {
             showToast('Failed to copy to clipboard', 'negative');
@@ -292,7 +293,7 @@ class MasPlaceholders extends LitElement {
         }
         try {
             await navigator.clipboard.writeText(text);
-            showToast('Code copied to clipboard', 'positive');
+            showToast(`Copied ${count} links`, 'positive');
         } catch {
             showToast('Failed to copy to clipboard', 'negative');
         }

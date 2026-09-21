@@ -146,7 +146,7 @@ class MasPlaceholdersItem extends LitElement {
         }
         try {
             await navigator.clipboard.writeText(url);
-            showToast('Code copied to clipboard', 'positive');
+            showToast('Copied 1 link', 'positive');
         } catch {
             showToast('Failed to copy to clipboard', 'negative');
         }
