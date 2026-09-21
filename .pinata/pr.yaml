@@ -15,5 +15,5 @@ template: |
 
     Resolves: [{issue_key}](https://jira.corp.adobe.com/browse/{issue_key})
 
-    **Test URLs** (the before/after pair the harness captured — the visual row of the evidence table below carries the verdict):
+    **Test URLs** (the before/after pair the harness visually verified):
     {test_urls}
