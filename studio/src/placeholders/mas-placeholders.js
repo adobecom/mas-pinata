@@ -9,7 +9,7 @@ import Events from '../events.js';
 import { MasRepository } from '../mas-repository.js';
 import { removeFromIndexFragment } from './mas-placeholders-repository.js';
 import '../mas-selection-panel.js';
-import { showToast } from '../utils.js';
+import { showToast, buildPlaceholderUrl } from '../utils.js';
 import { confirmation } from '../mas-confirm-dialog.js';
 import { FragmentStore } from '../reactivity/fragment-store.js';
 import { clearCaches } from '../../libs/fragment-client.js';
@@ -56,6 +56,7 @@ class MasPlaceholders extends LitElement {
         this.toggleCreationModal = this.toggleCreationModal.bind(this);
         this.onDeleted = this.onDeleted.bind(this);
         this.onBulkDelete = this.onBulkDelete.bind(this);
+        this.onCopyCode = this.onCopyCode.bind(this);
         this.updatePending = this.updatePending.bind(this);
     }
 
@@ -273,6 +274,30 @@ class MasPlaceholders extends LitElement {
         this.handleSelectionPanelClose();
     }
 
+    async onCopyCode() {
+        const keys = this.selection;
+        if (keys.length === 0) return;
+
+        const path = Store.search.get().path;
+        const text = this.placeholders
+            .map((placeholderStore) => placeholderStore.get())
+            .filter((placeholder) => keys.includes(placeholder.key))
+            .map((placeholder) => buildPlaceholderUrl({ key: placeholder.key, path, locale: placeholder.locale }))
+            .filter(Boolean)
+            .join('\n');
+
+        if (!text) {
+            showToast('Failed to copy to clipboard', 'negative');
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast('Code copied to clipboard', 'positive');
+        } catch {
+            showToast('Failed to copy to clipboard', 'negative');
+        }
+    }
+
     handleSelectionPanelClose() {
         Store.placeholders.selection.set([]);
         this.refresh();
@@ -349,6 +374,7 @@ class MasPlaceholders extends LitElement {
                 ?open=${this.selection.length > 0}
                 .selectionStore=${Store.placeholders.selection}
                 .onDelete=${this.onBulkDelete}
+                .onCopyCode=${this.onCopyCode}
                 @close=${this.handleSelectionPanelClose}
             ></mas-selection-panel>
         `;

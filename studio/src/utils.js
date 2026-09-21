@@ -285,6 +285,23 @@ function buildStudioFragmentHref({ webComponentName, fragmentId, page, path, fie
 }
 
 /**
+ * Deep link to a placeholder in the placeholders page, searching for its key.
+ * Bulk copies join these with newlines.
+ * @param {{ key: string, path: string, locale: string }} placeholder path is the surface path
+ * @returns {string | null}
+ */
+export function buildPlaceholderUrl({ key, path, locale }) {
+    if (!key || !locale) return null;
+    const params = new URLSearchParams();
+    params.set('content-type', 'placeholder');
+    params.set('page', 'placeholders');
+    if (path) params.set('path', path);
+    params.set('locale', locale);
+    params.set('search', key);
+    return `https://mas.adobe.com/studio.html#${params.toString()}`;
+}
+
+/**
  * Cards deep link for a merch card or merch-card-collection
  * @param {{ id: string, model?: { path?: string } }} fragment
  * @param {string} [path] surface path

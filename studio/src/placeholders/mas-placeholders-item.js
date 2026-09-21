@@ -5,7 +5,7 @@ import ReactiveController from '../reactivity/reactive-controller.js';
 import { MasRepository } from '../mas-repository.js';
 import { removeFromIndexFragment, publishPlaceholder } from './mas-placeholders-repository.js';
 import { confirmation } from '../mas-confirm-dialog.js';
-import { showToast } from '../utils.js';
+import { showToast, buildPlaceholderUrl } from '../utils.js';
 import { FragmentStore } from '../reactivity/fragment-store.js';
 import { Placeholder } from '../aem/placeholder.js';
 import '../rte/rte-field.js';
@@ -134,6 +134,22 @@ class MasPlaceholdersItem extends LitElement {
 
     preventSelection(event) {
         event.stopPropagation();
+    }
+
+    async onCopyCode(event) {
+        event.stopPropagation();
+        const { key, locale } = this.placeholder;
+        const url = buildPlaceholderUrl({ key, path: Store.search.get().path, locale });
+        if (!url) {
+            showToast('Failed to copy to clipboard', 'negative');
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast('Code copied to clipboard', 'positive');
+        } catch {
+            showToast('Failed to copy to clipboard', 'negative');
+        }
     }
 
     // #endregion
@@ -277,6 +293,14 @@ class MasPlaceholdersItem extends LitElement {
                         ?disabled=${this.disabled}
                     >
                         <sp-icon-edit size="m"></sp-icon-edit>
+                    </button>
+                    <button
+                        class="action-button copy-code-button"
+                        @click=${this.onCopyCode}
+                        aria-label="Copy code"
+                        ?disabled=${this.disabled}
+                    >
+                        <sp-icon-code size="m"></sp-icon-code>
                     </button>
                     <div class="dropdown-menu-container">
                         <button

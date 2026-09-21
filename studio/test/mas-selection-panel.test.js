@@ -247,6 +247,15 @@ describe('MasSelectionPanel', () => {
             expect(buttons.some((b) => b.getAttribute('label') === 'Copy Code')).to.be.true;
         });
 
+        it('delegates to onCopyCode when provided', async () => {
+            const onCopyCode = sandbox.stub();
+            const el = await createPanel([makeFragmentStore(makeCardFragment('uuid-1'))]);
+            el.onCopyCode = onCopyCode;
+            await el.handleCopyFragmentUrls();
+
+            expect(onCopyCode.calledOnce).to.be.true;
+        });
+
         it('does not show Copy URLs button when nothing is selected', async () => {
             const el = await createPanel([]);
             await el.updateComplete;
