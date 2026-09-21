@@ -70,6 +70,30 @@ describe('MasSelectionPanel', () => {
         return fixture(html`<mas-selection-panel open .selectionStore=${selectionStore}></mas-selection-panel>`);
     }
 
+    describe('Copy Code button dispatch', () => {
+        it('calls onCopyCode when provided instead of handleCopyFragmentUrls', async () => {
+            const onCopyCode = sandbox.stub();
+            const el = await createPanel(['key-1']);
+            el.onCopyCode = onCopyCode;
+            const fallback = sandbox.stub(el, 'handleCopyFragmentUrls');
+            await el.updateComplete;
+
+            el.shadowRoot.querySelector('sp-action-button[label="Copy Code"]').click();
+
+            expect(onCopyCode.calledOnceWith(['key-1'])).to.be.true;
+            expect(fallback.called).to.be.false;
+        });
+
+        it('falls back to handleCopyFragmentUrls when onCopyCode is not provided', async () => {
+            const el = await createPanel(['key-1']);
+            const fallback = sandbox.stub(el, 'handleCopyFragmentUrls');
+
+            el.shadowRoot.querySelector('sp-action-button[label="Copy Code"]').click();
+
+            expect(fallback.calledOnce).to.be.true;
+        });
+    });
+
     describe('handleCopyFragmentUrls', () => {
         let clipboardStub;
         let originalClipboardItem;

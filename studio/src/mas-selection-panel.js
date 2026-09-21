@@ -26,6 +26,7 @@ class MasSelectionPanel extends LitElement {
         onUnpublish: { type: Function, attribute: false },
         onCopyToFolder: { type: Function, attribute: false },
         onCopyStudioLinks: { type: Function, attribute: false },
+        onCopyCode: { type: Function, attribute: false },
     };
 
     constructor() {
@@ -40,6 +41,7 @@ class MasSelectionPanel extends LitElement {
         this.onUnpublish = null;
         this.onCopyToFolder = null;
         this.onCopyStudioLinks = null;
+        this.onCopyCode = null;
 
         this.close = this.close.bind(this);
     }
@@ -130,6 +132,11 @@ class MasSelectionPanel extends LitElement {
 
     handleCopyStudioLinks(event) {
         this.onCopyStudioLinks?.(this.selection, event);
+    }
+
+    handleCopyCode() {
+        if (typeof this.onCopyCode === 'function') return this.onCopyCode(this.selection);
+        return this.handleCopyFragmentUrls();
     }
 
     async handleCopyFragmentUrls() {
@@ -225,7 +232,7 @@ class MasSelectionPanel extends LitElement {
                   </sp-action-button>`
                 : nothing}
             ${count > 0
-                ? html`<sp-action-button slot="buttons" label="Copy Code" @click=${this.handleCopyFragmentUrls}>
+                ? html`<sp-action-button slot="buttons" label="Copy Code" @click=${this.handleCopyCode}>
                       <sp-icon-code slot="icon"></sp-icon-code>
                       <sp-tooltip self-managed placement="top">Copy Code</sp-tooltip>
                   </sp-action-button>`

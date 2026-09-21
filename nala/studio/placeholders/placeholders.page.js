@@ -32,6 +32,7 @@ export default class PlaceholdersPage {
 
         // Selection panel
         this.selectionPanel = page.locator('mas-selection-panel');
+        this.copyCodeButton = page.locator('mas-selection-panel sp-action-button[label="Copy Code"]');
 
         // Loading indicator
         this.progressBar = page.locator('sp-progress-bar');

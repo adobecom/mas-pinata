@@ -56,6 +56,7 @@ class MasPlaceholders extends LitElement {
         this.toggleCreationModal = this.toggleCreationModal.bind(this);
         this.onDeleted = this.onDeleted.bind(this);
         this.onBulkDelete = this.onBulkDelete.bind(this);
+        this.handleCopyPlaceholderUrls = this.handleCopyPlaceholderUrls.bind(this);
         this.updatePending = this.updatePending.bind(this);
     }
 
@@ -273,6 +274,33 @@ class MasPlaceholders extends LitElement {
         this.handleSelectionPanelClose();
     }
 
+    async handleCopyPlaceholderUrls(keys = this.selection) {
+        const selected = this.placeholders
+            .map((placeholderStore) => placeholderStore.get())
+            .filter((placeholder) => keys.includes(placeholder.key));
+        if (selected.length === 0) return;
+
+        const path = Store.search.get().path;
+        const locale = Store.filters.get().locale;
+        const urls = selected.map((placeholder) => {
+            const params = new URLSearchParams({
+                'content-type': 'placeholder',
+                page: 'placeholders',
+                path,
+                locale,
+                search: placeholder.key,
+            });
+            return `${window.location.origin}${window.location.pathname}#${params.toString()}`;
+        });
+
+        try {
+            await navigator.clipboard.writeText(urls.join('\n'));
+            showToast(`Copied ${urls.length} placeholder link${urls.length > 1 ? 's' : ''} to clipboard`, 'positive');
+        } catch {
+            showToast('Failed to copy code to clipboard', 'negative');
+        }
+    }
+
     handleSelectionPanelClose() {
         Store.placeholders.selection.set([]);
         this.refresh();
@@ -349,6 +377,7 @@ class MasPlaceholders extends LitElement {
                 ?open=${this.selection.length > 0}
                 .selectionStore=${Store.placeholders.selection}
                 .onDelete=${this.onBulkDelete}
+                .onCopyCode=${this.handleCopyPlaceholderUrls}
                 @close=${this.handleSelectionPanelClose}
             ></mas-selection-panel>
         `;
