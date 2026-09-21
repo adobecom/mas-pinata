@@ -5,6 +5,7 @@ import { elementUpdated } from '@open-wc/testing-helpers';
 
 // Import Store first - component imports it directly
 import Store from '../../src/store.js';
+import Events from '../../src/events.js';
 // Import the component being tested
 import '../../src/placeholders/mas-placeholders.js';
 // Import necessary dependencies potentially used by the component or tests
@@ -155,6 +156,62 @@ runTests(async () => {
             element.onSave();
             await elementUpdated(element);
             expect(refreshSpy.calledOnce).to.be.true;
+        });
+    });
+
+    describe('mas-placeholders copy code', () => {
+        let element;
+        let writeStub;
+        let toastStub;
+
+        const readBlobs = async () => {
+            const [item] = writeStub.firstCall.args[0];
+            const plain = await (await item.getType('text/plain')).text();
+            const htmlText = await (await item.getType('text/html')).text();
+            return { plain, htmlText };
+        };
+
+        beforeEach(async () => {
+            Store.search.set({ path: 'test-folder' });
+            Store.filters.set({ locale: 'en_US' });
+            Store.placeholders.list.data.set(['alpha', 'beta'].map((key) => ({ get: () => ({ key }) })));
+            writeStub = sinon.stub(navigator.clipboard, 'write').resolves();
+            toastStub = sinon.stub(Events.toast, 'emit');
+            element = document.createElement('mas-placeholders');
+        });
+
+        afterEach(() => sinon.restore());
+
+        it('copies one deep link and shows a positive toast', async () => {
+            await element.handleCopyPlaceholderUrls(['alpha']);
+            const { plain } = await readBlobs();
+            expect(plain).to.match(/#content-type=placeholder&page=placeholders&path=test-folder&locale=en_US&search=alpha$/);
+            expect(toastStub.calledWithMatch({ variant: 'positive' })).to.be.true;
+        });
+
+        it('copies newline-separated links for multiple selections', async () => {
+            await element.handleCopyPlaceholderUrls(['alpha', 'beta']);
+            const { plain, htmlText } = await readBlobs();
+            expect(plain.split('\n')).to.have.length(2);
+            expect(htmlText.split('<br>')).to.have.length(2);
+        });
+
+        it('emits a negative toast when the clipboard write fails', async () => {
+            writeStub.rejects(new Error('denied'));
+            await element.handleCopyPlaceholderUrls(['alpha']);
+            expect(toastStub.calledWithMatch({ variant: 'negative' })).to.be.true;
+            expect(toastStub.calledWithMatch({ variant: 'positive' })).to.be.false;
+        });
+
+        it('skips keys that are not in the list', async () => {
+            await element.handleCopyPlaceholderUrls(['missing', 'beta']);
+            const { plain } = await readBlobs();
+            expect(plain.split('\n')).to.have.length(1);
+            expect(plain).to.include('search=beta');
+
+            writeStub.resetHistory();
+            await element.handleCopyPlaceholderUrls(['missing']);
+            expect(writeStub.called).to.be.false;
         });
     });
 });

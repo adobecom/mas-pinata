@@ -56,6 +56,7 @@ class MasPlaceholders extends LitElement {
         this.toggleCreationModal = this.toggleCreationModal.bind(this);
         this.onDeleted = this.onDeleted.bind(this);
         this.onBulkDelete = this.onBulkDelete.bind(this);
+        this.handleCopyPlaceholderUrls = this.handleCopyPlaceholderUrls.bind(this);
         this.updatePending = this.updatePending.bind(this);
     }
 
@@ -273,6 +274,35 @@ class MasPlaceholders extends LitElement {
         this.handleSelectionPanelClose();
     }
 
+    async handleCopyPlaceholderUrls(selection) {
+        const { path } = Store.search.get();
+        const { locale } = Store.filters.get();
+        const keys = new Set(selection);
+        const urls = this.placeholders
+            .map((placeholderStore) => placeholderStore.get().key)
+            .filter((key) => keys.has(key))
+            .map(
+                (key) =>
+                    `${window.location.origin}${window.location.pathname}#content-type=placeholder&page=placeholders&path=${encodeURIComponent(path)}&locale=${encodeURIComponent(locale)}&search=${encodeURIComponent(key)}`,
+            );
+        if (urls.length === 0) return;
+
+        try {
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    'text/plain': new Blob([urls.join('\n')], { type: 'text/plain' }),
+                    'text/html': new Blob([urls.join('<br>')], { type: 'text/html' }),
+                }),
+            ]);
+            Events.toast.emit({
+                variant: 'positive',
+                content: `Copied ${urls.length} placeholder link${urls.length > 1 ? 's' : ''} to clipboard`,
+            });
+        } catch {
+            Events.toast.emit({ variant: 'negative', content: 'Failed to copy code to clipboard' });
+        }
+    }
+
     handleSelectionPanelClose() {
         Store.placeholders.selection.set([]);
         this.refresh();
@@ -349,6 +379,7 @@ class MasPlaceholders extends LitElement {
                 ?open=${this.selection.length > 0}
                 .selectionStore=${Store.placeholders.selection}
                 .onDelete=${this.onBulkDelete}
+                .onCopyCode=${this.handleCopyPlaceholderUrls}
                 @close=${this.handleSelectionPanelClose}
             ></mas-selection-panel>
         `;

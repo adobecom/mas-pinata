@@ -122,4 +122,27 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
             expect(rowCount).toBeGreaterThan(1); // Should show more than just the test placeholder
         });
     });
+
+    // Test 3: @studio-placeholders-copy-code - Validate Copy Code on a selected placeholder
+    test(`${features[3].name},${features[3].tags}`, async ({ page, baseURL, context }) => {
+        const testPage = `${baseURL}${features[3].path}${miloLibs}${features[3].browserParams}`;
+        setTestPage(testPage);
+        await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+        await test.step('step-1: Navigate to placeholders page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+            await placeholders.waitForTableToLoad();
+        });
+
+        await test.step('step-2: Select a placeholder row', async () => {
+            await placeholders.placeholderRows.first().locator('sp-table-checkbox-cell').click();
+            await expect(placeholders.copyCodeButton).toBeVisible();
+        });
+
+        await test.step('step-3: Click Copy Code and validate confirmation', async () => {
+            await placeholders.copyCodeButton.click();
+            await expect(placeholders.toastPositive).toBeVisible();
+        });
+    });
 });
