@@ -175,11 +175,15 @@ runTests(async () => {
                 await element.handleCopyPlaceholderUrls(['alpha']);
                 expect(writeStub.calledOnceWith(expectedUrl('alpha'))).to.be.true;
                 expect(toastSpy.calledWithMatch({ variant: 'positive' })).to.be.true;
+                expect(toastSpy.firstCall.args[0].content).to.equal('Copied 1 link');
+                expect(toastSpy.firstCall.args[0].variant).to.equal('positive');
             });
 
             it('copies newline-separated URLs in a single write for multiple placeholders', async function () {
                 await element.handleCopyPlaceholderUrls(['alpha', 'beta']);
                 expect(writeStub.calledOnceWith(`${expectedUrl('alpha')}\n${expectedUrl('beta')}`)).to.be.true;
+                expect(toastSpy.firstCall.args[0].content).to.equal('Copied 2 links');
+                expect(toastSpy.firstCall.args[0].variant).to.equal('positive');
             });
 
             it('skips selected keys that have no matching placeholder', async function () {
