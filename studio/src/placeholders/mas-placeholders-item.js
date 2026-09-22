@@ -123,7 +123,7 @@ class MasPlaceholdersItem extends LitElement {
         const url = buildPlaceholderDeepLink(this.placeholder.key, Store.surface(), Store.localeOrRegion());
         try {
             await navigator.clipboard.writeText(url);
-            showToast('Link copied', 'positive');
+            showToast('Copied 1 link', 'positive');
         } catch {
             showToast('Failed to copy link', 'negative');
         }

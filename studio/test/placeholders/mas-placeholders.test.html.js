@@ -240,7 +240,7 @@ runTests(async () => {
                 expect(url).to.include('search=addon-demo-test');
                 expect(url).to.include('content-type=placeholder');
                 expect(url).to.include(`page=${PAGE_NAMES.PLACEHOLDERS}`);
-                expect(toastStub.calledWith(sinon.match({ variant: 'positive' }))).to.be.true;
+                expect(toastStub.calledWith(sinon.match({ variant: 'positive', content: 'Copied 1 link' }))).to.be.true;
             });
 
             it('shows a negative toast when the clipboard write fails', async function () {
