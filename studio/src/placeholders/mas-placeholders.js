@@ -296,7 +296,7 @@ class MasPlaceholders extends LitElement {
             ]);
             Events.toast.emit({
                 variant: 'positive',
-                content: `Copied ${urls.length} placeholder link${urls.length > 1 ? 's' : ''} to clipboard`,
+                content: `Copied ${urls.length} link${urls.length === 1 ? '' : 's'}`,
             });
         } catch {
             Events.toast.emit({ variant: 'negative', content: 'Failed to copy code to clipboard' });
