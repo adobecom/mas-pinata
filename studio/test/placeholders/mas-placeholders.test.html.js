@@ -221,6 +221,7 @@ runTests(async () => {
 
                 expect(clipboardStub.writeText.calledOnceWith(expectedUrl('addon-demo-test-1'))).to.be.true;
                 expect(toastStub.calledWith(sinon.match({ variant: 'positive' }))).to.be.true;
+                expect(toastStub.calledWith(sinon.match({ content: 'Link copied to clipboard.' }))).to.be.true;
             });
 
             it('leaves Publish and Delete menu items unchanged', async function () {
@@ -238,6 +239,7 @@ runTests(async () => {
 
                 expect(clipboardStub.writeText.calledOnceWith(expectedUrl('addon-demo-test-1'))).to.be.true;
                 expect(toastStub.calledWith(sinon.match({ variant: 'positive' }))).to.be.true;
+                expect(toastStub.calledWith(sinon.match({ content: '1 link copied to clipboard.' }))).to.be.true;
             });
 
             it('copies newline-separated URLs when bulk Copy Code runs with multiple selections', async function () {
@@ -248,6 +250,8 @@ runTests(async () => {
                 expect(urls).to.have.length(2);
                 expect(urls[0]).to.equal(expectedUrl('addon-demo-test-1'));
                 expect(urls[1]).to.equal(expectedUrl('addon-demo-test-2'));
+                expect(toastStub.calledWith(sinon.match({ variant: 'positive' }))).to.be.true;
+                expect(toastStub.calledWith(sinon.match({ content: '2 links copied to clipboard.' }))).to.be.true;
             });
         });
     });
