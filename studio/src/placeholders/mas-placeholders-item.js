@@ -313,13 +313,13 @@ class MasPlaceholdersItem extends LitElement {
                                           <sp-icon-publish size="m"></sp-icon-publish>
                                           <span>Publish</span>
                                       </div>
-                                      <div class="dropdown-item" @click="${this.onDelete}">
-                                          <sp-icon-delete size="m"></sp-icon-delete>
-                                          <span>Delete</span>
-                                      </div>
                                       <div class="dropdown-item" @click="${this.onCopyCode}">
                                           <sp-icon-code size="m"></sp-icon-code>
                                           <span>Copy Code</span>
+                                      </div>
+                                      <div class="dropdown-item" @click="${this.onDelete}">
+                                          <sp-icon-delete size="m"></sp-icon-delete>
+                                          <span>Delete</span>
                                       </div>
                                   </div>
                               `

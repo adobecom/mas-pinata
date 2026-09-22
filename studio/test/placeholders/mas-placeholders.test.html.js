@@ -231,7 +231,7 @@ runTests(async () => {
                 await elementUpdated(item);
 
                 const labels = [...item.querySelectorAll('.dropdown-item span')].map((el) => el.textContent);
-                expect(labels).to.deep.equal(['Publish', 'Delete', 'Copy Code']);
+                expect(labels).to.deep.equal(['Publish', 'Copy Code', 'Delete']);
             });
 
             it('copies one URL when bulk Copy Code runs with a single selection', async function () {
