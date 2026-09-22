@@ -64,6 +64,10 @@ export default class PlaceholdersPage {
         return this.placeholderRows.nth(rowIndex).locator('.placeholder-value-error');
     }
 
+    getValueFieldHint(rowIndex = 0) {
+        return this.placeholderRows.nth(rowIndex).locator('.placeholder-value-hint');
+    }
+
     getCancelButton(rowIndex = 0) {
         return this.placeholderRows.nth(rowIndex).getByRole('button', { name: 'Cancel editing' });
     }

@@ -272,6 +272,13 @@ export default [
             padding: 0 8px 8px;
         }
 
+        .placeholder-value-hint {
+            display: block;
+            color: var(--spectrum-gray-600, #6e6e6e);
+            font-size: 12px;
+            padding: 0 8px 8px;
+        }
+
         .rte-container {
             position: relative;
             display: block;

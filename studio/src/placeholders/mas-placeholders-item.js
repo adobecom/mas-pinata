@@ -224,7 +224,11 @@ class MasPlaceholdersItem extends LitElement {
                                   ?disabled=${this.disabled}
                               ></sp-textfield>`}
                     </div>
-                    ${this.valueError ? html`<span class="placeholder-value-error">${this.valueError}</span>` : nothing}
+                    ${this.placeholder.isRichText
+                        ? nothing
+                        : this.valueError
+                          ? html`<span class="placeholder-value-error">${this.valueError}</span>`
+                          : html`<span class="placeholder-value-hint">Use commas for thousands, e.g. 10,000</span>`}
                 </sp-table-cell>
             `;
         }

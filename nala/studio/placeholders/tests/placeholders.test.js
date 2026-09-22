@@ -140,6 +140,11 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
             await expect(placeholders.getValueField(0)).toBeVisible();
         });
 
+        await test.step('step-2b: Validate the format hint is shown before typing', async () => {
+            await expect(placeholders.getValueFieldHint(0)).toBeVisible();
+            await expect(placeholders.getValueFieldError(0)).not.toBeVisible();
+        });
+
         await test.step('step-3: Enter a value with a period thousands-separator', async () => {
             await placeholders.getValueField(0).fill(data.invalidValue);
         });
@@ -147,6 +152,7 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
         await test.step('step-4: Validate the inline error is shown', async () => {
             await expect(placeholders.getValueFieldError(0)).toBeVisible();
             await expect(placeholders.getValueFieldError(0)).toHaveText(data.expectedError);
+            await expect(placeholders.getValueFieldHint(0)).not.toBeVisible();
         });
 
         await test.step('step-5: Validate the Save button is disabled', async () => {
