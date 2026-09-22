@@ -1,5 +1,9 @@
 import Events from './events.js';
 
+// AEM records the service account that runs the publish workflow step, not the
+// human who triggered it. Extend this set as more system accounts are found.
+const SYSTEM_ACCOUNTS = new Set(['workflow-process-service']);
+
 /**
  * Repository for version-related data operations.
  * Handles loading, saving, and restoring fragment versions.
@@ -44,7 +48,13 @@ export class VersionRepository {
 
             // Load version history
             const versionsResponse = await this.repository.aem.sites.cf.fragments.getVersions(fragmentId);
-            const historicalVersions = versionsResponse?.items || [];
+            const historicalVersions = (versionsResponse?.items || []).map((item) => {
+                if (!SYSTEM_ACCOUNTS.has(item.createdBy)) return item;
+                return {
+                    ...item,
+                    createdBy: fragment.modifiedBy || fragment.modified?.by || 'Published via workflow',
+                };
+            });
 
             // Combine current version with historical versions
             const versions = [currentVersion, ...historicalVersions];

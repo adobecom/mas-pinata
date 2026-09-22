@@ -83,6 +83,69 @@ describe('VersionRepository', () => {
             expect(result.currentVersion.created).to.be.a('string');
             expect(result.currentVersion.createdBy).to.equal('System');
         });
+
+        it('should replace a system-account createdBy with fragment.modifiedBy', async () => {
+            const fragment = {
+                id: 'fragment-1',
+                modified: '2024-01-15T10:00:00Z',
+                modifiedBy: 'real@example.com',
+            };
+            const versionsResponse = {
+                items: [{ id: 'v1', version: '1.0', createdBy: 'workflow-process-service' }],
+            };
+
+            mockRepository.aem.sites.cf.fragments.getById.resolves(fragment);
+            mockRepository.aem.sites.cf.fragments.getVersions.resolves(versionsResponse);
+
+            const result = await versionRepository.loadVersionHistory('fragment-1');
+
+            expect(result.versions[1].createdBy).to.equal('real@example.com');
+        });
+
+        it('should replace a system-account createdBy with fragment.modified.by when modifiedBy is absent', async () => {
+            const fragment = {
+                id: 'fragment-1',
+                modified: { at: '2024-01-15T10:00:00Z', by: 'real@example.com' },
+            };
+            const versionsResponse = {
+                items: [{ id: 'v1', version: '1.0', createdBy: 'workflow-process-service' }],
+            };
+
+            mockRepository.aem.sites.cf.fragments.getById.resolves(fragment);
+            mockRepository.aem.sites.cf.fragments.getVersions.resolves(versionsResponse);
+
+            const result = await versionRepository.loadVersionHistory('fragment-1');
+
+            expect(result.versions[1].createdBy).to.equal('real@example.com');
+        });
+
+        it('should fall back to "Published via workflow" when no real user is available', async () => {
+            const fragment = { id: 'fragment-1' };
+            const versionsResponse = {
+                items: [{ id: 'v1', version: '1.0', createdBy: 'workflow-process-service' }],
+            };
+
+            mockRepository.aem.sites.cf.fragments.getById.resolves(fragment);
+            mockRepository.aem.sites.cf.fragments.getVersions.resolves(versionsResponse);
+
+            const result = await versionRepository.loadVersionHistory('fragment-1');
+
+            expect(result.versions[1].createdBy).to.equal('Published via workflow');
+        });
+
+        it('should leave non-system-account createdBy values unchanged', async () => {
+            const fragment = { id: 'fragment-1', modifiedBy: 'real@example.com' };
+            const versionsResponse = {
+                items: [{ id: 'v1', version: '1.0', createdBy: 'real@example.com' }],
+            };
+
+            mockRepository.aem.sites.cf.fragments.getById.resolves(fragment);
+            mockRepository.aem.sites.cf.fragments.getVersions.resolves(versionsResponse);
+
+            const result = await versionRepository.loadVersionHistory('fragment-1');
+
+            expect(result.versions[1].createdBy).to.equal('real@example.com');
+        });
     });
 
     describe('loadVersionData', () => {
