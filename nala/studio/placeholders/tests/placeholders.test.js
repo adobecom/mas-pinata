@@ -122,4 +122,51 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
             expect(rowCount).toBeGreaterThan(1); // Should show more than just the test placeholder
         });
     });
+
+    // Test 3: @studio-placeholders-value-validation - Validate thousands-separator inline error
+    test(`${features[3].name},${features[3].tags}`, async ({ page, baseURL }) => {
+        const { data } = features[3];
+        const testPage = `${baseURL}${features[3].path}${miloLibs}${features[3].browserParams}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Navigate to placeholders page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+        });
+
+        await test.step('step-2: Open a placeholder row for editing', async () => {
+            await placeholders.waitForTableToLoad();
+            await placeholders.getEditButton(0).click();
+            await expect(placeholders.getValueField(0)).toBeVisible();
+        });
+
+        await test.step('step-3: Enter a value with a period thousands-separator', async () => {
+            await placeholders.getValueField(0).fill(data.invalidValue);
+        });
+
+        await test.step('step-4: Validate the inline error is shown', async () => {
+            await expect(placeholders.getValueFieldError(0)).toBeVisible();
+            await expect(placeholders.getValueFieldError(0)).toHaveText(data.expectedError);
+        });
+
+        await test.step('step-5: Validate the Save button is disabled', async () => {
+            await expect(placeholders.getApproveButton(0)).toBeDisabled();
+        });
+
+        await test.step('step-6: Replace the value with a valid one', async () => {
+            await placeholders.getValueField(0).fill(data.validValue);
+        });
+
+        await test.step('step-7: Validate the inline error clears', async () => {
+            await expect(placeholders.getValueFieldError(0)).not.toBeVisible();
+        });
+
+        await test.step('step-8: Validate the Save button is enabled', async () => {
+            await expect(placeholders.getApproveButton(0)).toBeEnabled();
+        });
+
+        await test.step('step-9: Discard the unsaved change', async () => {
+            await placeholders.getCancelButton(0).click();
+        });
+    });
 });

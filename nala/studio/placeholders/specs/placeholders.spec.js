@@ -30,5 +30,17 @@ export default {
             browserParams: '#page=placeholders&path=nala&locale=en_US',
             tags: '@mas-studio @placeholders',
         },
+        {
+            tcid: '3',
+            name: '@studio-placeholders-value-validation',
+            path: '/studio.html',
+            data: {
+                invalidValue: '10.000',
+                expectedError: 'Use a comma for thousands: 10,000',
+                validValue: 'www.adobe.com',
+            },
+            browserParams: '#page=placeholders&path=nala&locale=en_US',
+            tags: '@mas-studio @placeholders',
+        },
     ],
 };

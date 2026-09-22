@@ -47,6 +47,27 @@ export default class PlaceholdersPage {
         return this.page.locator(`sp-table-row[value="${key}"]`);
     }
 
+    getEditButton(rowIndex = 0) {
+        return this.placeholderRows.nth(rowIndex).getByRole('button', { name: 'Edit placeholder' });
+    }
+
+    getApproveButton(rowIndex = 0) {
+        return this.placeholderRows.nth(rowIndex).getByRole('button', { name: 'Save changes' });
+    }
+
+    getValueField(rowIndex = 0) {
+        // sp-textfield wrapper — target the inner <input> so fill()/toHaveValue work.
+        return this.placeholderRows.nth(rowIndex).locator('sp-table-cell.value sp-textfield input');
+    }
+
+    getValueFieldError(rowIndex = 0) {
+        return this.placeholderRows.nth(rowIndex).locator('.placeholder-value-error');
+    }
+
+    getCancelButton(rowIndex = 0) {
+        return this.placeholderRows.nth(rowIndex).getByRole('button', { name: 'Cancel editing' });
+    }
+
     async searchPlaceholder(searchTerm) {
         await this.searchInput.fill(searchTerm);
         await this.page.keyboard.press('Enter');

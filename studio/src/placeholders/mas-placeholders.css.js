@@ -131,6 +131,11 @@ export default [
             padding: 0 30px 0 0;
         }
 
+        .placeholders-table sp-table-cell.editing-cell.value {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
         .placeholders-table sp-table-cell.updated-by {
             overflow: hidden;
 
@@ -258,6 +263,13 @@ export default [
             width: 100%;
             min-height: 80px;
             margin-bottom: 8px;
+        }
+
+        .placeholder-value-error {
+            display: block;
+            color: var(--spectrum-red-600);
+            font-size: 12px;
+            padding: 0 8px 8px;
         }
 
         .rte-container {

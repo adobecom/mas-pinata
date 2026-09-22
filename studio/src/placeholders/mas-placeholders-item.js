@@ -10,6 +10,8 @@ import { FragmentStore } from '../reactivity/fragment-store.js';
 import { Placeholder } from '../aem/placeholder.js';
 import '../rte/rte-field.js';
 
+const THOUSANDS_SEPARATOR_MISUSE = /\b\d{1,3}(\.\d{3})+\b/;
+
 class MasPlaceholdersItem extends LitElement {
     static properties = {
         placeholderStore: { type: Object, reflect: false },
@@ -19,6 +21,7 @@ class MasPlaceholdersItem extends LitElement {
         toggleEditing: { type: Function, reflect: false },
         toggleDropdown: { type: Function, reflect: false },
         updatePending: { type: Function, reflect: false },
+        valueError: { type: String, state: true },
     };
 
     createRenderRoot() {
@@ -35,6 +38,7 @@ class MasPlaceholdersItem extends LitElement {
         this.toggleEditing = null;
         this.toggleDropdown = null;
         this.updatePending = null;
+        this.valueError = '';
 
         this.handleRteValueChange = this.handleRteValueChange.bind(this);
     }
@@ -80,7 +84,10 @@ class MasPlaceholdersItem extends LitElement {
     }
 
     handleValueChange(event) {
-        this.placeholderStore.updateField('value', [event.target.value || '']);
+        const value = event.target.value || '';
+        const match = value.match(THOUSANDS_SEPARATOR_MISUSE);
+        this.valueError = match ? `Use a comma for thousands: ${match[0].replace(/\./g, ',')}` : '';
+        this.placeholderStore.updateField('value', [value]);
     }
 
     handleRteValueChange(event) {
@@ -98,6 +105,7 @@ class MasPlaceholdersItem extends LitElement {
 
     onCancel(event) {
         this.placeholderStore.discardChanges();
+        this.valueError = '';
         this.toggleEditing(this.placeholder.key, event);
     }
 
@@ -216,6 +224,7 @@ class MasPlaceholdersItem extends LitElement {
                                   ?disabled=${this.disabled}
                               ></sp-textfield>`}
                     </div>
+                    ${this.valueError ? html`<span class="placeholder-value-error">${this.valueError}</span>` : nothing}
                 </sp-table-cell>
             `;
         }
@@ -250,7 +259,7 @@ class MasPlaceholdersItem extends LitElement {
                             class="action-button approve-button"
                             @click=${this.onSave}
                             aria-label="Save changes"
-                            ?disabled=${!this.placeholder.hasChanges || this.disabled}
+                            ?disabled=${!this.placeholder.hasChanges || this.disabled || !!this.valueError}
                         >
                             <sp-icon-checkmark size="m"></sp-icon-checkmark>
                         </button>
