@@ -9,7 +9,7 @@ import Events from '../events.js';
 import { MasRepository } from '../mas-repository.js';
 import { removeFromIndexFragment } from './mas-placeholders-repository.js';
 import '../mas-selection-panel.js';
-import { showToast } from '../utils.js';
+import { showToast, buildPlaceholderDeepLink } from '../utils.js';
 import { confirmation } from '../mas-confirm-dialog.js';
 import { FragmentStore } from '../reactivity/fragment-store.js';
 import { clearCaches } from '../../libs/fragment-client.js';
@@ -57,6 +57,7 @@ class MasPlaceholders extends LitElement {
         this.onDeleted = this.onDeleted.bind(this);
         this.onBulkDelete = this.onBulkDelete.bind(this);
         this.updatePending = this.updatePending.bind(this);
+        this.onCopyCode = this.onCopyCode.bind(this);
     }
 
     reactiveController = new ReactiveController(this, [
@@ -282,6 +283,22 @@ class MasPlaceholders extends LitElement {
         this.pending = value;
     }
 
+    async onCopyCode(keys) {
+        const selectedKeys = Array.isArray(keys) ? keys : [keys];
+        if (selectedKeys.length === 0) return;
+
+        const path = Store.surface();
+        const locale = Store.localeOrRegion();
+        const urls = selectedKeys.map((key) => buildPlaceholderDeepLink(key, path, locale));
+
+        try {
+            await navigator.clipboard.writeText(urls.join('\n'));
+            showToast(`Copied ${urls.length} link${urls.length > 1 ? 's' : ''} to clipboard`, 'positive');
+        } catch {
+            showToast('Failed to copy code to clipboard', 'negative');
+        }
+    }
+
     // #endregion
 
     /**
@@ -349,6 +366,7 @@ class MasPlaceholders extends LitElement {
                 ?open=${this.selection.length > 0}
                 .selectionStore=${Store.placeholders.selection}
                 .onDelete=${this.onBulkDelete}
+                .onCopyCode=${this.onCopyCode}
                 @close=${this.handleSelectionPanelClose}
             ></mas-selection-panel>
         `;
@@ -423,6 +441,7 @@ class MasPlaceholders extends LitElement {
                                           .toggleEditing=${this.toggleEditing}
                                           .toggleDropdown=${this.toggleDropdown}
                                           .updatePending=${this.updatePending}
+                                          .onCopyCode=${this.onCopyCode}
                                       ></mas-placeholders-item>
                                   `;
                               },

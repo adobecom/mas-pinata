@@ -32,6 +32,11 @@ export default class PlaceholdersPage {
 
         // Selection panel
         this.selectionPanel = page.locator('mas-selection-panel');
+        this.bulkCopyCodeButton = this.selectionPanel.locator('sp-action-button[label="Copy Code"]');
+
+        // Row action menu (three dots) and its "Copy Code" dropdown item
+        this.rowActionMenuButton = (row) => row.locator('.action-menu-button');
+        this.rowCopyCodeItem = (row) => row.locator('.dropdown-item:has-text("Copy Code")');
 
         // Loading indicator
         this.progressBar = page.locator('sp-progress-bar');

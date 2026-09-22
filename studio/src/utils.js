@@ -274,14 +274,27 @@ export function generateCodeToUse(fragment, path, page, failMessage) {
     return { authorPath, code, richText, href };
 }
 
-function buildStudioFragmentHref({ webComponentName, fragmentId, page, path, fieldName }) {
+function buildStudioFragmentHref({ webComponentName, fragmentId, page, path, fieldName, locale, search }) {
     const params = new URLSearchParams();
     params.set('content-type', webComponentName);
     if (page) params.set('page', page);
     if (path) params.set('path', path);
+    if (locale) params.set('locale', locale);
     if (fragmentId) params.set('query', fragmentId);
     if (fieldName) params.set('field', fieldName);
+    if (search) params.set('search', search);
     return `https://mas.adobe.com/studio.html#${params.toString()}`;
+}
+
+/**
+ * Placeholder deep link: opens the Placeholders page pre-searched for the given key.
+ * @param {string} key - Placeholder key
+ * @param {string} path - Surface path
+ * @param {string} locale - Locale or region
+ * @returns {string}
+ */
+export function buildPlaceholderDeepLink(key, path, locale) {
+    return buildStudioFragmentHref({ webComponentName: 'placeholder', page: 'placeholders', path, locale, search: key });
 }
 
 /**

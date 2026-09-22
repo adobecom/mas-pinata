@@ -156,5 +156,72 @@ runTests(async () => {
             await elementUpdated(element);
             expect(refreshSpy.calledOnce).to.be.true;
         });
+
+        // Copy Code use case: single key copies one placeholder deep link
+        it('should copy a single placeholder link to the clipboard via onCopyCode', async function () {
+            const writeTextStub = sinon.stub(navigator.clipboard, 'writeText').resolves();
+
+            await element.onCopyCode(['addon-demo-test']);
+
+            expect(writeTextStub.calledOnce).to.be.true;
+            expect(writeTextStub.firstCall.args[0]).to.equal(
+                'https://mas.adobe.com/studio.html#content-type=placeholder&page=placeholders&path=test-folder&locale=en_US&search=addon-demo-test',
+            );
+        });
+
+        // Copy Code use case: bulk keys copy newline-separated placeholder deep links
+        it('should copy newline-separated links for multiple selected placeholders', async function () {
+            const writeTextStub = sinon.stub(navigator.clipboard, 'writeText').resolves();
+
+            await element.onCopyCode(['key-one', 'key-two']);
+
+            expect(writeTextStub.calledOnce).to.be.true;
+            const lines = writeTextStub.firstCall.args[0].split('\n');
+            expect(lines.length).to.equal(2);
+            expect(lines[0]).to.include('search=key-one');
+            expect(lines[1]).to.include('search=key-two');
+        });
+
+        // Copy Code use case: per-row dropdown item calls onCopyCode with the row's key
+        it('should call onCopyCode with the row key when the dropdown Copy Code item is clicked', async function () {
+            const onCopyCodeStub = sinon.stub();
+            const toggleDropdownStub = sinon.stub();
+            const placeholder = {
+                key: 'row-key',
+                value: 'row-value',
+                isRichText: false,
+                status: 'DRAFT',
+                statusVariant: 'draft',
+                updatedBy: 'tester',
+                updatedAt: 'now',
+                hasChanges: false,
+            };
+            const placeholderStore = {
+                get: () => placeholder,
+                subscribe: () => {},
+                unsubscribe: () => {},
+            };
+
+            const item = document.createElement('mas-placeholders-item');
+            item.placeholderStore = placeholderStore;
+            item.activeDropdown = true;
+            item.toggleEditing = () => {};
+            item.toggleDropdown = toggleDropdownStub;
+            item.updatePending = () => {};
+            item.onCopyCode = onCopyCodeStub;
+            document.body.appendChild(item);
+            await elementUpdated(item);
+
+            const copyCodeItem = Array.from(item.querySelectorAll('.dropdown-item')).find((el) =>
+                el.textContent.includes('Copy Code'),
+            );
+            expect(copyCodeItem).to.exist;
+            copyCodeItem.click();
+
+            expect(onCopyCodeStub.calledOnceWith('row-key')).to.be.true;
+            expect(toggleDropdownStub.calledOnce).to.be.true;
+
+            item.remove();
+        });
     });
 });

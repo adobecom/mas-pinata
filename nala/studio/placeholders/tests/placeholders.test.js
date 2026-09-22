@@ -122,4 +122,75 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
             expect(rowCount).toBeGreaterThan(1); // Should show more than just the test placeholder
         });
     });
+
+    // Test 3: @studio-placeholders-row-copy-code - Validate the per-row "Copy Code" action
+    test(`${features[3].name},${features[3].tags}`, async ({ page, baseURL }) => {
+        const testPage = `${baseURL}${features[3].path}${miloLibs}${features[3].browserParams}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Navigate to placeholders page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+        });
+
+        await test.step('step-2: Open the row action menu and click Copy Code', async () => {
+            await placeholders.waitForTableToLoad();
+            await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+
+            const rowKey = (await placeholders.getPlaceholderRowData(0)).key.trim();
+            const firstRow = placeholders.placeholderRows.first();
+
+            await placeholders.rowActionMenuButton(firstRow).click();
+            const copyCodeItem = placeholders.rowCopyCodeItem(firstRow);
+            await expect(copyCodeItem).toBeVisible();
+            await copyCodeItem.click();
+
+            await expect(placeholders.toastPositive).toBeVisible({ timeout: 10000 });
+
+            const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+            expect(clipboardText).toContain('content-type=placeholder');
+            expect(clipboardText).toContain('page=placeholders');
+            expect(clipboardText).toContain('path=');
+            expect(clipboardText).toContain('locale=');
+            expect(clipboardText).toContain(`search=${rowKey}`);
+        });
+    });
+
+    // Test 4: @studio-placeholders-bulk-copy-code - Validate the bulk "Copy Code" action
+    test(`${features[4].name},${features[4].tags}`, async ({ page, baseURL }) => {
+        const testPage = `${baseURL}${features[4].path}${miloLibs}${features[4].browserParams}`;
+        setTestPage(testPage);
+
+        await test.step('step-1: Navigate to placeholders page', async () => {
+            await page.goto(testPage);
+            await page.waitForLoadState('domcontentloaded');
+        });
+
+        await test.step('step-2: Select two placeholder rows', async () => {
+            await placeholders.waitForTableToLoad();
+            await placeholders.tableRows.nth(0).click();
+            await placeholders.tableRows.nth(1).click();
+            await expect(placeholders.selectionPanel).toBeVisible();
+        });
+
+        await test.step('step-3: Click bulk Copy Code and verify clipboard + toast', async () => {
+            await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+
+            await expect(placeholders.bulkCopyCodeButton).toBeVisible();
+            await placeholders.bulkCopyCodeButton.click();
+
+            await expect(placeholders.toastPositive).toBeVisible({ timeout: 10000 });
+
+            const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+            const lines = clipboardText.split('\n').filter(Boolean);
+            expect(lines.length).toBe(2);
+            for (const line of lines) {
+                expect(line).toContain('content-type=placeholder');
+                expect(line).toContain('page=placeholders');
+                expect(line).toContain('path=');
+                expect(line).toContain('locale=');
+                expect(line).toContain('search=');
+            }
+        });
+    });
 });
