@@ -427,5 +427,30 @@ describe('VersionRepository', () => {
             expect(result).to.have.lengthOf(1);
             expect(result[0].comment).to.include('features');
         });
+
+        it('should find a system-account version by its resolved email', () => {
+            const resolvedVersions = [
+                ...versions,
+                { version: '4.0', createdBy: 'user@example.com', created: '2024-01-18', comment: 'Published' },
+            ];
+            const result = versionRepository.searchVersions(resolvedVersions, 'user@example.com');
+            expect(result).to.have.lengthOf(1);
+            expect(result[0].createdBy).to.equal('user@example.com');
+        });
+
+        it('should find a system-account version by "Published via workflow"', () => {
+            const resolvedVersions = [
+                ...versions,
+                {
+                    version: '4.0',
+                    createdBy: 'Published via workflow',
+                    created: '2024-01-18',
+                    comment: 'Published',
+                },
+            ];
+            const result = versionRepository.searchVersions(resolvedVersions, 'workflow');
+            expect(result).to.have.lengthOf(1);
+            expect(result[0].createdBy).to.equal('Published via workflow');
+        });
     });
 });
