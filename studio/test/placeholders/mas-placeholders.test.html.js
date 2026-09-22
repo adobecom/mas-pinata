@@ -12,6 +12,22 @@ import '../../src/mas-repository.js';
 import '../../src/rte/rte-field.js';
 import '../../src/mas-fragment-status.js';
 import { PAGE_NAMES } from '../../src/constants.js';
+import Events from '../../src/events.js';
+import { FragmentStore } from '../../src/reactivity/fragment-store.js';
+import { Placeholder } from '../../src/aem/placeholder.js';
+
+function makePlaceholderStore(key, value = 'value') {
+    return new FragmentStore(
+        new Placeholder({
+            path: `/content/dam/mas/test-folder/en_US/dictionary/${key}`,
+            fields: [
+                { name: 'key', values: [key] },
+                { name: 'value', values: [value] },
+                { name: 'richTextValue', values: [] },
+            ],
+        }),
+    );
+}
 
 runTests(async () => {
     describe('mas-placeholders component - UI Tests', () => {
@@ -155,6 +171,87 @@ runTests(async () => {
             element.onSave();
             await elementUpdated(element);
             expect(refreshSpy.calledOnce).to.be.true;
+        });
+
+        describe('onBulkCopyCode', function () {
+            let clipboardStub;
+
+            beforeEach(function () {
+                clipboardStub = { writeText: sinon.stub().resolves() };
+                Object.defineProperty(navigator, 'clipboard', { value: clipboardStub, configurable: true });
+            });
+
+            it('copies newline-separated deep links for the selected placeholders and shows a toast', async function () {
+                const toastStub = sinon.stub(Events.toast, 'emit');
+                Store.placeholders.list.data.set([makePlaceholderStore('key-one'), makePlaceholderStore('key-two')]);
+
+                await element.onBulkCopyCode(['key-one', 'key-two']);
+
+                expect(clipboardStub.writeText.calledOnce).to.be.true;
+                const [urls] = clipboardStub.writeText.firstCall.args;
+                const lines = urls.split('\n');
+                expect(lines).to.have.lengthOf(2);
+                expect(lines[0]).to.include('search=key-one');
+                expect(lines[1]).to.include('search=key-two');
+                expect(lines[0]).to.include('path=test-folder');
+                expect(lines[0]).to.include('locale=en_US');
+                expect(toastStub.calledWith(sinon.match({ variant: 'positive' }))).to.be.true;
+            });
+
+            it('does nothing when no selected key matches a loaded placeholder', async function () {
+                Store.placeholders.list.data.set([]);
+                await element.onBulkCopyCode(['missing-key']);
+                expect(clipboardStub.writeText.called).to.be.false;
+            });
+        });
+
+        describe('mas-placeholders-item Copy Code', function () {
+            let clipboardStub;
+
+            beforeEach(async function () {
+                clipboardStub = { writeText: sinon.stub().resolves() };
+                Object.defineProperty(navigator, 'clipboard', { value: clipboardStub, configurable: true });
+                Store.placeholders.list.data.set([makePlaceholderStore('addon-demo-test')]);
+                await elementUpdated(element);
+                await new Promise((r) => setTimeout(r, 20));
+            });
+
+            function getItem() {
+                return element.shadowRoot.querySelector('mas-placeholders-item');
+            }
+
+            it('renders a Copy Code entry in the row dropdown, after Publish and before Delete', async function () {
+                const item = getItem();
+                item.activeDropdown = true;
+                await elementUpdated(item);
+
+                const labels = [...item.querySelectorAll('.dropdown-item span')].map((span) => span.textContent);
+                expect(labels).to.deep.equal(['Publish', 'Copy Code', 'Delete']);
+            });
+
+            it('copies the placeholder deep link and shows a positive toast on success', async function () {
+                const toastStub = sinon.stub(Events.toast, 'emit');
+                const item = getItem();
+
+                await item.onCopyCode(new Event('click'));
+
+                expect(clipboardStub.writeText.calledOnce).to.be.true;
+                const [url] = clipboardStub.writeText.firstCall.args;
+                expect(url).to.include('search=addon-demo-test');
+                expect(url).to.include('content-type=placeholder');
+                expect(url).to.include(`page=${PAGE_NAMES.PLACEHOLDERS}`);
+                expect(toastStub.calledWith(sinon.match({ variant: 'positive' }))).to.be.true;
+            });
+
+            it('shows a negative toast when the clipboard write fails', async function () {
+                clipboardStub.writeText.rejects(new Error('denied'));
+                const toastStub = sinon.stub(Events.toast, 'emit');
+                const item = getItem();
+
+                await item.onCopyCode(new Event('click'));
+
+                expect(toastStub.calledWith(sinon.match({ variant: 'negative' }))).to.be.true;
+            });
         });
     });
 });

@@ -237,6 +237,31 @@ describe('MasSelectionPanel', () => {
         });
     });
 
+    describe('handleCopyCode', () => {
+        it('calls onCopyCode with the current selection when set, instead of handleCopyFragmentUrls', async () => {
+            const onCopyCode = sandbox.stub();
+            const el = await fixture(
+                html`<mas-selection-panel open .selectionStore=${makeSelectionStore(['key-1'])} .onCopyCode=${onCopyCode}>
+                </mas-selection-panel>`,
+            );
+            const fragmentUrlsStub = sandbox.stub(el, 'handleCopyFragmentUrls');
+
+            el.handleCopyCode();
+
+            expect(onCopyCode.calledOnceWith(['key-1'])).to.be.true;
+            expect(fragmentUrlsStub.called).to.be.false;
+        });
+
+        it('falls back to handleCopyFragmentUrls when onCopyCode is not set', async () => {
+            const el = await createPanel([makeFragmentStore(makeCardFragment('uuid-1'))]);
+            const fragmentUrlsStub = sandbox.stub(el, 'handleCopyFragmentUrls');
+
+            el.handleCopyCode();
+
+            expect(fragmentUrlsStub.calledOnce).to.be.true;
+        });
+    });
+
     describe('render', () => {
         it('shows Copy URLs button when items are selected', async () => {
             const fragment = { id: 'uuid-1', model: { path: CARD_MODEL_PATH } };

@@ -69,6 +69,24 @@ export function getDictionaryFolderPath(surfacePath, locale) {
     return `${prefix}/${locale}/dictionary`;
 }
 
+/**
+ * Builds a shareable Studio link that opens the placeholders page with `key` prefilled in search.
+ * @param {string} key
+ * @param {string} path - surface path (e.g. 'acom')
+ * @param {string} locale
+ * @returns {string}
+ */
+export function buildPlaceholderDeepLink(key, path, locale) {
+    const params = new URLSearchParams({
+        'content-type': 'placeholder',
+        page: PAGE_NAMES.PLACEHOLDERS,
+        path,
+        locale,
+        search: key,
+    });
+    return `https://mas.adobe.com/studio.html#${params.toString()}`;
+}
+
 // --- AEM helpers ---
 
 export async function fetchIndexFragment(indexPath) {

@@ -3,7 +3,7 @@ import { STATUS_PUBLISHED, TAG_STATUS_DRAFT } from '../constants.js';
 import Store from '../store.js';
 import ReactiveController from '../reactivity/reactive-controller.js';
 import { MasRepository } from '../mas-repository.js';
-import { removeFromIndexFragment, publishPlaceholder } from './mas-placeholders-repository.js';
+import { removeFromIndexFragment, publishPlaceholder, buildPlaceholderDeepLink } from './mas-placeholders-repository.js';
 import { confirmation } from '../mas-confirm-dialog.js';
 import { showToast } from '../utils.js';
 import { FragmentStore } from '../reactivity/fragment-store.js';
@@ -116,6 +116,17 @@ class MasPlaceholdersItem extends LitElement {
             startToast: false,
             endToast: false,
         });
+    }
+
+    async onCopyCode(event) {
+        this.toggleDropdown(this.placeholder.key, event);
+        const url = buildPlaceholderDeepLink(this.placeholder.key, Store.surface(), Store.localeOrRegion());
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast('Link copied', 'positive');
+        } catch {
+            showToast('Failed to copy link', 'negative');
+        }
     }
 
     async onPublish(event) {
@@ -299,6 +310,10 @@ class MasPlaceholdersItem extends LitElement {
                                       >
                                           <sp-icon-publish size="m"></sp-icon-publish>
                                           <span>Publish</span>
+                                      </div>
+                                      <div class="dropdown-item" @click=${this.onCopyCode}>
+                                          <sp-icon-code size="m"></sp-icon-code>
+                                          <span>Copy Code</span>
                                       </div>
                                       <div class="dropdown-item" @click="${this.onDelete}">
                                           <sp-icon-delete size="m"></sp-icon-delete>

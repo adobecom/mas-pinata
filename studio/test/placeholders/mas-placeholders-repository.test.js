@@ -9,6 +9,7 @@ import {
     ensureReferenceField,
     getParentPath,
     getDictionaryFolderPath,
+    buildPlaceholderDeepLink,
     fetchIndexFragment,
     getIndexFragment,
     ensureDictionaryFolder,
@@ -117,6 +118,20 @@ describe('mas-placeholders-repository', () => {
             );
             expect(getDictionaryFolderPath('', 'en_US')).to.equal(`${ROOT_PATH}/en_US/dictionary`);
             expect(getDictionaryFolderPath(SURFACES.ACOM.name, null)).to.be.null;
+        });
+    });
+
+    describe('buildPlaceholderDeepLink', () => {
+        it('builds a studio.html deep link with the confirmed hash format', () => {
+            const url = buildPlaceholderDeepLink('btn-buy', 'acom', 'en_US');
+            expect(url).to.equal(
+                'https://mas.adobe.com/studio.html#content-type=placeholder&page=placeholders&path=acom&locale=en_US&search=btn-buy',
+            );
+        });
+
+        it('percent-encodes special characters in the key', () => {
+            const url = buildPlaceholderDeepLink('buy & save', 'acom', 'en_US');
+            expect(url).to.include('search=buy+%26+save');
         });
     });
 
