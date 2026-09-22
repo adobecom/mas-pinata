@@ -12,6 +12,25 @@ import '../../src/mas-repository.js';
 import '../../src/rte/rte-field.js';
 import '../../src/mas-fragment-status.js';
 import { PAGE_NAMES } from '../../src/constants.js';
+import { FragmentStore } from '../../src/reactivity/fragment-store.js';
+import { Placeholder } from '../../src/aem/placeholder.js';
+import Events from '../../src/events.js';
+
+function makePlaceholderStore({ key, path, value = 'Some value' }) {
+    return new FragmentStore(
+        new Placeholder({
+            id: key,
+            path,
+            status: 'DRAFT',
+            fields: [
+                { name: 'key', values: [key] },
+                { name: 'value', values: [value] },
+                { name: 'richTextValue', values: [] },
+            ],
+            modified: { by: 'tester', at: Date.now() },
+        }),
+    );
+}
 
 runTests(async () => {
     describe('mas-placeholders component - UI Tests', () => {
@@ -155,6 +174,81 @@ runTests(async () => {
             element.onSave();
             await elementUpdated(element);
             expect(refreshSpy.calledOnce).to.be.true;
+        });
+
+        describe('Copy Code', () => {
+            let clipboardStub;
+            let toastStub;
+
+            beforeEach(async function () {
+                clipboardStub = { writeText: sinon.stub().resolves() };
+                Object.defineProperty(navigator, 'clipboard', { value: clipboardStub, configurable: true });
+                toastStub = sinon.stub(Events.toast, 'emit');
+
+                // Keys are ordered so ascending key sort (this suite's default) matches insertion order.
+                Store.placeholders.list.data.set([
+                    makePlaceholderStore({
+                        key: 'addon-demo-test-1',
+                        path: '/content/dam/mas/sandbox/en_US/dictionary/addon-demo-test-1',
+                    }),
+                    makePlaceholderStore({
+                        key: 'addon-demo-test-2',
+                        path: '/content/dam/mas/sandbox/en_US/dictionary/addon-demo-test-2',
+                    }),
+                ]);
+                await elementUpdated(element);
+                await new Promise((r) => setTimeout(r, 10));
+            });
+
+            const expectedUrl = (key) =>
+                `${window.location.origin}/studio.html#content-type=placeholder&page=placeholders&path=sandbox&locale=en_US&search=${key}`;
+
+            it('copies the deep link and shows a toast when Copy Code is clicked on a row', async function () {
+                const item = element.shadowRoot.querySelector('mas-placeholders-item');
+                expect(item).to.exist;
+
+                const menuButton = item.querySelector('.action-menu-button');
+                menuButton.click();
+                await elementUpdated(element);
+                await elementUpdated(item);
+
+                const copyItem = [...item.querySelectorAll('.dropdown-item')].find((el) =>
+                    el.textContent.includes('Copy Code'),
+                );
+                expect(copyItem).to.exist;
+                copyItem.click();
+                await new Promise((r) => setTimeout(r, 10));
+
+                expect(clipboardStub.writeText.calledOnceWith(expectedUrl('addon-demo-test-1'))).to.be.true;
+                expect(toastStub.calledWith(sinon.match({ variant: 'positive' }))).to.be.true;
+            });
+
+            it('leaves Publish and Delete menu items unchanged', async function () {
+                const item = element.shadowRoot.querySelector('mas-placeholders-item');
+                item.querySelector('.action-menu-button').click();
+                await elementUpdated(element);
+                await elementUpdated(item);
+
+                const labels = [...item.querySelectorAll('.dropdown-item span')].map((el) => el.textContent);
+                expect(labels).to.deep.equal(['Publish', 'Delete', 'Copy Code']);
+            });
+
+            it('copies one URL when bulk Copy Code runs with a single selection', async function () {
+                await element.onBulkCopyCode(['addon-demo-test-1']);
+
+                expect(clipboardStub.writeText.calledOnceWith(expectedUrl('addon-demo-test-1'))).to.be.true;
+                expect(toastStub.calledWith(sinon.match({ variant: 'positive' }))).to.be.true;
+            });
+
+            it('copies newline-separated URLs when bulk Copy Code runs with multiple selections', async function () {
+                await element.onBulkCopyCode(['addon-demo-test-1', 'addon-demo-test-2']);
+
+                const [copied] = clipboardStub.writeText.firstCall.args;
+                const urls = copied.split('\n');
+                expect(urls).to.have.length(2);
+                expect(urls[0]).to.equal(expectedUrl('addon-demo-test-1'));
+                expect(urls[1]).to.equal(expectedUrl('addon-demo-test-2'));
+            });
         });
     });
 });

@@ -10,6 +10,7 @@ import {
     TAG_MERCH_CARD_COLLECTION,
     TAG_STUDIO_CONTENT_TYPE,
     TAG_MODEL_ID_MAPPING,
+    PAGE_NAMES,
 } from './constants.js';
 import { VARIANTS } from './editors/variant-picker.js';
 import Events from './events.js';
@@ -295,6 +296,23 @@ export function buildCardsDeepLink(fragment, path, page = 'content') {
     const webComponentName = MODEL_WEB_COMPONENT_MAPPING[fragment?.model?.path];
     if (!webComponentName || !fragment?.id) return null;
     return buildStudioFragmentHref({ webComponentName, fragmentId: fragment.id, page, path });
+}
+
+/**
+ * Deep link that opens a placeholder through a search on the Placeholders page.
+ * The origin is read at call time so branch, stage and prod deployments each
+ * produce a working link.
+ * @param {{ path: string, locale: string, key: string }} params
+ * @returns {string}
+ */
+export function buildPlaceholderDeepLink({ path, locale, key }) {
+    const params = new URLSearchParams();
+    params.set('content-type', 'placeholder');
+    params.set('page', PAGE_NAMES.PLACEHOLDERS);
+    params.set('path', path);
+    params.set('locale', locale);
+    params.set('search', key);
+    return `${window.location.origin}/studio.html#${params.toString()}`;
 }
 
 /**

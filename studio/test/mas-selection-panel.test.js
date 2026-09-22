@@ -237,6 +237,41 @@ describe('MasSelectionPanel', () => {
         });
     });
 
+    describe('Copy Code — placeholder surface', () => {
+        it('calls onCopyCode and not handleCopyFragmentUrls when onCopyCode is provided', async () => {
+            const selectionStore = makeSelectionStore(['key-1']);
+            const onCopyCode = sandbox.stub();
+            const el = await fixture(
+                html`<mas-selection-panel
+                    open
+                    .selectionStore=${selectionStore}
+                    .onCopyCode=${onCopyCode}
+                ></mas-selection-panel>`,
+            );
+            const fallbackSpy = sandbox.spy(el, 'handleCopyFragmentUrls');
+            await el.updateComplete;
+
+            const buttons = [...el.shadowRoot.querySelectorAll('sp-action-button')];
+            const copyButton = buttons.find((b) => b.getAttribute('label') === 'Copy Code');
+            copyButton.click();
+
+            expect(onCopyCode.calledOnceWith(['key-1'])).to.be.true;
+            expect(fallbackSpy.called).to.be.false;
+        });
+
+        it('falls back to handleCopyFragmentUrls when onCopyCode is not provided', async () => {
+            const el = await createPanel([makeFragmentStore(makeCardFragment('uuid-1'))]);
+            const fallbackSpy = sandbox.spy(el, 'handleCopyFragmentUrls');
+            await el.updateComplete;
+
+            const buttons = [...el.shadowRoot.querySelectorAll('sp-action-button')];
+            const copyButton = buttons.find((b) => b.getAttribute('label') === 'Copy Code');
+            copyButton.click();
+
+            expect(fallbackSpy.calledOnce).to.be.true;
+        });
+    });
+
     describe('render', () => {
         it('shows Copy URLs button when items are selected', async () => {
             const fragment = { id: 'uuid-1', model: { path: CARD_MODEL_PATH } };

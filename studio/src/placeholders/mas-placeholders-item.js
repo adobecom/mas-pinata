@@ -5,7 +5,7 @@ import ReactiveController from '../reactivity/reactive-controller.js';
 import { MasRepository } from '../mas-repository.js';
 import { removeFromIndexFragment, publishPlaceholder } from './mas-placeholders-repository.js';
 import { confirmation } from '../mas-confirm-dialog.js';
-import { showToast } from '../utils.js';
+import { showToast, buildPlaceholderDeepLink, extractSurfaceFromPath, extractLocaleFromPath } from '../utils.js';
 import { FragmentStore } from '../reactivity/fragment-store.js';
 import { Placeholder } from '../aem/placeholder.js';
 import '../rte/rte-field.js';
@@ -129,6 +129,19 @@ class MasPlaceholdersItem extends LitElement {
                 status: STATUS_PUBLISHED,
             };
             this.placeholderStore.refreshFrom(updatedPlaceholder);
+        }
+    }
+
+    async onCopyCode(event) {
+        this.toggleDropdown(this.placeholder.key, event);
+        const path = extractSurfaceFromPath(this.placeholder.path);
+        const locale = extractLocaleFromPath(this.placeholder.path);
+        const url = buildPlaceholderDeepLink({ path, locale, key: this.placeholder.key });
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast('Items copied to clipboard.', 'positive');
+        } catch {
+            showToast('Failed to copy code to clipboard', 'negative');
         }
     }
 
@@ -303,6 +316,10 @@ class MasPlaceholdersItem extends LitElement {
                                       <div class="dropdown-item" @click="${this.onDelete}">
                                           <sp-icon-delete size="m"></sp-icon-delete>
                                           <span>Delete</span>
+                                      </div>
+                                      <div class="dropdown-item" @click="${this.onCopyCode}">
+                                          <sp-icon-code size="m"></sp-icon-code>
+                                          <span>Copy Code</span>
                                       </div>
                                   </div>
                               `

@@ -1,6 +1,7 @@
 import { expect } from '@open-wc/testing';
 import {
     buildCardsDeepLink,
+    buildPlaceholderDeepLink,
     generateCodeToUse,
     generateFieldLink,
     getFragmentPartsToUse,
@@ -261,6 +262,26 @@ describe('buildCardsDeepLink', () => {
         const linkable = [{ model: { path: CARD_MODEL_PATH } }, { model: { path: COLLECTION_MODEL_PATH } }];
         const lines = linkable.map((f) => buildCardsDeepLink(f, 'sandbox', 'content')).filter(Boolean);
         expect(lines).to.deep.equal([]);
+    });
+});
+
+describe('buildPlaceholderDeepLink', () => {
+    it('builds a URL with the required hash params in order', () => {
+        const url = buildPlaceholderDeepLink({ path: 'sandbox', locale: 'en_US', key: 'addon-demo-test' });
+        expect(url).to.equal(
+            `${window.location.origin}/studio.html#content-type=placeholder&page=placeholders&path=sandbox&locale=en_US&search=addon-demo-test`,
+        );
+    });
+
+    it('percent-encodes special characters in the key', () => {
+        const url = buildPlaceholderDeepLink({ path: 'sandbox', locale: 'en_US', key: 'a key/with&chars' });
+        expect(url).to.include('search=a+key%2Fwith%26chars');
+    });
+
+    it('derives the origin from window.location.origin at call time', () => {
+        expect(buildPlaceholderDeepLink({ path: 'acom', locale: 'en_US', key: 'foo' })).to.satisfy((url) =>
+            url.startsWith(`${window.location.origin}/studio.html#`),
+        );
     });
 });
 
