@@ -18,6 +18,7 @@ node ./docs/src/build-docs.mjs minicompare.md ./docs/minicompare.html
 node ./docs/src/build-docs.mjs minicomparemweb.md ./docs/minicomparemweb.html
 node ./docs/src/build-docs.mjs product.md ./docs/product.html
 node ./docs/src/build-docs.mjs segment.md ./docs/segment.html
+node ./docs/src/build-docs.mjs pro.md ./docs/pro.html
 node ./docs/src/build-docs.mjs specialoffer.md ./docs/specialoffer.html
 node ./docs/src/build-docs.mjs image.md ./docs/image.html
 node ./docs/src/build-docs.mjs commerce.md ./docs/commerce.html
