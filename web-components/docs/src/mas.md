@@ -70,6 +70,13 @@ Example: if you have 5 cards with buy-now cta on your page, you can take a combi
 ${daa-lh}--${daa-ll}: will result in 'phlt--buy-now-2'.
 
 <div class="pro-gallery-content">
-  <h2 id="pro-card">Pro Card</h2>
-  <merch-card variant="pro"><aem-fragment fragment="153bc964-d558-47ba-95b5-345fa8a02087"></aem-fragment></merch-card>
+
+## Pro Card {#pro-card}
+
+```html
+<merch-card variant="pro"><aem-fragment fragment="153bc964-d558-47ba-95b5-345fa8a02087"></aem-fragment></merch-card>
+```
+
+<merch-card variant="pro"><aem-fragment fragment="153bc964-d558-47ba-95b5-345fa8a02087"></aem-fragment></merch-card>
+
 </div>
