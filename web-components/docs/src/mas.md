@@ -74,9 +74,9 @@ ${daa-lh}--${daa-ll}: will result in 'phlt--buy-now-2'.
 ## Pro Card {#pro-card}
 
 ```html
-<merch-card variant="pro"><aem-fragment fragment="153bc964-d558-47ba-95b5-345fa8a02087"></aem-fragment></merch-card>
+<merch-card variant="pro"><aem-fragment fragment="46e554aa-f273-4caa-a0b8-4491253d7ef2"></aem-fragment></merch-card>
 ```
 
-<merch-card variant="pro"><aem-fragment fragment="153bc964-d558-47ba-95b5-345fa8a02087"></aem-fragment></merch-card>
+<merch-card variant="pro"><aem-fragment fragment="46e554aa-f273-4caa-a0b8-4491253d7ef2"></aem-fragment></merch-card>
 
 </div>
