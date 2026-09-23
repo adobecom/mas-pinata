@@ -153,6 +153,10 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
             await expect(placeholders.getValueFieldError(0)).toBeVisible();
             await expect(placeholders.getValueFieldError(0)).toHaveText(data.expectedError);
             await expect(placeholders.getValueFieldHint(0)).not.toBeVisible();
+            await expect(placeholders.placeholderRows.nth(0).locator('sp-table-cell.value sp-textfield')).toHaveAttribute(
+                'invalid',
+                '',
+            );
         });
 
         await test.step('step-5: Validate the Save button is disabled', async () => {
@@ -165,6 +169,9 @@ test.describe('M@S Studio Placeholders Test Suite', () => {
 
         await test.step('step-7: Validate the inline error clears', async () => {
             await expect(placeholders.getValueFieldError(0)).not.toBeVisible();
+            await expect(placeholders.placeholderRows.nth(0).locator('sp-table-cell.value sp-textfield')).not.toHaveAttribute(
+                'invalid',
+            );
         });
 
         await test.step('step-8: Validate the Save button is enabled', async () => {

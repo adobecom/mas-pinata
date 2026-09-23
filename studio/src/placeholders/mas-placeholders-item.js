@@ -222,6 +222,7 @@ class MasPlaceholdersItem extends LitElement {
                                   @input=${this.handleValueChange}
                                   @click=${this.preventSelection}
                                   ?disabled=${this.disabled}
+                                  ?invalid=${!!this.valueError}
                               ></sp-textfield>`}
                     </div>
                     ${this.placeholder.isRichText
