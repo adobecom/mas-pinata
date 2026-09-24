@@ -153,7 +153,8 @@ button {
     width: 100%;
 }
 
-.plans-gallery-content {
+.plans-gallery-content,
+.pro-gallery-content {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -165,7 +166,8 @@ button {
         margin-block: 10px;
     }
 
-    & .plans-link {
+    & .plans-link,
+    & .pro-link {
         font-size: 14px;
         padding-left: 6px;
     }
@@ -263,6 +265,20 @@ merch-card[variant='ccd-slice'][size='wide'] {
             4,
             var(--merch-card-collection-card-width)
         );
+    }
+}
+
+.four-merch-cards.pro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 720px;
+}
+
+@media screen and (min-width: 768px) {
+    .four-merch-cards.pro {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 

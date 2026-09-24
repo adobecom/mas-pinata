@@ -98,6 +98,25 @@ Adobe Home Gallery provides a comprehensive list of all supported card variants 
 </merch-card>
 ```
 
+### Pro variant (static)
+
+```html {.demo .light}
+<merch-card id="static-pro" variant="pro">
+  <merch-icon slot="icons" size="l" src="https://www.adobe.com/content/dam/shared/images/product-icons/svg/creative-cloud.svg" alt="Creative Cloud Pro"></merch-icon>
+  <h3 slot="heading-xs">Creative Cloud Pro</h3>
+  <div slot="body-xs">
+      <p>Get 20+ Creative Cloud apps including Photoshop, Illustrator, Adobe Express, Premiere Pro, and
+          Acrobat Pro.</p>
+  </div>
+  <p slot="heading-m">
+      <span is="inline-price" data-template="price" data-wcs-osi="r_JXAnlFI7xD6FxWKl2ODvZriLYBoSL701Kd1hRyhe8"></span>
+  </p>
+  <div slot="footer">
+      <a is="checkout-link" href="#" class="con-button blue" data-wcs-osi="r_JXAnlFI7xD6FxWKl2ODvZriLYBoSL701Kd1hRyhe8">Buy now</a>
+  </div>
+</merch-card>
+```
+
 ### Attributes
 
 | Name        | Description                                                                                                                                                                                           | Default Value | Required | Provider |
