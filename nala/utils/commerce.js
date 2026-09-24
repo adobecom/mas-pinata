@@ -44,6 +44,7 @@ const DOCS_GALLERY_PATH = {
         US: '/web-components/docs/plans.html',
         CA_VISITOR: '/web-components/docs/plans.html?country=CA&locale=en_US',
     },
+    PRO: { US: '/web-components/docs/pro.html' },
     PLANS_COLLECTION: {
         US: '/web-components/docs/plans-collection.html',
         GR_co: '/web-components/docs/plans-collection.html?country=GR',

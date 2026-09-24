@@ -266,6 +266,18 @@ merch-card[variant='ccd-slice'][size='wide'] {
     }
 }
 
+/* Pro rows: global card width is unset, so size the tracks here (394px = pro max width) */
+.four-merch-cards.pro {
+    grid-template-columns: minmax(0, 394px);
+    align-items: stretch;
+}
+
+@media screen and (min-width: 768px) {
+    .four-merch-cards.pro {
+        grid-template-columns: repeat(2, minmax(0, 394px));
+    }
+}
+
 /* Adobe Home */
 
 h1,
