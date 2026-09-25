@@ -416,6 +416,36 @@ describe('MasSideNav – Copy Field', () => {
             expect(fields.find((f) => f.name === 'subtitle').preview).to.equal('creativity and design');
         });
 
+        it('should include badge with the Badge label and exclude trialBadge', () => {
+            const fragment = mockFragment([
+                { name: 'badge', values: ['Best value'] },
+                { name: 'trialBadge', values: ['Free trial'] },
+            ]);
+            editorStub.withArgs('mas-fragment-editor').returns(mockEditor(fragment));
+            const map = Object.fromEntries(el.copyableFields.map((f) => [f.name, f.displayName]));
+            expect(map.badge).to.equal('Badge');
+            expect(map.trialBadge).to.be.undefined;
+        });
+
+        it('should exclude badge when its value is empty', () => {
+            const fragment = mockFragment([{ name: 'badge', values: [] }]);
+            editorStub.withArgs('mas-fragment-editor').returns(mockEditor(fragment));
+            expect(el.copyableFields.map((f) => f.name)).to.not.include('badge');
+        });
+
+        it('should include a non-empty base badge as inherited for variations', () => {
+            const sourceFragment = mockFragment([{ name: 'cardTitle', values: ['Creative Cloud ARG'] }], {
+                id: 'variation-123',
+            });
+            const baseFragment = mockFragment([{ name: 'badge', values: ['Best value'] }], { id: 'base-123' });
+            editorStub
+                .withArgs('mas-fragment-editor')
+                .returns(mockEditor(sourceFragment, null, { isVariation: true, localeDefaultFragment: baseFragment }));
+
+            const badge = el.copyableFields.find((f) => f.name === 'badge');
+            expect(badge.source).to.equal('inherited');
+        });
+
         it('should exclude non-allowlisted inherited fields', () => {
             const sourceFragment = mockFragment([{ name: 'cardTitle', values: ['Variation title'] }], { id: 'variation-123' });
             const baseFragment = mockFragment(
@@ -638,6 +668,27 @@ describe('MasSideNav – Copy Field', () => {
             const htmlText = await (await item.getType('text/html')).text();
             expect(htmlText).to.include('query=variation-123');
         });
+
+        it('should copy a badge field link ending with field=badge', async () => {
+            Store.search.get.returns({ path: 'sandbox' });
+            const fragment = mockFragment([{ name: 'badge', values: ['Best value'] }], {
+                id: 'daa51d7e-67b1-4c59-98c0-f002052f0498',
+            });
+            editorStub.withArgs('mas-fragment-editor').returns(mockEditor(fragment));
+
+            await el.copyField('badge');
+            expect(clipboardStub.write.calledOnce).to.be.true;
+            const item = clipboardStub.write.firstCall.args[0][0];
+            const htmlText = await (await item.getType('text/html')).text();
+            expect(htmlText).to.include('content-type=merch-card');
+            expect(htmlText).to.include('page=content');
+            expect(htmlText).to.include('path=sandbox');
+            expect(htmlText).to.include('query=daa51d7e-67b1-4c59-98c0-f002052f0498');
+            expect(htmlText).to.include('&field=badge"');
+            const plainText = await (await item.getType('text/plain')).text();
+            expect(plainText).to.match(/^mas-field: .* → badge$/);
+            expect(toastStub.firstCall.args[0]).to.deep.equal({ variant: 'positive', content: 'Copied Badge field link' });
+        });
     });
 
     describe('copyCtaItem', () => {
@@ -718,6 +769,20 @@ describe('MasSideNav – Copy Field', () => {
 
             const items = container.querySelectorAll('sp-menu-item');
             expect(items.length).to.equal(3);
+        });
+
+        it('should render a Badge row when the fragment has a badge', () => {
+            const fragment = mockFragment([
+                { name: 'cardTitle', values: ['Creative Cloud'] },
+                { name: 'badge', values: ['Best value'] },
+            ]);
+            editorStub.withArgs('mas-fragment-editor').returns(mockEditor(fragment));
+
+            const container = document.createElement('div');
+            render(el.copyFieldButton, container);
+
+            const labels = [...container.querySelectorAll('.field-label')].map((label) => label.textContent.trim());
+            expect(labels).to.include('Badge');
         });
 
         it('should render copy field menu inside a scroll container', () => {
