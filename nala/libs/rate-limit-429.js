@@ -150,17 +150,16 @@ const readFetchResponse = (response) => ({
 /**
  * Gate on the hostname, then call `send` until it stops answering 429 or the retries are spent.
  * The last response is returned untouched, so a persistent 429 fails exactly as it did before.
- * `send` receives the attempt index (0 for the first call, MAX_429_RETRIES for the last retry).
  * `read` extracts the status and Retry-After header from the kind of response `send` returns.
  */
 async function sendWithRetry(send, { hostname, trigger, onWait, read = readPlaywrightResponse }) {
     await waitForDomain(hostname, { onWait });
-    let response = await send(0);
+    let response = await send();
     for (let retry = 0; read(response).status === 429 && retry < MAX_429_RETRIES; retry += 1) {
         const { waitMs, source } = parseRetryAfter(read(response).retryAfter);
         await recordPause({ hostname, waitMs, source, trigger });
         await waitForDomain(hostname, { onWait });
-        response = await send(retry + 1);
+        response = await send();
     }
     return response;
 }
@@ -219,9 +218,9 @@ export async function install429HandlerOnContext(context, { onWait } = {}) {
 
 /**
  * Wrap a Playwright APIRequestContext so fetch/get/post/put/patch/delete/head gate and retry on 429.
- * Calls whose URL cannot be resolved pass through unchanged. Calls with failOnStatusCode: true are retried on 429
- * with the flag off, then throw like Playwright does: on the last attempt (Playwright's own error) or on a non-429
- * error status.
+ * Calls whose URL cannot be resolved pass through unchanged. Calls with failOnStatusCode: true have every attempt,
+ * including the last retry, sent with the flag off. Once the retries are done, one error carrying the full response
+ * body is thrown if the final status is below 200 or 400 and above.
  * @param {import('@playwright/test').APIRequestContext} ctx
  * @param {{ baseURL?: string, onWait?: (pauseUntil: number) => void }} [options]
  */
@@ -244,19 +243,12 @@ export function wrapApiRequestContext(ctx, { baseURL, onWait } = {}) {
                     options?.method ?? (prop === 'fetch' ? (urlOrRequest.method?.() ?? 'GET') : prop)
                 ).toUpperCase();
                 const response = await sendWithRetry(
-                    (attempt) =>
-                        value.call(
-                            target,
-                            urlOrRequest,
-                            failOnStatusCode && attempt < MAX_429_RETRIES ? { ...options, failOnStatusCode: false } : options,
-                        ),
+                    () => value.call(target, urlOrRequest, { ...options, failOnStatusCode: false }),
                     { hostname: url.hostname, trigger: `${method} ${url.href}`, onWait },
                 );
                 if (failOnStatusCode && (response.status() < 200 || response.status() >= 400)) {
                     const body = await response.text();
-                    const responseText = body
-                        ? `\nResponse text:\n${body.length > 1000 ? `${body.slice(0, 997)}...` : body}`
-                        : '';
+                    const responseText = body ? `\nResponse text:\n${body}` : '';
                     throw new Error(`apiRequestContext.${prop}: ${response.status()} ${response.statusText()}${responseText}`);
                 }
                 return response;
