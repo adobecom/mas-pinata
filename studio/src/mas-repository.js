@@ -31,6 +31,7 @@ import {
     COLLECTION_MODEL_PATH,
     COMPAT_VERSION,
     MAS_PRODUCT_CODE_PREFIX,
+    PROMOTIONS_PATH_PREFIX,
     PZN_FOLDER,
     SURFACES,
     BULK_PUBLISH_PROJECTS_FOLDER,
@@ -38,7 +39,7 @@ import {
     TAG_COMPARE_CHART,
     TAG_MERCH_CARD_COLLECTION,
 } from './constants.js';
-import { applyFragmentListFilters } from './fragments/fragment-list-filters.js';
+import { applyFragmentListFilters, VARIATION_FILTER } from './fragments/fragment-list-filters.js';
 import * as promotionsRepository from './promotions/promotions-repository.js';
 import {
     clearDictionaryCache,
@@ -61,7 +62,13 @@ import {
     resolvePromoVariationParentPath,
     VARIATION_SEARCH_TABS,
 } from './utils/variation-search.js';
-import { getFragmentByPathOrNull } from './promotions/promotion-model.js';
+import {
+    getFragmentByPathOrNull,
+    getPromoNameFromPromoVariationPath,
+    getPromoNameFromTag,
+    getPromotionTagFromFragment,
+    resolveDefaultPathFromPromoVariation,
+} from './promotions/promotion-model.js';
 import { Promotion } from './aem/promotion.js';
 
 let fragmentCache;
@@ -162,11 +169,39 @@ export class MasRepository extends LitElement {
     #searchCursor = null;
     #addonPlaceholdersRequest = null;
 
-    #applyFragmentListFilters(fragmentStores) {
+    /** Paths of the cards with at least one promo variation in the searched surface/locale; see #loadPromoParentPaths. */
+    #promoParentPaths = new Set();
+
+    #applyFragmentListFilters(fragmentStores, { skipVariationFilter = false } = {}) {
         return applyFragmentListFilters(fragmentStores, {
             page: this.page.value,
             personalizationFilterEnabled: this.filters.value.personalizationFilterEnabled,
+            variationFilter: skipVariationFilter ? undefined : this.filters.value.variationFilter,
+            promoParentPaths: this.#promoParentPaths,
         });
+    }
+
+    /**
+     * Promo variations are not listed in their parent's `variations` field, so the parents are derived from
+     * the variations found under the promotions folder of the searched surface/locale.
+     */
+    async #loadPromoParentPaths(localizedPath, abortController) {
+        const parentPaths = new Set();
+        const cursor = await this.aem.sites.cf.fragments.search(
+            { path: `${localizedPath}/${PROMOTIONS_PATH_PREFIX.slice(0, -1)}`, modelIds: EDITABLE_FRAGMENT_MODEL_IDS },
+            null,
+            abortController,
+        );
+        for await (const page of cursor) {
+            for (const item of page) {
+                const promoTag = getPromotionTagFromFragment(item);
+                const promoName = (promoTag && getPromoNameFromTag(promoTag)) ?? getPromoNameFromPromoVariationPath(item.path);
+                for (const parentPath of resolveDefaultPathFromPromoVariation(item.path, promoName)) {
+                    parentPaths.add(parentPath);
+                }
+            }
+        }
+        this.#promoParentPaths = parentPaths;
     }
 
     /** @type {AEM} */
@@ -448,6 +483,7 @@ export class MasRepository extends LitElement {
         const locale = this.filters.value.locale;
         const personalizationOn = this.filters.value.personalizationFilterEnabled === true;
         const metaPersonalizationOn = dataStore.getMeta('personalizationFilterEnabled') === true;
+        const variationFilter = this.filters.value.variationFilter;
         let resolvedLocale = locale;
         let resolvedPath = path;
 
@@ -502,7 +538,8 @@ export class MasRepository extends LitElement {
             currentData?.length > 0 &&
             currentPath === path &&
             currentLocale === locale &&
-            metaPersonalizationOn === personalizationOn;
+            metaPersonalizationOn === personalizationOn &&
+            (dataStore.getMeta('variationFilter') ?? null) === (variationFilter ?? null);
 
         const identicalFilters =
             sameSurface && currentQuery === query && currentTags === tagsString && currentCreatedBy === createdByString;
@@ -701,7 +738,7 @@ export class MasRepository extends LitElement {
                     }
                     const fragment = await this.#addToCache(displayFragment);
                     const sourceStore = generateFragmentStore(fragment, null, { lazy: true });
-                    dataStore.set(this.#applyFragmentListFilters([sourceStore]));
+                    dataStore.set(this.#applyFragmentListFilters([sourceStore], { skipVariationFilter: true }));
 
                     if (fragmentSurface) {
                         Store.search.setMeta('uuid-query', query);
@@ -745,6 +782,9 @@ export class MasRepository extends LitElement {
                 Store.fragments.variationSearchTab.set(null);
                 const surface = path?.split('/').filter(Boolean)[0]?.toLowerCase();
                 const fragmentStores = [];
+                if (variationFilter === VARIATION_FILTER.PROMO || variationFilter === VARIATION_FILTER.NONE) {
+                    await this.#loadPromoParentPaths(localizedPath, searchController);
+                }
                 if (lowerClientQuery.trim().includes(' ')) {
                     // first try to find the card that matches the full query
                     const reducedQuery = localSearch.query;
@@ -806,6 +846,7 @@ export class MasRepository extends LitElement {
             dataStore.setMeta('tags', tagsString);
             dataStore.setMeta('createdBy', createdByString);
             dataStore.setMeta('personalizationFilterEnabled', personalizationOn);
+            dataStore.setMeta('variationFilter', variationFilter);
             if (this.page.value === PAGE_NAMES.PROMOTIONS_EDITOR) {
                 dataStore.setMeta('promotionPickerSurface', Store.promotions.itemPickerSurface.get());
             }

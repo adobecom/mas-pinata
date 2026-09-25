@@ -178,19 +178,16 @@ class MasToolbar extends LitElement {
 
     updateFilterCount() {
         const filters = Store.filters.get();
-        if (!filters || !filters.tags) {
-            this.filterCount = 0;
-            return;
-        }
-
-        if (typeof filters.tags === 'string') {
+        this.filterCount = 0;
+        if (typeof filters?.tags === 'string') {
             this.filterCount = filters.tags.split(',').filter(Boolean).length;
-        } else if (Array.isArray(filters.tags)) {
+        } else if (Array.isArray(filters?.tags)) {
             this.filterCount = filters.tags.filter(Boolean).length;
-        } else {
-            this.filterCount = 0;
         }
         if (Store.createdByUsers.value.length > 0) {
+            this.filterCount += 1;
+        }
+        if (filters?.variationFilter) {
             this.filterCount += 1;
         }
     }
