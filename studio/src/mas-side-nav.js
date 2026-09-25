@@ -320,6 +320,7 @@ class MasSideNav extends LitElement {
         'promoText',
         'callout',
         'subtitle',
+        'badge',
         'ctas',
     ]);
 
