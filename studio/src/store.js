@@ -1,4 +1,5 @@
 import { PAGE_NAMES, SORT_COLUMNS, WCS_LANDSCAPE_DRAFT, WCS_LANDSCAPE_PUBLISHED } from './constants.js';
+import { VARIATION_FILTER } from './fragments/fragment-list-filters.js';
 import { ReactiveStore } from './reactivity/reactive-store.js';
 import { EditorContextStore } from './reactivity/editor-context-store.js';
 import { SettingsStore } from './settings/settings-store.js';
@@ -262,8 +263,12 @@ const Store = {
  * @returns {object}
  */
 function filtersValidator(value) {
-    if (!value) return { locale: 'en_US', tags: undefined, personalizationFilterEnabled: false };
+    if (!value) {
+        return { locale: 'en_US', tags: undefined, personalizationFilterEnabled: false, variationFilter: undefined };
+    }
     if (!value.locale) value.locale = 'en_US';
+
+    if (!Object.values(VARIATION_FILTER).includes(value.variationFilter)) value.variationFilter = undefined;
 
     const rawPzn = value.personalizationFilterEnabled;
     value.personalizationFilterEnabled =

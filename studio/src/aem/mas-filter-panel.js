@@ -4,6 +4,7 @@ import Store from '../store.js';
 import { isPznCountryTagPath } from '../common/utils/personalization-utils.js';
 import ReactiveController from '../reactivity/reactive-controller.js';
 import router from '../router.js';
+import { VARIATION_FILTER_OPTIONS } from '../fragments/fragment-list-filters.js';
 
 function pathToTagId(path) {
     return `mas:${path.replace('/content/cq:tags/mas/', '')}`;
@@ -254,6 +255,7 @@ class MasFilterPanel extends LitElement {
             ...prev,
             tags: '',
             personalizationFilterEnabled: false,
+            variationFilter: undefined,
         }));
 
         Store.createdByUsers.set([]);
@@ -276,6 +278,20 @@ class MasFilterPanel extends LitElement {
     #handleUserDelete(e) {
         const value = e.target.value;
         Store.createdByUsers.set(Store.createdByUsers.value.filter((user) => user.userPrincipalName !== value));
+    }
+
+    #setVariationFilter(variationFilter) {
+        Store.filters.set((prev) => ({ ...prev, variationFilter }));
+    }
+
+    #handleVariationFilterChange(e) {
+        this.#setVariationFilter(e.target.value || undefined);
+    }
+
+    get variationFilterTag() {
+        const selected = VARIATION_FILTER_OPTIONS.find(({ value }) => value === Store.filters.get().variationFilter);
+        if (!selected) return nothing;
+        return html`<sp-tag size="s" deletable @delete=${() => this.#setVariationFilter(undefined)}>${selected.label}</sp-tag>`;
     }
 
     get createdByUsersTags() {
@@ -398,6 +414,17 @@ class MasFilterPanel extends LitElement {
                     @personalization-toggle-change=${this.#onPersonalizationToggleEnabled}
                 ></aem-tag-picker-field>
 
+                <sp-picker
+                    label="Has variation?"
+                    size="m"
+                    .value=${Store.filters.get().variationFilter ?? ''}
+                    @change=${this.#handleVariationFilterChange}
+                >
+                    ${VARIATION_FILTER_OPTIONS.map(
+                        ({ value, label }) => html`<sp-menu-item value=${value}>${label}</sp-menu-item>`,
+                    )}
+                </sp-picker>
+
                 <mas-user-picker
                     label="Created by"
                     .currentUser=${Store.profile}
@@ -422,7 +449,7 @@ class MasFilterPanel extends LitElement {
                         >
                     `,
                 )}
-                ${this.createdByUsersTags}
+                ${this.variationFilterTag} ${this.createdByUsersTags}
             </sp-tags>
         `;
     }
