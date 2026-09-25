@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../libs/rate-limited-test.js';
 import { features } from './benchmark.spec.js';
 import BenchmarkPage from './benchmark.page.js';
 import { constructTestUrl } from '../../utils/commerce.js';
@@ -9,7 +9,7 @@ test.beforeEach(async ({ page, browserName }) => {
         await page.setExtraHTTPHeaders({ 'sec-ch-ua': '"Chromium";v="123", "Not:A-Brand";v="8"' });
     }
     // disabling cache
-    await page.route('**', (route) => route.continue());
+    await page.route('**', (route) => route.fallback());
 });
 
 test.describe('Benchmark feature test suite', () => {
