@@ -1,5 +1,6 @@
 <div class="plans-gallery-content">
   <h1 id="pro-gallery">Pro Gallery</h1>
+  <p>This gallery shows the one published Pro card (Light, Edu, What's included); Dark and Wide will be added once QA publishes those cards.</p>
   <a class="plans-link" target="_blank" href="https://main--mas--adobecom.aem.live/studio.html?#path=sandbox&query=46e554aa-f273-4caa-a0b8-4491253d7ef2">Open the Pro fragment in Studio ↗</a>
   <h2 id="crd-mrch-pro-light">Light <a class="header-anchor" href="#crd-mrch-pro-light" title="Permalink to this heading">#</a></h2>
   <div id="pro-light" class="pro-gallery-row">
