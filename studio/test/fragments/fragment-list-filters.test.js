@@ -106,6 +106,20 @@ describe('fragment-list-filters', () => {
             expect(filterStoresByVariationType(stores, VARIATION_FILTER.NONE, promoParentPaths)).to.deep.equal([none]);
         });
 
+        it('excludes a card whose only variation is a locale variation', () => {
+            const result = filterStoresByVariationType(stores, VARIATION_FILTER.NONE, promoParentPaths);
+
+            expect(result).to.not.include(localeOnly);
+        });
+
+        it('keeps a card with promo and grouped variations under both filters', () => {
+            const promoResult = filterStoresByVariationType(stores, VARIATION_FILTER.PROMO, promoParentPaths);
+            const groupedResult = filterStoresByVariationType(stores, VARIATION_FILTER.GROUPED, promoParentPaths);
+
+            expect(promoResult).to.include(both);
+            expect(groupedResult).to.include(both);
+        });
+
         it('returns every card when no filter is set', () => {
             expect(filterStoresByVariationType(stores, undefined, promoParentPaths)).to.deep.equal(stores);
         });
