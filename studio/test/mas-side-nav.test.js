@@ -686,7 +686,7 @@ describe('MasSideNav – Copy Field', () => {
             expect(htmlText).to.include('query=daa51d7e-67b1-4c59-98c0-f002052f0498');
             expect(htmlText).to.include('&field=badge"');
             const plainText = await (await item.getType('text/plain')).text();
-            expect(plainText).to.match(/^mas-field: .* → badge$/);
+            expect(plainText).to.match(/^mas-field: .* → Badge$/);
             expect(toastStub.firstCall.args[0]).to.deep.equal({ variant: 'positive', content: 'Copied Badge field link' });
         });
     });
