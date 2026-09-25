@@ -6,6 +6,7 @@ import os from 'os';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import {
+    MAX_429_RETRIES,
     fetchWith429Retry,
     install429HandlerOnContext,
     parseRetryAfter,
@@ -26,7 +27,7 @@ let logs;
  * Local server: `/api` answers 429 (with the given Retry-After) for the first `limit429` hits, then 200.
  * Listens on all interfaces so both 127.0.0.1 and localhost reach it.
  */
-async function startServer({ limit429 = 1, retryAfter = '1' } = {}) {
+async function startServer({ limit429 = 1, retryAfter = '1', finalStatus = 200 } = {}) {
     const server = { hits: 0 };
     server.http = http.createServer((req, res) => {
         if (req.url === '/api') {
@@ -34,6 +35,11 @@ async function startServer({ limit429 = 1, retryAfter = '1' } = {}) {
             if (server.hits <= limit429) {
                 res.writeHead(429, retryAfter === undefined ? {} : { 'Retry-After': retryAfter });
                 res.end('slow down');
+                return;
+            }
+            if (finalStatus !== 200) {
+                res.writeHead(finalStatus);
+                res.end('broken');
                 return;
             }
         }
@@ -156,6 +162,39 @@ test('wrapApiRequestContext retries a 429 from an APIRequestContext', async () =
     expect(server.hits).toBe(2);
     expect(Date.now() - startedAt).toBeGreaterThanOrEqual(990);
     expect(logs.join('\n')).toContain(`trigger=GET ${baseURL}/api`);
+    await ctx.dispose();
+});
+
+test('wrapApiRequestContext retries a 429 on a failOnStatusCode call and returns the 200', async () => {
+    const server = await startServer({ limit429: 1, retryAfter: '0' });
+    const baseURL = `http://127.0.0.1:${server.port}`;
+    const ctx = wrapApiRequestContext(await request.newContext({ baseURL }), { baseURL });
+
+    const response = await ctx.get('/api', { failOnStatusCode: true });
+    expect(response.status()).toBe(200);
+    expect(server.hits).toBe(2);
+    expect(logs.join('\n')).toContain('[NALA 429] pause host=127.0.0.1');
+    await ctx.dispose();
+});
+
+test('wrapApiRequestContext throws a failOnStatusCode call once the 429 retries are spent', async () => {
+    const server = await startServer({ limit429: Infinity, retryAfter: '0' });
+    const baseURL = `http://127.0.0.1:${server.port}`;
+    const ctx = wrapApiRequestContext(await request.newContext({ baseURL }), { baseURL });
+
+    await expect(ctx.get('/api', { failOnStatusCode: true })).rejects.toThrow('429');
+    expect(server.hits).toBe(1 + MAX_429_RETRIES);
+    await ctx.dispose();
+});
+
+test('wrapApiRequestContext throws a failOnStatusCode call on a non-429 error without retrying', async () => {
+    const server = await startServer({ limit429: 0, finalStatus: 500 });
+    const baseURL = `http://127.0.0.1:${server.port}`;
+    const ctx = wrapApiRequestContext(await request.newContext({ baseURL }), { baseURL });
+
+    await expect(ctx.get('/api', { failOnStatusCode: true })).rejects.toThrow('500');
+    expect(server.hits).toBe(1);
+    expect(logs.join('\n')).not.toContain('[NALA 429] pause');
     await ctx.dispose();
 });
 

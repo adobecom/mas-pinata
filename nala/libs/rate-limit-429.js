@@ -150,16 +150,17 @@ const readFetchResponse = (response) => ({
 /**
  * Gate on the hostname, then call `send` until it stops answering 429 or the retries are spent.
  * The last response is returned untouched, so a persistent 429 fails exactly as it did before.
+ * `send` receives the attempt index (0 for the first call, MAX_429_RETRIES for the last retry).
  * `read` extracts the status and Retry-After header from the kind of response `send` returns.
  */
 async function sendWithRetry(send, { hostname, trigger, onWait, read = readPlaywrightResponse }) {
     await waitForDomain(hostname, { onWait });
-    let response = await send();
+    let response = await send(0);
     for (let retry = 0; read(response).status === 429 && retry < MAX_429_RETRIES; retry += 1) {
         const { waitMs, source } = parseRetryAfter(read(response).retryAfter);
         await recordPause({ hostname, waitMs, source, trigger });
         await waitForDomain(hostname, { onWait });
-        response = await send();
+        response = await send(retry + 1);
     }
     return response;
 }
@@ -218,7 +219,9 @@ export async function install429HandlerOnContext(context, { onWait } = {}) {
 
 /**
  * Wrap a Playwright APIRequestContext so fetch/get/post/put/patch/delete/head gate and retry on 429.
- * Calls with failOnStatusCode: true, or whose URL cannot be resolved, pass through unchanged.
+ * Calls whose URL cannot be resolved pass through unchanged. Calls with failOnStatusCode: true are retried on 429
+ * with the flag off, then throw like Playwright does: on the last attempt (Playwright's own error) or on a non-429
+ * error status.
  * @param {import('@playwright/test').APIRequestContext} ctx
  * @param {{ baseURL?: string, onWait?: (pauseUntil: number) => void }} [options]
  */
@@ -236,15 +239,27 @@ export function wrapApiRequestContext(ctx, { baseURL, onWait } = {}) {
                 } catch {
                     return value.call(target, urlOrRequest, options);
                 }
-                if (options?.failOnStatusCode) return value.call(target, urlOrRequest, options);
+                const failOnStatusCode = options?.failOnStatusCode === true;
                 const method = (
                     options?.method ?? (prop === 'fetch' ? (urlOrRequest.method?.() ?? 'GET') : prop)
                 ).toUpperCase();
-                return sendWithRetry(() => value.call(target, urlOrRequest, options), {
-                    hostname: url.hostname,
-                    trigger: `${method} ${url.href}`,
-                    onWait,
-                });
+                const response = await sendWithRetry(
+                    (attempt) =>
+                        value.call(
+                            target,
+                            urlOrRequest,
+                            failOnStatusCode && attempt < MAX_429_RETRIES ? { ...options, failOnStatusCode: false } : options,
+                        ),
+                    { hostname: url.hostname, trigger: `${method} ${url.href}`, onWait },
+                );
+                if (failOnStatusCode && (response.status() < 200 || response.status() >= 400)) {
+                    const body = await response.text();
+                    const responseText = body
+                        ? `\nResponse text:\n${body.length > 1000 ? `${body.slice(0, 997)}...` : body}`
+                        : '';
+                    throw new Error(`apiRequestContext.${prop}: ${response.status()} ${response.statusText()}${responseText}`);
+                }
+                return response;
             };
         },
     });
