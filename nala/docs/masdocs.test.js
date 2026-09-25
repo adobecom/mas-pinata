@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../libs/rate-limited-test.js';
 import { features } from './masdocs.spec.js';
 import { constructTestUrl } from '../utils/commerce.js';
 

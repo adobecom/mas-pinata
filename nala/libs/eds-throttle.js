@@ -6,6 +6,9 @@
  *
  * Auth setup loads studio.html before GlobalRequestCounter runs; call installEdsThrottleOnPage(page)
  * there so the first navigation is paced too.
+ *
+ * Pacing runs before the shared 429 gate (rate-limit-429.js): the page route hands requests on with route.fallback(),
+ * so a context-level 429 handler, when installed, still sees them.
  */
 
 /** Default CI cap: 45 rps/worker × 4 workers (studio:3 + docs:1) = 180 rps, under 200 rps EDS limit. */
@@ -80,6 +83,6 @@ export async function installEdsThrottleOnPage(page) {
         if (isEdsEdgeHost(url)) {
             await throttleEdsGap(edsMaxRps);
         }
-        await route.continue();
+        await route.fallback();
     });
 }

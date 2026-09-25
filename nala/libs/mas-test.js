@@ -1,6 +1,7 @@
 import { test as base } from '@playwright/test';
 import GlobalRequestCounter from './global-request-counter.js';
 import { installEdsThrottleOnPage } from './eds-throttle.js';
+import { createTimeoutExtender, install429HandlerOnContext, wrapApiRequestContext } from './rate-limit-429.js';
 import { setCurrentTestName } from '../utils/fragment-tracker.js';
 import StudioPage from '../studio/studio.page.js';
 import EditorPage from '../studio/editor.page.js';
@@ -84,6 +85,7 @@ const masTest = base.extend({
         versions = new VersionPage(page);
         placeholders = new PlaceholdersPage(page);
 
+        await install429HandlerOnContext(page.context(), { onWait: createTimeoutExtender(() => testInfo) });
         await installEdsThrottleOnPage(page);
         await GlobalRequestCounter.init(page);
 
@@ -101,6 +103,9 @@ const masTest = base.extend({
             // Always save request count
             GlobalRequestCounter.saveCountToFileSync();
         }
+    },
+    request: async ({ request, baseURL }, use, testInfo) => {
+        await use(wrapApiRequestContext(request, { baseURL, onWait: createTimeoutExtender(() => testInfo) }));
     },
 });
 

@@ -2,10 +2,12 @@
 import { test as setup, expect } from '@playwright/test';
 import path from 'path';
 import { installEdsThrottleOnPage } from './eds-throttle.js';
+import { createTimeoutExtender, install429HandlerOnContext, wrapApiRequestContext } from './rate-limit-429.js';
 
 const authFile = path.join(__dirname, '../../nala/.auth/user.json');
 
-setup('authenticate, @mas-studio', async ({ page, baseURL, browserName }) => {
+setup('authenticate, @mas-studio', async ({ page, baseURL, browserName }, testInfo) => {
+    const onWait = createTimeoutExtender(() => testInfo);
     if (browserName === 'chromium') {
         await page.setExtraHTTPHeaders({
             'sec-ch-ua': '"Chromium";v="123", "Not:A-Brand";v="8"',
@@ -15,6 +17,7 @@ setup('authenticate, @mas-studio', async ({ page, baseURL, browserName }) => {
     expect(process.env.IMS_EMAIL, 'ERROR: No environment variable for email provided for IMS Test.').toBeTruthy();
     expect(process.env.IMS_PASS, 'ERROR: No environment variable for password provided for IMS Test.').toBeTruthy();
 
+    await install429HandlerOnContext(page.context(), { onWait });
     await installEdsThrottleOnPage(page);
     await page.goto(`${baseURL}/studio.html`);
     await page.waitForURL('**/auth.services.adobe.com/en_US/index.html**/');
@@ -56,7 +59,7 @@ setup('authenticate, @mas-studio', async ({ page, baseURL, browserName }) => {
     await expect(page).toHaveURL(welcomeUrlPattern, { timeout: 45000 });
 
     await expect(async () => {
-        const response = await page.request.get(`${baseURL}/studio.html`);
+        const response = await wrapApiRequestContext(page.request, { baseURL, onWait }).get(`${baseURL}/studio.html`);
         expect(response.status()).toBe(200);
     }).toPass();
     await page.waitForLoadState('domcontentloaded');
