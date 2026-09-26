@@ -1,5 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { styles } from './mas-collapsible-table-row.css.js';
 import { Fragment } from '../aem/fragment.js';
 import { getItemTypeLabel, shouldIgnoreRowClickForSelection } from '../common/utils/render-utils.js';
@@ -10,8 +11,11 @@ import { mergePromoReferencesIntoFragmentData } from '../promotions/promotions-r
 import { getPromotionInfo, getPromotionTagFromFragment, findPromotionProjectIdByTag } from '../promotions/promotion-model.js';
 import { getGroupedVariationTagsValue } from '../editors/variation-utils.js';
 import Store from '../store.js';
-import { PAGE_NAMES, VARIATION_TAB_NAME } from '../constants.js';
+import { CARD_MODEL_PATH, PAGE_NAMES, VARIATION_TAB_NAME } from '../constants.js';
+import { extractLocaleFromPath, extractSurfaceFromPath } from '../utils.js';
 import '../aem/aem-tag-picker-field.js';
+
+const ROW_CONTROL_TAGS = new Set(['sp-action-button', 'sp-button', 'sp-checkbox']);
 
 export class MasCollapsibleTableRow extends LitElement {
     static styles = styles;
@@ -34,6 +38,7 @@ export class MasCollapsibleTableRow extends LitElement {
         promoVariationsFetchedByParent: { type: Object },
         renderActionsCell: { type: Function },
         renderPreviewCell: { type: Function },
+        promoVariationContextMenu: { type: Object, state: true },
     };
 
     #groupedActiveLoadCount = 0;
@@ -54,6 +59,7 @@ export class MasCollapsibleTableRow extends LitElement {
         this.variationsController = new ReactiveController(this, [getItemsSelectionStore().groupedVariationsByParent]);
         this.selectedCardsController = new ReactiveController(this, [getItemsSelectionStore().selectedCards]);
         this.promoVariations = [];
+        this.promoVariationContextMenu = null;
     }
 
     connectedCallback() {
@@ -74,8 +80,20 @@ export class MasCollapsibleTableRow extends LitElement {
         }
     }
 
+    disconnectedCallback() {
+        super.disconnectedCallback();
+        this.#stopListeningForMenuDismiss();
+    }
+
     updated(changedProperties) {
         super.updated(changedProperties);
+        if (changedProperties.has('promoVariationContextMenu')) {
+            if (this.promoVariationContextMenu) {
+                this.#startListeningForMenuDismiss();
+            } else {
+                this.#stopListeningForMenuDismiss();
+            }
+        }
         if (changedProperties.has('topLevelCard')) {
             const prev = changedProperties.get('topLevelCard');
             if (prev?.id !== this.topLevelCard?.id) {
@@ -90,6 +108,15 @@ export class MasCollapsibleTableRow extends LitElement {
                 this.isLoadingPromoVariations = false;
             }
         }
+    }
+
+    /** Only the promotions editor's Selected items > Fragments table opens promo variations for editing. */
+    get canOpenPromoVariationsInNewTab() {
+        return (
+            this.viewOnly &&
+            Store.page.get() === PAGE_NAMES.PROMOTIONS_EDITOR &&
+            this.topLevelCard?.model?.path === CARD_MODEL_PATH
+        );
     }
 
     get topLevelCardFragment() {
@@ -243,6 +270,7 @@ export class MasCollapsibleTableRow extends LitElement {
             </div>`;
         }
         const isSelectable = this.selectableTabs.includes(VARIATION_TAB_NAME.PROMOTION);
+        const canOpenInNewTab = this.canOpenPromoVariationsInNewTab;
         return this.promoVariations.length === 0
             ? html`<div class="empty-promotion-variations">No promotion variations found</div>`
             : html`<sp-table>
@@ -271,6 +299,10 @@ export class MasCollapsibleTableRow extends LitElement {
                                   ?selected=${isSelected}
                                   aria-selected=${isSelected ? 'true' : 'false'}
                                   @click=${(event) => isSelectable && this.#onRowClickForSelection(event, path)}
+                                  @dblclick=${canOpenInNewTab ? (e) => this.#onPromoVariationDblClick(e, variation) : null}
+                                  @contextmenu=${canOpenInNewTab
+                                      ? (e) => this.#onPromoVariationContextMenu(e, variation)
+                                      : null}
                               >
                                   <sp-table-cell class="table-icon-cell">
                                       <sp-button
@@ -346,7 +378,24 @@ export class MasCollapsibleTableRow extends LitElement {
             }
         }
 
-        return html`${topLevelRow}${nestedContent}`;
+        return html`${topLevelRow}${nestedContent}${this.promoVariationContextMenuTemplate}`;
+    }
+
+    get promoVariationContextMenuTemplate() {
+        if (!this.promoVariationContextMenu) return nothing;
+        const { x, y, variation } = this.promoVariationContextMenu;
+        return html`<sp-popover
+            open
+            class="promo-variation-context-menu"
+            style=${styleMap({ position: 'fixed', left: `${x}px`, top: `${y}px`, zIndex: '10' })}
+        >
+            <sp-menu>
+                <sp-menu-item @click=${() => this.#openPromoVariationFromMenu(variation)}>
+                    <sp-icon-open-in slot="icon"></sp-icon-open-in>
+                    Open in a new tab
+                </sp-menu-item>
+            </sp-menu>
+        </sp-popover>`;
     }
 
     renderTitle(item) {
@@ -455,6 +504,66 @@ export class MasCollapsibleTableRow extends LitElement {
                 }),
             );
         }
+    }
+
+    #getPromoVariationEditorUrl({ id, path }) {
+        const params = new URLSearchParams({ page: PAGE_NAMES.FRAGMENT_EDITOR, fragmentId: id });
+        const locale = extractLocaleFromPath(path);
+        const surface = extractSurfaceFromPath(path);
+        if (locale) params.set('locale', locale);
+        if (surface) params.set('path', surface);
+        const promotionId = Store.promotions.inEdit.get()?.get?.()?.id || Store.promotions.promotionId.get();
+        if (promotionId) params.set('promotionId', promotionId);
+        return `${window.location.pathname}${window.location.search}#${params}`;
+    }
+
+    #openPromoVariationInNewTab(variation) {
+        window.open(this.#getPromoVariationEditorUrl(variation), '_blank', 'noopener');
+    }
+
+    #isFromRowControl(e) {
+        return e.composedPath().some((el) => ROW_CONTROL_TAGS.has(el.localName));
+    }
+
+    #onPromoVariationDblClick(e, variation) {
+        if (this.#isFromRowControl(e)) return;
+        this.#openPromoVariationInNewTab(variation);
+    }
+
+    #onPromoVariationContextMenu(e, variation) {
+        if (this.#isFromRowControl(e)) return;
+        e.preventDefault();
+        this.promoVariationContextMenu = { x: e.clientX, y: e.clientY, variation };
+    }
+
+    #openPromoVariationFromMenu(variation) {
+        this.promoVariationContextMenu = null;
+        this.#openPromoVariationInNewTab(variation);
+    }
+
+    #closePromoVariationContextMenu = () => {
+        this.promoVariationContextMenu = null;
+    };
+
+    #onDocumentPointerDown = (e) => {
+        if (e.composedPath().some((el) => el.classList?.contains('promo-variation-context-menu'))) return;
+        this.#closePromoVariationContextMenu();
+    };
+
+    #onDocumentKeyDown = (e) => {
+        if (e.key === 'Escape') this.#closePromoVariationContextMenu();
+    };
+
+    #startListeningForMenuDismiss() {
+        document.addEventListener('pointerdown', this.#onDocumentPointerDown);
+        document.addEventListener('keydown', this.#onDocumentKeyDown);
+        window.addEventListener('scroll', this.#closePromoVariationContextMenu, true);
+    }
+
+    #stopListeningForMenuDismiss() {
+        document.removeEventListener('pointerdown', this.#onDocumentPointerDown);
+        document.removeEventListener('keydown', this.#onDocumentKeyDown);
+        window.removeEventListener('scroll', this.#closePromoVariationContextMenu, true);
     }
 
     #onRowClickForSelection(e, path) {
