@@ -875,6 +875,7 @@ class MasPromotionsItemsTable extends LitElement {
             .renderActionsCell=${(item) => this.#renderActionsCell(item)}
             .renderPreviewCell=${(item) => this.#renderPreviewCell(item)}
             .promoVariationsFetchedByParent=${this.existingPromoVariationsByPath}
+            .openPromoVariationsInNewTab=${true}
             @show-toast=${this.#showToast}
         >
         </mas-select-items-table>`;

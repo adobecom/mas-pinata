@@ -194,6 +194,11 @@ export const styles = [
             flex: 0 0 auto;
         }
 
+        .context-menu {
+            position: fixed;
+            z-index: 1000;
+        }
+
         .variation-details-row {
             sp-table-cell {
                 background-color: var(--spectrum-gray-50);

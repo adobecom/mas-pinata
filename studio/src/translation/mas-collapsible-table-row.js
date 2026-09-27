@@ -9,6 +9,7 @@ import ReactiveController from '../reactivity/reactive-controller.js';
 import { mergePromoReferencesIntoFragmentData } from '../promotions/promotions-repository.js';
 import { getPromotionInfo, getPromotionTagFromFragment, findPromotionProjectIdByTag } from '../promotions/promotion-model.js';
 import { getGroupedVariationTagsValue } from '../editors/variation-utils.js';
+import { openPromoVariationInNewTab } from '../promotions/promo-variation-open-actions.js';
 import Store from '../store.js';
 import { PAGE_NAMES, VARIATION_TAB_NAME } from '../constants.js';
 import '../aem/aem-tag-picker-field.js';
@@ -34,6 +35,8 @@ export class MasCollapsibleTableRow extends LitElement {
         promoVariationsFetchedByParent: { type: Object },
         renderActionsCell: { type: Function },
         renderPreviewCell: { type: Function },
+        openPromoVariationsInNewTab: { type: Boolean },
+        promoVariationContextMenu: { type: Object, state: true },
     };
 
     #groupedActiveLoadCount = 0;
@@ -54,6 +57,8 @@ export class MasCollapsibleTableRow extends LitElement {
         this.variationsController = new ReactiveController(this, [getItemsSelectionStore().groupedVariationsByParent]);
         this.selectedCardsController = new ReactiveController(this, [getItemsSelectionStore().selectedCards]);
         this.promoVariations = [];
+        this.openPromoVariationsInNewTab = false;
+        this.promoVariationContextMenu = null;
     }
 
     connectedCallback() {
@@ -271,6 +276,12 @@ export class MasCollapsibleTableRow extends LitElement {
                                   ?selected=${isSelected}
                                   aria-selected=${isSelected ? 'true' : 'false'}
                                   @click=${(event) => isSelectable && this.#onRowClickForSelection(event, path)}
+                                  @dblclick=${this.openPromoVariationsInNewTab
+                                      ? (event) => this.#onPromoVariationDblClick(event, variation)
+                                      : nothing}
+                                  @contextmenu=${this.openPromoVariationsInNewTab
+                                      ? (event) => this.#onPromoVariationContextMenu(event, variation)
+                                      : nothing}
                               >
                                   <sp-table-cell class="table-icon-cell">
                                       <sp-button
@@ -346,7 +357,7 @@ export class MasCollapsibleTableRow extends LitElement {
             }
         }
 
-        return html`${topLevelRow}${nestedContent}`;
+        return html`${topLevelRow}${nestedContent}${this.promoVariationContextMenuTemplate}`;
     }
 
     renderTitle(item) {
@@ -455,6 +466,35 @@ export class MasCollapsibleTableRow extends LitElement {
                 }),
             );
         }
+    }
+
+    #onPromoVariationDblClick(e, variation) {
+        if (shouldIgnoreRowClickForSelection(e)) return;
+        openPromoVariationInNewTab(variation);
+    }
+
+    #onPromoVariationContextMenu(e, variation) {
+        if (shouldIgnoreRowClickForSelection(e)) return;
+        e.preventDefault();
+        this.promoVariationContextMenu = { variation, x: e.clientX, y: e.clientY };
+        window.addEventListener('click', this.#closePromoVariationContextMenu, { once: true });
+        window.addEventListener('keydown', this.#closePromoVariationContextMenu, { once: true });
+    }
+
+    #closePromoVariationContextMenu = () => {
+        this.promoVariationContextMenu = null;
+        window.removeEventListener('click', this.#closePromoVariationContextMenu);
+        window.removeEventListener('keydown', this.#closePromoVariationContextMenu);
+    };
+
+    get promoVariationContextMenuTemplate() {
+        if (!this.promoVariationContextMenu) return nothing;
+        const { variation, x, y } = this.promoVariationContextMenu;
+        return html`<sp-popover class="context-menu" open style="left: ${x}px; top: ${y}px">
+            <sp-menu>
+                <sp-menu-item @click=${() => openPromoVariationInNewTab(variation)}>Open in a new tab</sp-menu-item>
+            </sp-menu>
+        </sp-popover>`;
     }
 
     #onRowClickForSelection(e, path) {

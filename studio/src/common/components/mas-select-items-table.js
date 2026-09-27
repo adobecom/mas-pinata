@@ -35,6 +35,7 @@ class MasSelectItemsTable extends LitElement {
         renderActionsCell: { type: Function },
         renderPreviewCell: { type: Function },
         promoVariationsFetchedByParent: { type: Object },
+        openPromoVariationsInNewTab: { type: Boolean },
         viewOnlyFragmentsFetchedByParent: { type: Boolean },
     };
 
@@ -65,6 +66,7 @@ class MasSelectItemsTable extends LitElement {
         this.renderPreviewCell = null;
         this.hidePromoVariations = false;
         this.viewOnlyFragmentsFetchedByParent = false;
+        this.openPromoVariationsInNewTab = false;
     }
 
     connectedCallback() {
@@ -342,6 +344,7 @@ class MasSelectItemsTable extends LitElement {
                             .renderActionsCell=${this.renderActionsCell}
                             .renderPreviewCell=${this.renderPreviewCell}
                             .promoVariationsFetchedByParent=${this.promoVariationsFetchedByParent}
+                            .openPromoVariationsInNewTab=${this.openPromoVariationsInNewTab}
                         ></mas-collapsible-table-row>`,
                 )}`;
             case TABLE_TYPE.COLLECTIONS:
