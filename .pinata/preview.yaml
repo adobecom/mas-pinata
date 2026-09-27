@@ -109,7 +109,7 @@ content_probes:
 # The visual gate works signed in only inside Studio's sandbox folder (`path`, in
 # the hash: #...&path=sandbox). A signed-in capture of any other folder is refused
 # before it loads, and an exploration that leaves the sandbox is stopped.
-explore_scope: {path: sandbox}
+explore_scope: { path: sandbox }
 
 # This list qualifies pasted/generated URLs and selects authentication settings.
 # Declared surface URLs below are selected directly, not filtered by this list.
