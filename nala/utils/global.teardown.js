@@ -135,6 +135,7 @@ async function cleanupClonedCards() {
         // Import request counter to track teardown requests
         const GlobalRequestCounter = (await import('../libs/global-request-counter.js')).default;
         const { installEdsThrottleOnPage } = await import('../libs/eds-throttle.js');
+        const { install429HandlerOnContext } = await import('../libs/rate-limit-429.js');
 
         const browser = await chromium.launch({
             args: ['--disable-web-security', '--disable-gpu'],
@@ -146,6 +147,7 @@ async function cleanupClonedCards() {
             storageState: authPath,
             bypassCSP: true,
         });
+        await install429HandlerOnContext(context);
         const page = await context.newPage();
 
         // Set HTTP headers for chromium (same as mastest)

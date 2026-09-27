@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../libs/rate-limited-test.js';
+import { createTimeoutExtender, install429HandlerOnContext } from '../../libs/rate-limit-429.js';
 import { features } from './masccd.spec.js';
 import MerchCCD from './masccd.page.js';
 import WebUtil from '../../libs/webutil.js';
@@ -1979,6 +1980,7 @@ test.describe('CCD Merchcard feature test suite', () => {
             const context = await browser.newContext({
                 extraHTTPHeaders: { 'sec-ch-ua': '"Chromium";v="123", "Not:A-Brand";v="8"' },
             });
+            await install429HandlerOnContext(context, { onWait: createTimeoutExtender(() => test.info()) });
             const page = await context.newPage();
 
             try {

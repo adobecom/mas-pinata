@@ -30,6 +30,7 @@
 import { chromium, devices } from '@playwright/test';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { install429HandlerOnContext } from '../libs/rate-limit-429.js';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const authFile = join(currentDir, '../.auth/user.json');
@@ -69,6 +70,7 @@ async function cleanupClonedCards(options = {}) {
                 storageState: authFile,
                 bypassCSP: true,
             });
+            await install429HandlerOnContext(context);
             const page = await context.newPage();
 
             // Set HTTP headers for chromium

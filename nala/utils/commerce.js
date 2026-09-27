@@ -1,5 +1,6 @@
 import { test } from '@playwright/test';
 import { installEdsThrottleOnPage } from '../libs/eds-throttle.js';
+import { createTimeoutExtender, install429HandlerOnContext } from '../libs/rate-limit-429.js';
 
 const MILO_LIBS = process.env.MILO_LIBS || '';
 const MAS_LIBS = process.env.MAS_LIBS || '';
@@ -338,6 +339,16 @@ function createWorkerPageSetup(config = {}) {
         test.setTimeout(setupTimeout);
 
         workerContext = await browser.newContext({ extraHTTPHeaders });
+        await install429HandlerOnContext(workerContext, {
+            // worker-scoped pages outlive a single test, so between tests there is no timeout to extend
+            onWait: createTimeoutExtender(() => {
+                try {
+                    return test.info();
+                } catch {
+                    return null;
+                }
+            }),
+        });
 
         consoleErrors = [];
         masRequestErrors = [];

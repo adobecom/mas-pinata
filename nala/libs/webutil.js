@@ -1,6 +1,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 
 import { expect, request } from '@playwright/test';
+import { wrapApiRequestContext } from './rate-limit-429.js';
 
 /**
  * A utility class for common web interactions.
@@ -201,7 +202,7 @@ export default class WebUtil {
      * @param {string} url
      */
     static async loadTestDataFromAPI(url, path) {
-        const context = await request.newContext({ baseURL: url });
+        const context = wrapApiRequestContext(await request.newContext({ baseURL: url }), { baseURL: url });
         const res = await context.fetch(path);
         return res.json();
     }
@@ -225,7 +226,7 @@ export default class WebUtil {
                     networklogs.push(JSON.stringify(firstEvent.data._adobe_corpnew.digitalData.search));
                 }
             }
-            route.continue();
+            route.fallback();
         });
     }
 
