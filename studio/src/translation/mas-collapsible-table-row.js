@@ -11,6 +11,8 @@ import { getPromotionInfo, getPromotionTagFromFragment, findPromotionProjectIdBy
 import { getGroupedVariationTagsValue } from '../editors/variation-utils.js';
 import Store from '../store.js';
 import { PAGE_NAMES, VARIATION_TAB_NAME } from '../constants.js';
+import { extractLocaleFromPath, extractSurfaceFromPath } from '../utils.js';
+import { getDefaultLocaleCode } from '../../../io/www/src/fragment/locales.js';
 import '../aem/aem-tag-picker-field.js';
 
 export class MasCollapsibleTableRow extends LitElement {
@@ -34,6 +36,7 @@ export class MasCollapsibleTableRow extends LitElement {
         promoVariationsFetchedByParent: { type: Object },
         renderActionsCell: { type: Function },
         renderPreviewCell: { type: Function },
+        promoContextMenu: { type: Object, state: true },
     };
 
     #groupedActiveLoadCount = 0;
@@ -54,6 +57,13 @@ export class MasCollapsibleTableRow extends LitElement {
         this.variationsController = new ReactiveController(this, [getItemsSelectionStore().groupedVariationsByParent]);
         this.selectedCardsController = new ReactiveController(this, [getItemsSelectionStore().selectedCards]);
         this.promoVariations = [];
+        this.promoContextMenu = null;
+    }
+
+    disconnectedCallback() {
+        super.disconnectedCallback();
+        document.removeEventListener('pointerdown', this.#handleDocumentPointerDown);
+        document.removeEventListener('keydown', this.#handleDocumentKeyDown);
     }
 
     connectedCallback() {
@@ -76,6 +86,15 @@ export class MasCollapsibleTableRow extends LitElement {
 
     updated(changedProperties) {
         super.updated(changedProperties);
+        if (changedProperties.has('promoContextMenu')) {
+            if (this.promoContextMenu) {
+                document.addEventListener('pointerdown', this.#handleDocumentPointerDown);
+                document.addEventListener('keydown', this.#handleDocumentKeyDown);
+            } else {
+                document.removeEventListener('pointerdown', this.#handleDocumentPointerDown);
+                document.removeEventListener('keydown', this.#handleDocumentKeyDown);
+            }
+        }
         if (changedProperties.has('topLevelCard')) {
             const prev = changedProperties.get('topLevelCard');
             if (prev?.id !== this.topLevelCard?.id) {
@@ -271,6 +290,12 @@ export class MasCollapsibleTableRow extends LitElement {
                                   ?selected=${isSelected}
                                   aria-selected=${isSelected ? 'true' : 'false'}
                                   @click=${(event) => isSelectable && this.#onRowClickForSelection(event, path)}
+                                  @dblclick=${this.#canOpenPromoVariationInNewTab
+                                      ? (event) => this.#onPromoVariationDblClick(event, variation)
+                                      : null}
+                                  @contextmenu=${this.#canOpenPromoVariationInNewTab
+                                      ? (event) => this.#onPromoVariationContextMenu(event, variation)
+                                      : null}
                               >
                                   <sp-table-cell class="table-icon-cell">
                                       <sp-button
@@ -346,7 +371,7 @@ export class MasCollapsibleTableRow extends LitElement {
             }
         }
 
-        return html`${topLevelRow}${nestedContent}`;
+        return html`${topLevelRow}${nestedContent}${this.#promoContextMenuTemplate}`;
     }
 
     renderTitle(item) {
@@ -538,7 +563,10 @@ export class MasCollapsibleTableRow extends LitElement {
     #toggleExpandTopLevel(e) {
         e.stopPropagation();
         this.isTopLevelExpanded = !this.isTopLevelExpanded;
-        if (!this.isTopLevelExpanded) return;
+        if (!this.isTopLevelExpanded) {
+            this.#closePromoContextMenu();
+            return;
+        }
         if (!this.viewOnly) {
             if (this.selectedTabKey === VARIATION_TAB_NAME.PROMOTION) {
                 this.#loadPromoVariations();
@@ -619,6 +647,78 @@ export class MasCollapsibleTableRow extends LitElement {
         const id = findPromotionProjectIdByTag(promotionTagId, projects);
         if (!id) return null;
         return `#page=${PAGE_NAMES.PROMOTIONS_EDITOR}&promotionId=${encodeURIComponent(id)}`;
+    }
+
+    get #canOpenPromoVariationInNewTab() {
+        return this.viewOnly && Store.page.get() === PAGE_NAMES.PROMOTIONS_EDITOR;
+    }
+
+    #getPromoVariationEditorUrl(variation) {
+        if (!variation?.id) return null;
+        const surface = extractSurfaceFromPath(variation.path);
+        const locale = extractLocaleFromPath(variation.path);
+        const catalogLocale = (surface && getDefaultLocaleCode(surface, locale)) || locale;
+        const promotionId = Store.promotions.inEdit.get()?.get?.()?.id || Store.promotions.promotionId.get();
+        const params = new URLSearchParams({ page: PAGE_NAMES.FRAGMENT_EDITOR, fragmentId: variation.id });
+        if (surface) params.set('path', surface);
+        if (promotionId) params.set('promotionId', promotionId);
+        if (catalogLocale) params.set('locale', catalogLocale);
+        if (locale && locale !== catalogLocale) params.set('region', locale);
+        return `${window.location.pathname}${window.location.search}#${params.toString()}`;
+    }
+
+    #openPromoVariationInNewTab(variation) {
+        const url = this.#getPromoVariationEditorUrl(variation);
+        if (url) window.open(url, '_blank', 'noopener');
+    }
+
+    #onPromoVariationDblClick(e, variation) {
+        if (shouldIgnoreRowClickForSelection(e)) return;
+        e.stopPropagation();
+        this.#openPromoVariationInNewTab(variation);
+    }
+
+    #onPromoVariationContextMenu(e, variation) {
+        if (shouldIgnoreRowClickForSelection(e)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.promoContextMenu = { x: e.clientX, y: e.clientY, variation };
+    }
+
+    #closePromoContextMenu() {
+        this.promoContextMenu = null;
+    }
+
+    #handleDocumentPointerDown = (e) => {
+        const popover = this.shadowRoot?.querySelector('.promo-context-menu');
+        if (popover && e.composedPath().includes(popover)) return;
+        this.#closePromoContextMenu();
+    };
+
+    #handleDocumentKeyDown = (e) => {
+        if (e.key === 'Escape') this.#closePromoContextMenu();
+    };
+
+    get #promoContextMenuTemplate() {
+        if (!this.promoContextMenu) return nothing;
+        const { x, y, variation } = this.promoContextMenu;
+        return html`<sp-popover
+            open
+            class="promo-context-menu"
+            style="position: fixed; left: ${x}px; top: ${y}px; z-index: 10;"
+        >
+            <sp-menu>
+                <sp-menu-item
+                    @click=${() => {
+                        this.#openPromoVariationInNewTab(variation);
+                        this.#closePromoContextMenu();
+                    }}
+                >
+                    <sp-icon-open-in slot="icon"></sp-icon-open-in>
+                    Open in a new tab
+                </sp-menu-item>
+            </sp-menu>
+        </sp-popover>`;
     }
 
     renderPromoVariationDetailsRow(variation) {

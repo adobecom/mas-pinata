@@ -6,7 +6,13 @@ import Store from '../../src/store.js';
 import { setItemsSelectionStore } from '../../src/common/items-selection-store.js';
 import { setCardVariationsByPaths, enrichPromoVariations } from '../../src/common/utils/items-loader.js';
 import { Fragment } from '../../src/aem/fragment.js';
-import { CARD_MODEL_PATH, COLLECTION_MODEL_PATH, DICTIONARY_MODEL_PATH, FRAGMENT_STATUS } from '../../src/constants.js';
+import {
+    CARD_MODEL_PATH,
+    COLLECTION_MODEL_PATH,
+    DICTIONARY_MODEL_PATH,
+    FRAGMENT_STATUS,
+    PAGE_NAMES,
+} from '../../src/constants.js';
 import { renderFragmentStatusCell } from '../../src/translation/translation-utils.js';
 import '../../src/swc.js';
 import '../../src/translation/mas-collapsible-table-row.js';
@@ -1179,6 +1185,161 @@ describe('MasCollapsibleTableRow', () => {
             const shadowText = el.shadowRoot?.textContent || '';
             expect(shadowText).to.include('Black Friday');
             expect(shadowText).to.include('black-friday');
+        });
+    });
+
+    describe('promo variation open in new tab', () => {
+        const promoPath = '/content/dam/mas/acom/en_US/promotions/black-friday/promo-card';
+
+        afterEach(() => {
+            Store.page.set(PAGE_NAMES.WELCOME);
+            Store.promotions.promotionId.set(null);
+        });
+
+        const renderPromoVariationRow = async (options = {}) => {
+            const topLevelCard = createMockTopLevelCard();
+            setupCardVariationsInStore(topLevelCard.path, []);
+            Store.page.set(options.page ?? PAGE_NAMES.PROMOTIONS_EDITOR);
+            const el = await fixture(
+                html`<mas-collapsible-table-row
+                    .topLevelCard=${topLevelCard}
+                    .viewOnly=${options.viewOnly ?? true}
+                    .viewOnlyTabs=${['promotion']}
+                    .tabs=${['promotion']}
+                    .isTopLevelExpanded=${true}
+                ></mas-collapsible-table-row>`,
+            );
+            el.promoVariations = [
+                {
+                    id: 'promo-frag-1',
+                    path: promoPath,
+                    title: 'Promo Card',
+                    studioPath: 'promo/path',
+                    tags: [],
+                    offerData: { offerId: 'OFFER-1' },
+                },
+            ];
+            await el.updateComplete;
+            return el;
+        };
+
+        it('opens the variation editor in a new tab on double-click', async () => {
+            Store.promotions.promotionId.set('promo-project-1');
+            const el = await renderPromoVariationRow();
+            const openStub = sandbox.stub(window, 'open');
+            const row = el.shadowRoot.querySelector(`sp-table-row[value="${promoPath}"]`);
+            row.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+            expect(openStub.calledOnce).to.be.true;
+            const [url, target, features] = openStub.firstCall.args;
+            expect(target).to.equal('_blank');
+            expect(features).to.equal('noopener');
+            const params = new URLSearchParams(url.split('#')[1]);
+            expect(params.get('page')).to.equal('fragment-editor');
+            expect(params.get('fragmentId')).to.equal('promo-frag-1');
+            expect(params.get('promotionId')).to.equal('promo-project-1');
+        });
+
+        it('shows "Open in a new tab" on right-click, and choosing it opens the same URL', async () => {
+            Store.promotions.promotionId.set('promo-project-2');
+            const el = await renderPromoVariationRow();
+            const openStub = sandbox.stub(window, 'open');
+            const row = el.shadowRoot.querySelector(`sp-table-row[value="${promoPath}"]`);
+            const contextMenuEvent = new MouseEvent('contextmenu', {
+                bubbles: true,
+                composed: true,
+                clientX: 10,
+                clientY: 20,
+            });
+            const preventDefaultSpy = sandbox.spy(contextMenuEvent, 'preventDefault');
+            row.dispatchEvent(contextMenuEvent);
+            await el.updateComplete;
+            expect(preventDefaultSpy.called).to.be.true;
+            const menuItem = el.shadowRoot.querySelector('.promo-context-menu sp-menu-item');
+            expect(menuItem).to.exist;
+            expect(menuItem.textContent).to.include('Open in a new tab');
+            menuItem.click();
+            await el.updateComplete;
+            expect(openStub.calledOnce).to.be.true;
+            const [url] = openStub.firstCall.args;
+            const params = new URLSearchParams(url.split('#')[1]);
+            expect(params.get('fragmentId')).to.equal('promo-frag-1');
+            expect(el.shadowRoot.querySelector('.promo-context-menu')).to.not.exist;
+        });
+
+        it('does nothing on dblclick or contextmenu on the variation details row', async () => {
+            const el = await renderPromoVariationRow();
+            el.expandedVariationsPaths = new Set([promoPath]);
+            await el.updateComplete;
+            const openStub = sandbox.stub(window, 'open');
+            const detailsRow = el.shadowRoot.querySelector('.variation-details-row');
+            expect(detailsRow).to.exist;
+            detailsRow.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+            detailsRow.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, composed: true }));
+            await el.updateComplete;
+            expect(openStub.called).to.be.false;
+            expect(el.promoContextMenu).to.be.null;
+        });
+
+        it('does not open a tab when the copy button is double-clicked, and the copy button still copies on click', async () => {
+            const el = await renderPromoVariationRow();
+            const writeTextStub = sandbox.stub(navigator.clipboard, 'writeText').resolves();
+            const openStub = sandbox.stub(window, 'open');
+            const copyBtn = el.shadowRoot.querySelector('sp-action-button[aria-label="Copy Offer ID to clipboard"]');
+            expect(copyBtn).to.exist;
+            copyBtn.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+            await el.updateComplete;
+            expect(openStub.called).to.be.false;
+            copyBtn.click();
+            await el.updateComplete;
+            expect(writeTextStub.calledWith('OFFER-1')).to.be.true;
+        });
+
+        it('does not open a tab or prevent the native menu on another page', async () => {
+            const el = await renderPromoVariationRow({ page: PAGE_NAMES.TRANSLATION_EDITOR });
+            const openStub = sandbox.stub(window, 'open');
+            const row = el.shadowRoot.querySelector(`sp-table-row[value="${promoPath}"]`);
+            row.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+            const contextMenuEvent = new MouseEvent('contextmenu', { bubbles: true, composed: true });
+            const preventDefaultSpy = sandbox.spy(contextMenuEvent, 'preventDefault');
+            row.dispatchEvent(contextMenuEvent);
+            await el.updateComplete;
+            expect(openStub.called).to.be.false;
+            expect(preventDefaultSpy.called).to.be.false;
+        });
+
+        it('does not open a tab or prevent the native menu when viewOnly is false', async () => {
+            const el = await renderPromoVariationRow({ viewOnly: false });
+            const openStub = sandbox.stub(window, 'open');
+            const row = el.shadowRoot.querySelector(`sp-table-row[value="${promoPath}"]`);
+            row.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+            const contextMenuEvent = new MouseEvent('contextmenu', { bubbles: true, composed: true });
+            const preventDefaultSpy = sandbox.spy(contextMenuEvent, 'preventDefault');
+            row.dispatchEvent(contextMenuEvent);
+            await el.updateComplete;
+            expect(openStub.called).to.be.false;
+            expect(preventDefaultSpy.called).to.be.false;
+        });
+
+        it('does not add dblclick behaviour to grouped tab rows', async () => {
+            const varPath = '/content/dam/mas/acom/en_US/cards/parent/pzn/var1';
+            const topLevelCard = createMockTopLevelCard({
+                path: '/content/dam/mas/acom/en_US/cards/parent',
+                variationPaths: [varPath],
+            });
+            setupCardVariationsInStore(topLevelCard.path, [{ path: varPath, title: 'Variation 1' }]);
+            Store.page.set(PAGE_NAMES.PROMOTIONS_EDITOR);
+            const el = await fixture(
+                html`<mas-collapsible-table-row
+                    .topLevelCard=${topLevelCard}
+                    .isTopLevelExpanded=${true}
+                ></mas-collapsible-table-row>`,
+            );
+            await el.updateComplete;
+            const openStub = sandbox.stub(window, 'open');
+            const row = el.shadowRoot.querySelector(`sp-table-row[value="${varPath}"]`);
+            expect(row).to.exist;
+            row.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+            expect(openStub.called).to.be.false;
         });
     });
 
