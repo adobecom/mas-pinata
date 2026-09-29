@@ -37,6 +37,7 @@ class MasPromotions extends LitElement {
         error: { type: String, state: true },
         promotionsData: { type: Array, state: true },
         promotionsLoading: { type: Boolean, state: true },
+        searchTerm: { type: String, state: true },
         isDialogOpen: { type: Boolean, state: true },
         confirmDialogConfig: { type: Object, state: true },
         duplicateDialogOpen: { type: Boolean, state: true },
@@ -53,6 +54,7 @@ class MasPromotions extends LitElement {
         this.error = null;
         this.promotionsData = Store.promotions?.list?.data?.get() || [];
         this.promotionsLoading = Store.promotions?.list?.loading?.get() || false;
+        this.searchTerm = '';
         this.isDialogOpen = false;
         this.confirmDialogConfig = null;
         this.duplicateDialogOpen = false;
@@ -102,7 +104,6 @@ class MasPromotions extends LitElement {
             this.error = 'Repository component not found';
             return;
         }
-        this.promotionsData = Store.promotions?.list?.data?.get() || [];
 
         Store.promotions.list.loading.set(true);
         await this.loadPromotions();
@@ -183,9 +184,38 @@ class MasPromotions extends LitElement {
         return this.renderPromotionsTable();
     }
 
+    /**
+     * Promotions from the loaded list narrowed by the selected status filter and the search term.
+     * Neither the filter click handler nor rendering mutates promotionsData, so this is always
+     * derived from the full loaded list.
+     * @returns {Array} filtered promotion stores
+     */
+    get filteredPromotions() {
+        const term = this.searchTerm.trim().toLowerCase();
+        return this.promotionsData.filter((promotion) => {
+            const promo = promotion.get();
+            if (this.filter !== 'all' && promo.promotionListFilterKey !== this.filter) return false;
+            if (term && !promo.title?.toLowerCase().includes(term)) return false;
+            return true;
+        });
+    }
+
+    /**
+     * Per-status counts of the full loaded promotion list, ignoring the search term so tile
+     * counts stay stable while the user types.
+     * @returns {Record<string, number>} count by filter value, including 'all'
+     */
+    get statusCounts() {
+        const counts = { all: this.promotionsData.length };
+        for (const promotion of this.promotionsData) {
+            const key = promotion.get().promotionListFilterKey;
+            counts[key] = (counts[key] || 0) + 1;
+        }
+        return counts;
+    }
+
     renderPromotionsTable() {
-        this.#handleFilterPromotions(this.filter);
-        const filteredPromotions = this.promotionsData;
+        const filteredPromotions = this.filteredPromotions;
 
         const columns = [
             { key: 'title', label: 'Promotion' },
@@ -245,36 +275,52 @@ class MasPromotions extends LitElement {
 
     willUpdate() {
         this.canEdit = canEditPromotions();
+        // Store.promotions.list.{data,loading} can be updated by loaders outside this component
+        // (e.g. MasRepository.handleSearch running its own loadPromotions()), and the ReactiveController
+        // only triggers a re-render — it does not copy the new values in. Re-derive them here so every
+        // render reflects the latest store state instead of whichever snapshot a prior local call took.
+        this.promotionsData = Store.promotions?.list?.data?.get() || [];
+        this.promotionsLoading = Store.promotions?.list?.loading?.get() || false;
+    }
+
+    #handleSearchInput(event) {
+        this.searchTerm = event.target.value;
     }
 
     render() {
         return html`
             <div class="promotions-container">
-                <div class="promotions-header">
-                    <sp-search size="m" placeholder="Search"></sp-search>
+                <div class="promotions-page-header">
+                    <h1 class="page-title">Promotions</h1>
                     ${this.canEdit
                         ? html`<sp-button variant="accent" @click=${() => this.#handleAddPromotion()} class="create-button">
                               <sp-icon-add slot="icon"></sp-icon-add>
-                              Create promotion project
+                              Create project
                           </sp-button>`
                         : nothing}
                 </div>
 
                 ${this.renderError()}
 
-                <div class="promotions-segmented-control-container">
-                    <sp-action-group selects="single" emphasized size="m" justified selected='["${this.filter}"]'>
-                        ${repeat(
-                            this.filterOptions,
-                            (filter) =>
-                                html`<sp-action-button
-                                    value=${filter.value}
-                                    @click=${() => this.#handleFilterPromotions(filter.value)}
-                                    >${filter.label}</sp-action-button
-                                >`,
-                        )}
-                    </sp-action-group>
+                <div class="promotions-status-tiles">
+                    ${repeat(
+                        this.filterOptions,
+                        (filter) => filter.value,
+                        (filter) => html`
+                            <button
+                                type="button"
+                                class="status-tile ${filter.value === this.filter ? 'selected' : ''}"
+                                data-filter=${filter.value}
+                                @click=${() => this.#handleFilterPromotions(filter.value)}
+                            >
+                                <span class="status-tile-label">${filter.label}</span>
+                                <span class="status-tile-count">${this.statusCounts[filter.value] || 0}</span>
+                            </button>
+                        `,
+                    )}
                 </div>
+
+                <div class="promotions-divider"></div>
 
                 ${this.renderConfirmDialog()}
                 ${this.duplicating
@@ -291,9 +337,17 @@ class MasPromotions extends LitElement {
                     }}
                 ></mas-promotion-duplicate-dialog>
 
-                <div class="promotions-filters-container">
-                    <div class="filters-container"><sp-icon-filter></sp-icon-filter><span>Filters:</span></div>
-                    <div class="result-count-container">${(this.promotionsData || []).length} results</div>
+                <div class="promotions-search-row">
+                    <div class="promotions-search-field">
+                        <sp-search
+                            size="m"
+                            placeholder="Search"
+                            value=${this.searchTerm}
+                            ?disabled=${this.promotionsLoading}
+                            @input=${this.#handleSearchInput}
+                        ></sp-search>
+                    </div>
+                    <div class="promotions-search-results">${this.filteredPromotions.length} results</div>
                 </div>
 
                 <div class="promotions-content">${this.renderPromotionsContent()}</div>
@@ -562,18 +616,12 @@ class MasPromotions extends LitElement {
     };
 
     #handleFilterPromotions(filter) {
-        // reset promotions data
-        this.promotionsData = Store.promotions.list.data.get() || [];
         this.filter = filter;
         Store.promotions.list.filter.set(filter);
-
-        if (filter !== 'all') {
-            const filteredPromotions = this.promotionsData.filter(
-                (promotion) => promotion.value?.promotionListFilterKey === filter,
-            );
-            this.promotionsData = filteredPromotions;
-        }
     }
 }
 
 customElements.define('mas-promotions', MasPromotions);
+
+export default MasPromotions;
+export { MasPromotions };
