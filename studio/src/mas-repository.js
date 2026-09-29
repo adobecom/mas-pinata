@@ -38,7 +38,7 @@ import {
     TAG_COMPARE_CHART,
     TAG_MERCH_CARD_COLLECTION,
 } from './constants.js';
-import { applyFragmentListFilters } from './fragments/fragment-list-filters.js';
+import { applyFragmentListFilters, VARIATION_FILTERS_REQUIRING_PROMO_HYDRATION } from './fragments/fragment-list-filters.js';
 import * as promotionsRepository from './promotions/promotions-repository.js';
 import {
     clearDictionaryCache,
@@ -166,6 +166,7 @@ export class MasRepository extends LitElement {
         return applyFragmentListFilters(fragmentStores, {
             page: this.page.value,
             personalizationFilterEnabled: this.filters.value.personalizationFilterEnabled,
+            variationFilter: this.filters.value.variationFilter ?? null,
         });
     }
 
@@ -448,6 +449,8 @@ export class MasRepository extends LitElement {
         const locale = this.filters.value.locale;
         const personalizationOn = this.filters.value.personalizationFilterEnabled === true;
         const metaPersonalizationOn = dataStore.getMeta('personalizationFilterEnabled') === true;
+        const variationFilter = this.filters.value.variationFilter ?? null;
+        const metaVariationFilter = dataStore.getMeta('variationFilter') ?? null;
         let resolvedLocale = locale;
         let resolvedPath = path;
 
@@ -502,7 +505,8 @@ export class MasRepository extends LitElement {
             currentData?.length > 0 &&
             currentPath === path &&
             currentLocale === locale &&
-            metaPersonalizationOn === personalizationOn;
+            metaPersonalizationOn === personalizationOn &&
+            metaVariationFilter === variationFilter;
 
         const identicalFilters =
             sameSurface && currentQuery === query && currentTags === tagsString && currentCreatedBy === createdByString;
@@ -806,6 +810,7 @@ export class MasRepository extends LitElement {
             dataStore.setMeta('tags', tagsString);
             dataStore.setMeta('createdBy', createdByString);
             dataStore.setMeta('personalizationFilterEnabled', personalizationOn);
+            dataStore.setMeta('variationFilter', variationFilter);
             if (this.page.value === PAGE_NAMES.PROMOTIONS_EDITOR) {
                 dataStore.setMeta('promotionPickerSurface', Store.promotions.itemPickerSurface.get());
             }
@@ -875,6 +880,10 @@ export class MasRepository extends LitElement {
         if (signal?.aborted) return false;
         const page = await cursor.next();
         if (page.done) return true;
+        // Promo variations are discovered by path/tag probing, not through the `variations`
+        // reference field, so search results never carry them; hydrate on demand only when the
+        // active filter needs promo presence, to leave the unfiltered fetch path untouched.
+        const needsPromoHydration = VARIATION_FILTERS_REQUIRING_PROMO_HYDRATION.includes(this.filters.value.variationFilter);
         const fgStores = [];
         for await (const item of page.value) {
             if (this.#skipVariant(variants, item)) continue;
@@ -883,7 +892,12 @@ export class MasRepository extends LitElement {
             if (!match) continue;
             applyCorrectorToFragment(item, surface);
             if (!fragmentStores.some((f) => f.value.id === item.id)) {
-                const fragment = await this.#addToCache(item);
+                const hydratedItem = needsPromoHydration
+                    ? await promotionsRepository.mergePromoReferencesIntoFragmentData(this.aem, item, () =>
+                          this.loadPromotions(),
+                      )
+                    : item;
+                const fragment = await this.#addToCache(hydratedItem);
                 const fgStore = generateFragmentStore(fragment, null, { lazy: true });
                 if (match.exact) {
                     fgStores.unshift(fgStore);
