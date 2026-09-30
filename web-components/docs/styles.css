@@ -171,6 +171,23 @@ button {
     }
 }
 
+/* Pro sets no --merch-card-collection-card-width, so the shared four-merch-cards
+   grid collapses to one column; lay the gallery rows out here instead. */
+.pro-gallery-row {
+    display: grid;
+    grid-template-columns: minmax(0, 394px);
+    justify-content: center;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+}
+
+@media screen and (min-width: 768px) {
+    .pro-gallery-row {
+        grid-template-columns: repeat(3, minmax(0, 394px));
+    }
+}
+
 code {
     max-width: 90vw;
 }

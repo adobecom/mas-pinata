@@ -98,6 +98,30 @@ Adobe Home Gallery provides a comprehensive list of all supported card variants 
 </merch-card>
 ```
 
+### Pro variant with static content
+
+```html {.demo .light}
+<merch-card id="static-pro" variant="pro">
+  <h3 slot="heading-xs">Acrobat Pro</h3>
+  <div slot="body-xs">
+      <p>Create, edit, sign, and manage your PDFs.</p>
+  </div>
+  <p slot="heading-m">
+      <span is="inline-price" data-display-per-unit="false" data-display-recurrence="true"
+          data-display-tax="false" data-wcs-osi="r_JXAnlFI7xD6FxWKl2ODvZriLYBoSL701Kd1hRyhe8"></span>
+  </p>
+  <div slot="whats-included">
+      <ul>
+          <li>Edit PDFs and scans</li>
+          <li>Sign and request signatures</li>
+      </ul>
+  </div>
+  <div slot="footer">
+      <a is="checkout-link" href="#" class="con-button blue active" data-wcs-osi="r_JXAnlFI7xD6FxWKl2ODvZriLYBoSL701Kd1hRyhe8">Buy now</a>
+  </div>
+</merch-card>
+```
+
 ### Attributes
 
 | Name        | Description                                                                                                                                                                                           | Default Value | Required | Provider |
