@@ -341,7 +341,9 @@ export function generateFieldLink(fragment, path, page, fieldName, fieldNameText
     const { fragmentParts } = getFragmentPartsToUse(fragment, path);
     const webComponentName = getWebComponentName(fragment);
     if (!webComponentName) return null;
-    const displayText = `mas-field: ${fragmentParts} → ${fieldNameText ?? resolvedFieldName}`;
+    // The link name shows "Badge" capitalized, while the URL field param stays lowercase.
+    const linkName = fieldNameText ?? (fieldName === 'badge' ? 'Badge' : resolvedFieldName);
+    const displayText = `mas-field: ${fragmentParts} → ${linkName}`;
     const href = buildStudioFragmentHref({
         webComponentName,
         fragmentId: fragment?.id,
