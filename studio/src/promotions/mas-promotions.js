@@ -262,18 +262,20 @@ class MasPromotions extends LitElement {
 
                 ${this.renderError()}
 
-                <div class="promotions-segmented-control-container">
-                    <sp-action-group selects="single" emphasized size="m" justified selected='["${this.filter}"]'>
-                        ${repeat(
-                            this.filterOptions,
-                            (filter) =>
-                                html`<sp-action-button
-                                    value=${filter.value}
-                                    @click=${() => this.#handleFilterPromotions(filter.value)}
-                                    >${filter.label}</sp-action-button
-                                >`,
-                        )}
-                    </sp-action-group>
+                <div class="promotions-filters-container">
+                    <div class="promotions-filter-picker">
+                        <sp-action-group selects="single" emphasized size="m" justified selected='["${this.filter}"]'>
+                            ${repeat(
+                                this.filterOptions,
+                                (filter) =>
+                                    html`<sp-action-button
+                                        value=${filter.value}
+                                        @click=${() => this.#handleFilterPromotions(filter.value)}
+                                        >${filter.label}</sp-action-button
+                                    >`,
+                            )}
+                        </sp-action-group>
+                    </div>
                 </div>
 
                 ${this.renderConfirmDialog()}
@@ -291,10 +293,7 @@ class MasPromotions extends LitElement {
                     }}
                 ></mas-promotion-duplicate-dialog>
 
-                <div class="promotions-filters-container">
-                    <div class="filters-container"><sp-icon-filter></sp-icon-filter><span>Filters:</span></div>
-                    <div class="result-count-container">${(this.promotionsData || []).length} results</div>
-                </div>
+                <div class="result-count-container">${(this.promotionsData || []).length} results</div>
 
                 <div class="promotions-content">${this.renderPromotionsContent()}</div>
             </div>

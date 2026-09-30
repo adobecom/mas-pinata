@@ -26,19 +26,30 @@ export const styles = css`
         margin-bottom: 24px;
     }
 
-    .promotions-segmented-control-container {
-        margin-bottom: 24px;
-    }
-
     .promotions-filters-container {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        align-self: stretch;
         margin-bottom: 24px;
     }
 
-    .filters-container {
+    .promotions-filter-picker {
         display: flex;
+        height: 32px;
+        padding: 0 11px 0 12px;
+        justify-content: flex-end;
+        align-items: flex-start;
+        gap: 6px;
+        align-self: stretch;
+        border-radius: 8px;
+        border: 2px solid var(--Palette-gray-300, #dadada);
+        background: var(--Palette-gray-25, #fff);
+    }
+
+    .result-count-container {
+        margin-bottom: 24px;
     }
 
     .promotions-table {
