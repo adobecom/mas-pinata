@@ -354,6 +354,53 @@ export class Fragment {
     }
 
     /**
+     * Classifies a variation path by shape alone (no reference hydration required).
+     * A grouped-shaped (pzn) path outside the current fragment's parent locale family is
+     * 'excluded' rather than falling through to promo/locale classification, matching
+     * #categorizeVariations' original behavior of never reclassifying it.
+     * @param {string} path
+     * @param {{ surface?: string, locale?: string }} [context]
+     * @returns {'grouped'|'promo'|'excluded'|null}
+     */
+    static classifyVariationPathKind(path, { surface, locale } = {}) {
+        if (Fragment.isGroupedVariationPath(path)) {
+            return isVariationPathInParentLocaleFamily(surface, locale, path) ? 'grouped' : 'excluded';
+        }
+        if (isPromoVariationPath(path)) return 'promo';
+        return null;
+    }
+
+    /**
+     * References-free promo/grouped variation presence, derived from this fragment's own
+     * `variations` field paths. List rows built from search results have no hydrated
+     * `references`, so #categorizeVariations (and listPromoVariations/listGroupedVariations)
+     * report nothing for them. When references are hydrated, the promotion-tag fallback and
+     * reference-path promo sweep (via #categorizeVariations) are folded in so hydrated and
+     * unhydrated callers agree on promo presence.
+     * @returns {{ promo: boolean, grouped: boolean }}
+     */
+    getVariationPresence() {
+        const currentMatch = this.path.match(PATH_TOKENS);
+        const { surface, parsedLocale: currentLocale } = currentMatch?.groups || {};
+
+        let promo = false;
+        let grouped = false;
+
+        for (const path of this.getVariations()) {
+            const kind = Fragment.classifyVariationPathKind(path, { surface, locale: currentLocale });
+            if (kind === 'grouped') grouped = true;
+            if (kind === 'promo') promo = true;
+            if (promo && grouped) break;
+        }
+
+        if (!promo && this.references?.length) {
+            promo = this.#categorizeVariations().promo.length > 0;
+        }
+
+        return { promo, grouped };
+    }
+
+    /**
      * Categorizes all variation references in a single pass into locale, promo, and grouped buckets.
      * Each variation is classified into exactly one category (grouped > promo > locale).
      * @returns {{ locale: Object[], promo: Object[], grouped: Object[] }}
@@ -379,14 +426,18 @@ export class Fragment {
             const reference = referencesByPath.get(path);
             if (!reference) continue;
 
-            if (Fragment.isGroupedVariationPath(path)) {
-                if (isVariationPathInParentLocaleFamily(surface, currentLocale, path)) {
-                    grouped.push(reference);
-                }
+            const kind = Fragment.classifyVariationPathKind(path, { surface, locale: currentLocale });
+
+            if (kind === 'grouped') {
+                grouped.push(reference);
                 continue;
             }
 
-            if (isPromoVariationPath(path)) {
+            if (kind === 'excluded') {
+                continue;
+            }
+
+            if (kind === 'promo') {
                 promo.push(reference);
                 promoPaths.add(path);
                 continue;

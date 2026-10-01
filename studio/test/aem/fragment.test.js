@@ -239,6 +239,131 @@ describe('Fragment', () => {
         });
     });
 
+    describe('getVariationPresence', () => {
+        const basePath = '/content/dam/mas/sandbox/en_US/my-fragment';
+
+        it('reports promo presence from an unhydrated promo variation path', () => {
+            const fragment = new Fragment(
+                createFragmentConfig({
+                    path: basePath,
+                    references: [],
+                    fields: [
+                        {
+                            name: 'variations',
+                            values: ['/content/dam/mas/sandbox/en_US/promotions/black-friday/my-fragment'],
+                        },
+                    ],
+                }),
+            );
+
+            expect(fragment.getVariationPresence()).to.deep.equal({ promo: true, grouped: false });
+            expect(fragment.listPromoVariations()).to.have.lengthOf(0);
+        });
+
+        it('reports grouped presence from an unhydrated pzn variation path', () => {
+            const fragment = new Fragment(
+                createFragmentConfig({
+                    path: basePath,
+                    references: [],
+                    fields: [
+                        {
+                            name: 'variations',
+                            values: ['/content/dam/mas/sandbox/en_US/pzn/my-fragment'],
+                        },
+                    ],
+                }),
+            );
+
+            expect(fragment.getVariationPresence()).to.deep.equal({ promo: false, grouped: true });
+            expect(fragment.listGroupedVariations()).to.have.lengthOf(0);
+        });
+
+        it('reports both promo and grouped presence when both path kinds are present', () => {
+            const fragment = new Fragment(
+                createFragmentConfig({
+                    path: basePath,
+                    references: [],
+                    fields: [
+                        {
+                            name: 'variations',
+                            values: [
+                                '/content/dam/mas/sandbox/en_US/promotions/black-friday/my-fragment',
+                                '/content/dam/mas/sandbox/en_US/pzn/my-fragment',
+                            ],
+                        },
+                    ],
+                }),
+            );
+
+            expect(fragment.getVariationPresence()).to.deep.equal({ promo: true, grouped: true });
+        });
+
+        it('reports neither when there are no variation paths', () => {
+            const fragment = new Fragment(
+                createFragmentConfig({
+                    path: basePath,
+                    references: [],
+                    fields: [{ name: 'variations', values: [] }],
+                }),
+            );
+
+            expect(fragment.getVariationPresence()).to.deep.equal({ promo: false, grouped: false });
+        });
+
+        it('reports neither for locale-only variation paths', () => {
+            const fragment = new Fragment(
+                createFragmentConfig({
+                    path: basePath,
+                    references: [],
+                    fields: [
+                        {
+                            name: 'variations',
+                            values: ['/content/dam/mas/sandbox/fr_FR/my-fragment'],
+                        },
+                    ],
+                }),
+            );
+
+            expect(fragment.getVariationPresence()).to.deep.equal({ promo: false, grouped: false });
+        });
+
+        it('reports promo presence from the promotion-tag fallback when references are hydrated', () => {
+            const taggedPath = '/content/dam/mas/sandbox/en_US/my-other-fragment';
+            const fragment = new Fragment(
+                createFragmentConfig({
+                    path: basePath,
+                    references: [
+                        {
+                            id: 'ref-tagged-promo',
+                            path: taggedPath,
+                            tags: [{ id: `${TAG_PROMOTION_PREFIX}summer-sale` }],
+                        },
+                    ],
+                }),
+            );
+
+            expect(fragment.getVariationPresence()).to.deep.equal({ promo: true, grouped: false });
+        });
+
+        it('agrees with #categorizeVariations (via listGroupedVariations/listPromoVariations) when references are hydrated', () => {
+            const groupedPath = '/content/dam/mas/sandbox/en_US/pzn/my-fragment';
+            const promoPath = '/content/dam/mas/sandbox/en_US/promotions/black-friday/my-fragment';
+            const fragment = new Fragment(
+                createFragmentConfig({
+                    path: basePath,
+                    references: [
+                        { id: 'ref-grouped', path: groupedPath },
+                        { id: 'ref-promo', path: promoPath, tags: [{ id: `${TAG_PROMOTION_PREFIX}black-friday` }] },
+                    ],
+                }),
+            );
+
+            expect(fragment.getVariationPresence()).to.deep.equal({ promo: true, grouped: true });
+            expect(fragment.listGroupedVariations()).to.have.lengthOf(1);
+            expect(fragment.listPromoVariations()).to.have.lengthOf(1);
+        });
+    });
+
     describe('getEffectiveFieldValues', () => {
         const parent = new Fragment(
             createFragmentConfig({

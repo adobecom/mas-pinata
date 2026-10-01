@@ -4,6 +4,7 @@ import Store from '../store.js';
 import { isPznCountryTagPath } from '../common/utils/personalization-utils.js';
 import ReactiveController from '../reactivity/reactive-controller.js';
 import router from '../router.js';
+import { VARIATION_FILTER_OPTIONS } from '../fragments/fragment-list-filters.js';
 
 function pathToTagId(path) {
     return `mas:${path.replace('/content/cq:tags/mas/', '')}`;
@@ -254,6 +255,7 @@ class MasFilterPanel extends LitElement {
             ...prev,
             tags: '',
             personalizationFilterEnabled: false,
+            hasVariation: undefined,
         }));
 
         Store.createdByUsers.set([]);
@@ -262,6 +264,25 @@ class MasFilterPanel extends LitElement {
         this.shadowRoot.querySelectorAll('aem-tag-picker-field').forEach((tagPicker) => {
             tagPicker.clear();
         });
+    }
+
+    get #hasVariationFilter() {
+        return Store.filters.get().hasVariation || '';
+    }
+
+    #handleVariationFilterChange(e) {
+        const value = e.target.value || undefined;
+        Store.filters.set((prev) => ({
+            ...prev,
+            hasVariation: value,
+        }));
+    }
+
+    #handleVariationFilterClear() {
+        Store.filters.set((prev) => ({
+            ...prev,
+            hasVariation: undefined,
+        }));
     }
 
     async #handleTagDelete(e) {
@@ -289,6 +310,13 @@ class MasFilterPanel extends LitElement {
                 </sp-tag>
             `,
         );
+    }
+
+    get #variationFilterTag() {
+        const value = this.#hasVariationFilter;
+        if (!value) return nothing;
+        const label = VARIATION_FILTER_OPTIONS.find((option) => option.value === value)?.label;
+        return html` <sp-tag size="s" deletable @delete=${this.#handleVariationFilterClear}>${label}</sp-tag> `;
     }
 
     render() {
@@ -398,6 +426,18 @@ class MasFilterPanel extends LitElement {
                     @personalization-toggle-change=${this.#onPersonalizationToggleEnabled}
                 ></aem-tag-picker-field>
 
+                <sp-picker
+                    size="m"
+                    label="Has variation?"
+                    placeholder="Has variation?"
+                    value=${this.#hasVariationFilter}
+                    @change=${this.#handleVariationFilterChange}
+                >
+                    ${VARIATION_FILTER_OPTIONS.map(
+                        (option) => html`<sp-menu-item value=${option.value}>${option.label}</sp-menu-item>`,
+                    )}
+                </sp-picker>
+
                 <mas-user-picker
                     label="Created by"
                     .currentUser=${Store.profile}
@@ -422,7 +462,7 @@ class MasFilterPanel extends LitElement {
                         >
                     `,
                 )}
-                ${this.createdByUsersTags}
+                ${this.createdByUsersTags} ${this.#variationFilterTag}
             </sp-tags>
         `;
     }

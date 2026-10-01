@@ -2699,6 +2699,85 @@ describe('MasRepository dictionary helpers', () => {
             }
         });
 
+        it('cache validation checks hasVariation metadata: unset to a value invalidates the cache', async () => {
+            const fragments = Array.from({ length: 3 }, (_, i) =>
+                createFragment({ id: `hv-${i}`, path: `${ROOT_PATH}/acom/en_US/hv-${i}`, fields: [] }),
+            );
+            const mockCursor = createMockCursorFromPages([fragments]);
+            const { repository, mockDataStore, cleanup } = await setupSearchTest(mockCursor);
+            try {
+                await repository.searchFragments();
+
+                mockDataStore.get.returns([{ get: () => ({ path: `${ROOT_PATH}/acom/en_US/hv-0` }) }]);
+                mockDataStore.getMeta.withArgs('path').returns('acom');
+                mockDataStore.getMeta.withArgs('query').returns('');
+                mockDataStore.getMeta.withArgs('locale').returns('en_US');
+                mockDataStore.getMeta.withArgs('tags').returns('');
+                mockDataStore.getMeta.withArgs('createdBy').returns('');
+                mockDataStore.getMeta.withArgs('hasVariation').returns(null);
+
+                repository.filters = { value: { locale: 'en_US', tags: '', hasVariation: 'promo' } };
+                await repository.searchFragments();
+                expect(mockDataStore.set.calledWith([])).to.be.true;
+                expect(mockDataStore.setMeta.calledWith('hasVariation', 'promo')).to.be.true;
+            } finally {
+                cleanup();
+            }
+        });
+
+        it('cache validation checks hasVariation metadata: switching values invalidates the cache', async () => {
+            const fragments = Array.from({ length: 3 }, (_, i) =>
+                createFragment({ id: `hv2-${i}`, path: `${ROOT_PATH}/acom/en_US/hv2-${i}`, fields: [] }),
+            );
+            const mockCursor = createMockCursorFromPages([fragments]);
+            const { repository, mockDataStore, cleanup } = await setupSearchTest(mockCursor);
+            try {
+                repository.filters = { value: { locale: 'en_US', tags: '', hasVariation: 'promo' } };
+                await repository.searchFragments();
+
+                mockDataStore.get.returns([{ get: () => ({ path: `${ROOT_PATH}/acom/en_US/hv2-0` }) }]);
+                mockDataStore.getMeta.withArgs('path').returns('acom');
+                mockDataStore.getMeta.withArgs('query').returns('');
+                mockDataStore.getMeta.withArgs('locale').returns('en_US');
+                mockDataStore.getMeta.withArgs('tags').returns('');
+                mockDataStore.getMeta.withArgs('createdBy').returns('');
+                mockDataStore.getMeta.withArgs('hasVariation').returns('promo');
+
+                repository.filters = { value: { locale: 'en_US', tags: '', hasVariation: 'grouped' } };
+                await repository.searchFragments();
+                expect(mockDataStore.set.calledWith([])).to.be.true;
+            } finally {
+                cleanup();
+            }
+        });
+
+        it('cache validation checks hasVariation metadata: clearing the selection invalidates the cache', async () => {
+            const fragments = Array.from({ length: 3 }, (_, i) =>
+                createFragment({ id: `hv3-${i}`, path: `${ROOT_PATH}/acom/en_US/hv3-${i}`, fields: [] }),
+            );
+            const mockCursor = createMockCursorFromPages([fragments]);
+            const { repository, mockDataStore, cleanup } = await setupSearchTest(mockCursor);
+            try {
+                repository.filters = { value: { locale: 'en_US', tags: '', hasVariation: 'none' } };
+                await repository.searchFragments();
+
+                mockDataStore.get.returns([{ get: () => ({ path: `${ROOT_PATH}/acom/en_US/hv3-0` }) }]);
+                mockDataStore.getMeta.withArgs('path').returns('acom');
+                mockDataStore.getMeta.withArgs('query').returns('');
+                mockDataStore.getMeta.withArgs('locale').returns('en_US');
+                mockDataStore.getMeta.withArgs('tags').returns('');
+                mockDataStore.getMeta.withArgs('createdBy').returns('');
+                mockDataStore.getMeta.withArgs('hasVariation').returns('none');
+
+                repository.filters = { value: { locale: 'en_US', tags: '' } };
+                await repository.searchFragments();
+                expect(mockDataStore.set.calledWith([])).to.be.true;
+                expect(mockDataStore.setMeta.calledWith('hasVariation', null)).to.be.true;
+            } finally {
+                cleanup();
+            }
+        });
+
         it('sets loading false after successful loadNextPage', async () => {
             const page1 = Array.from({ length: MasRepository.MIN_FILTERED_PAGE_RESULTS }, (_, i) =>
                 createFragment({ id: `l-${i}`, path: `${ROOT_PATH}/acom/en_US/l-${i}`, fields: [] }),

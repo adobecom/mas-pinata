@@ -309,6 +309,58 @@
                         const tagsParam = Store.filters.get().tags || '';
                         expect(tagsParam).to.include('mas:product_code/apptype/mypac');
                     });
+
+                    it('Has variation? filter defaults to unset', async function () {
+                        const filterPanel = initElementFromTemplate('filterPanel1', this.test.title);
+                        await filterPanel.updateComplete;
+
+                        expect(Store.filters.get().hasVariation).to.be.undefined;
+                        const picker = filterPanel.shadowRoot.querySelector('sp-picker[label="Has variation?"]');
+                        expect(picker).to.not.be.null;
+                        expect(picker.value).to.equal('');
+                    });
+
+                    it('selecting a second "Has variation?" option replaces the first', async function () {
+                        const filterPanel = initElementFromTemplate('filterPanel1', this.test.title);
+                        await filterPanel.updateComplete;
+
+                        const picker = filterPanel.shadowRoot.querySelector('sp-picker[label="Has variation?"]');
+                        picker.value = 'promo';
+                        picker.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+                        await filterPanel.updateComplete;
+                        expect(Store.filters.get().hasVariation).to.equal('promo');
+
+                        picker.value = 'grouped';
+                        picker.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+                        await filterPanel.updateComplete;
+                        expect(Store.filters.get().hasVariation).to.equal('grouped');
+                    });
+
+                    it('deleting the "Has variation?" chip clears the filter', async function () {
+                        Store.filters.set((prev) => ({ ...prev, hasVariation: 'promo' }));
+                        const filterPanel = initElementFromTemplate('filterPanel1', this.test.title);
+                        await filterPanel.updateComplete;
+
+                        const tags = filterPanel.shadowRoot.querySelectorAll('sp-tag');
+                        const chip = Array.from(tags).find((t) => t.textContent.trim() === 'Has promo variation');
+                        expect(chip).to.not.be.undefined;
+                        chip.dispatchEvent(new CustomEvent('delete', { bubbles: true, composed: true }));
+                        await filterPanel.updateComplete;
+
+                        expect(Store.filters.get().hasVariation).to.be.undefined;
+                    });
+
+                    it('Reset Filters clears the "Has variation?" selection along with tags', async function () {
+                        Store.filters.set((prev) => ({ ...prev, hasVariation: 'promo' }));
+                        const filterPanel = initElementFromTemplate('filterPanel1', this.test.title);
+                        await filterPanel.updateComplete;
+
+                        const resetButton = filterPanel.shadowRoot.querySelector('sp-action-button');
+                        resetButton.click();
+                        await filterPanel.updateComplete;
+
+                        expect(Store.filters.get().hasVariation).to.be.undefined;
+                    });
                 });
             });
         </script>
