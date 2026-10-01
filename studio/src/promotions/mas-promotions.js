@@ -37,6 +37,7 @@ class MasPromotions extends LitElement {
         error: { type: String, state: true },
         promotionsData: { type: Array, state: true },
         promotionsLoading: { type: Boolean, state: true },
+        searchTerm: { type: String, state: true },
         isDialogOpen: { type: Boolean, state: true },
         confirmDialogConfig: { type: Object, state: true },
         duplicateDialogOpen: { type: Boolean, state: true },
@@ -53,6 +54,7 @@ class MasPromotions extends LitElement {
         this.error = null;
         this.promotionsData = Store.promotions?.list?.data?.get() || [];
         this.promotionsLoading = Store.promotions?.list?.loading?.get() || false;
+        this.searchTerm = '';
         this.isDialogOpen = false;
         this.confirmDialogConfig = null;
         this.duplicateDialogOpen = false;
@@ -183,9 +185,37 @@ class MasPromotions extends LitElement {
         return this.renderPromotionsTable();
     }
 
+    /**
+     * Narrows the unfiltered promotions list to those matching a given status filter.
+     * @param {Array} promotions
+     * @param {string} filterKey
+     * @returns {Array}
+     */
+    #filterByStatus(promotions, filterKey) {
+        if (filterKey === 'all') return promotions;
+        return promotions.filter((promotion) => promotion.value?.promotionListFilterKey === filterKey);
+    }
+
+    /** Promotions matching the selected status filter and the current search term. */
+    get filteredPromotions() {
+        const statusFiltered = this.#filterByStatus(this.promotionsData || [], this.filter);
+        const term = this.searchTerm.trim().toLowerCase();
+        if (!term) return statusFiltered;
+        return statusFiltered.filter((promotion) => promotion.value?.title?.toLowerCase().includes(term));
+    }
+
+    /** Per-status project counts computed from the unfiltered promotions list. */
+    get statusCounts() {
+        const promotions = this.promotionsData || [];
+        const counts = {};
+        for (const filter of this.filterOptions) {
+            counts[filter.value] = this.#filterByStatus(promotions, filter.value).length;
+        }
+        return counts;
+    }
+
     renderPromotionsTable() {
-        this.#handleFilterPromotions(this.filter);
-        const filteredPromotions = this.promotionsData;
+        const filteredPromotions = this.filteredPromotions;
 
         const columns = [
             { key: 'title', label: 'Promotion' },
@@ -245,35 +275,58 @@ class MasPromotions extends LitElement {
 
     willUpdate() {
         this.canEdit = canEditPromotions();
+        this.promotionsData = Store.promotions.list.data.get() || [];
+        this.promotionsLoading = Store.promotions.list.loading.get() || false;
     }
 
     render() {
         return html`
             <div class="promotions-container">
-                <div class="promotions-header">
-                    <sp-search size="m" placeholder="Search"></sp-search>
+                <div class="promotions-page-header-row">
+                    <h1 class="promotions-page-header">Promotions</h1>
                     ${this.canEdit
-                        ? html`<sp-button variant="accent" @click=${() => this.#handleAddPromotion()} class="create-button">
-                              <sp-icon-add slot="icon"></sp-icon-add>
-                              Create promotion project
+                        ? html`<sp-button
+                              variant="accent"
+                              @click=${() => this.#handleAddPromotion()}
+                              class="promotions-create-button"
+                          >
+                              Create project
                           </sp-button>`
                         : nothing}
                 </div>
 
                 ${this.renderError()}
 
-                <div class="promotions-segmented-control-container">
-                    <sp-action-group selects="single" emphasized size="m" justified selected='["${this.filter}"]'>
-                        ${repeat(
-                            this.filterOptions,
-                            (filter) =>
-                                html`<sp-action-button
-                                    value=${filter.value}
-                                    @click=${() => this.#handleFilterPromotions(filter.value)}
-                                    >${filter.label}</sp-action-button
-                                >`,
-                        )}
-                    </sp-action-group>
+                <div class="promotions-status-tiles">
+                    ${repeat(
+                        this.filterOptions,
+                        (filter) => filter.value,
+                        (filter) => html`
+                            <div
+                                class="promotions-status-tile ${this.filter === filter.value ? 'selected' : ''}"
+                                @click=${() => this.#handleFilterChange(filter.value)}
+                            >
+                                <span class="promotions-status-tile-label">${filter.label}</span>
+                                <span class="promotions-status-tile-count">${this.statusCounts[filter.value] ?? 0}</span>
+                            </div>
+                        `,
+                    )}
+                </div>
+
+                <div class="promotions-rule"></div>
+
+                <div class="promotions-search-bar">
+                    <div class="promotions-search-field-container">
+                        <sp-search
+                            size="m"
+                            placeholder="Search"
+                            value=${this.searchTerm}
+                            ?disabled=${this.promotionsLoading}
+                            @input=${this.#handleSearchInput}
+                            @change=${this.#handleSearchInput}
+                        ></sp-search>
+                    </div>
+                    <span class="promotions-search-help-text">${this.filteredPromotions.length} results</span>
                 </div>
 
                 ${this.renderConfirmDialog()}
@@ -290,11 +343,6 @@ class MasPromotions extends LitElement {
                         this.duplicateDialogOpen = false;
                     }}
                 ></mas-promotion-duplicate-dialog>
-
-                <div class="promotions-filters-container">
-                    <div class="filters-container"><sp-icon-filter></sp-icon-filter><span>Filters:</span></div>
-                    <div class="result-count-container">${(this.promotionsData || []).length} results</div>
-                </div>
 
                 <div class="promotions-content">${this.renderPromotionsContent()}</div>
             </div>
@@ -561,19 +609,17 @@ class MasPromotions extends LitElement {
         }
     };
 
-    #handleFilterPromotions(filter) {
-        // reset promotions data
-        this.promotionsData = Store.promotions.list.data.get() || [];
+    #handleFilterChange(filter) {
         this.filter = filter;
         Store.promotions.list.filter.set(filter);
+    }
 
-        if (filter !== 'all') {
-            const filteredPromotions = this.promotionsData.filter(
-                (promotion) => promotion.value?.promotionListFilterKey === filter,
-            );
-            this.promotionsData = filteredPromotions;
-        }
+    #handleSearchInput(event) {
+        this.searchTerm = event.target.value ?? '';
     }
 }
 
 customElements.define('mas-promotions', MasPromotions);
+
+export default MasPromotions;
+export { MasPromotions };
