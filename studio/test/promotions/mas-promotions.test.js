@@ -302,4 +302,23 @@ describe('MasPromotions', () => {
             expect(el.filteredPromotions).to.have.lengthOf(0);
         });
     });
+
+    describe('font family of the new Promotions text', () => {
+        it('renders the header, tile labels, tile counts and results text in a sans-serif font', async () => {
+            const data = [makePromotion({ id: 'promo-1', title: 'Summer Launch Promo', startDate: PAST, endDate: FUTURE_END })];
+            const el = await mountPromotions(data, 'all');
+
+            const header = el.renderRoot.querySelector('h1.promotions-page-header');
+            const tile = getTile(el, 'All');
+            const tileLabel = tile.querySelector('.promotions-status-tile-label');
+            const tileCount = tile.querySelector('.promotions-status-tile-count');
+            const resultsText = el.renderRoot.querySelector('.promotions-search-help-text');
+
+            for (const target of [header, tileLabel, tileCount, resultsText]) {
+                const fontFamily = getComputedStyle(target).fontFamily;
+                expect(fontFamily).to.include('sans-serif');
+                expect(fontFamily).to.not.include('Adobe Clean Spectrum VF');
+            }
+        });
+    });
 });

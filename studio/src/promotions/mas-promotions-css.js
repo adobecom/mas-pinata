@@ -28,7 +28,7 @@ export const styles = css`
 
     .promotions-page-header {
         color: #000;
-        font-family: var(--Font-family-Sans-serif, 'Adobe Clean Spectrum VF');
+        font-family: var(--spectrum-sans-font-family-stack, 'Adobe Clean', sans-serif);
         font-size: var(--Font-size-600, 25px);
         font-style: normal;
         font-weight: 700;
@@ -77,7 +77,7 @@ export const styles = css`
     .promotions-status-tile-label {
         align-self: flex-end;
         color: var(--Alias-content-neutral-default, var(--Alias-content-neutral-default, #292929));
-        font-family: var(--Font-family-Sans-serif, 'Adobe Clean Spectrum VF');
+        font-family: var(--spectrum-sans-font-family-stack, 'Adobe Clean', sans-serif);
         font-size: var(--Font-size-100, 14px);
         font-style: normal;
         font-weight: 400;
@@ -88,7 +88,7 @@ export const styles = css`
     .promotions-status-tile-count {
         flex: 1 0 0;
         color: #000;
-        font-family: var(--Font-family-Sans-serif, 'Adobe Clean Spectrum VF');
+        font-family: var(--spectrum-sans-font-family-stack, 'Adobe Clean', sans-serif);
         font-size: var(--Font-size-600, 25px);
         font-style: normal;
         font-weight: 700;
@@ -142,7 +142,7 @@ export const styles = css`
     .promotions-search-help-text {
         flex: 1 0 0;
         color: var(--Alias-content-neutral-default, #292929);
-        font-family: var(--Font-family-Sans-serif, 'Adobe Clean Spectrum VF');
+        font-family: var(--spectrum-sans-font-family-stack, 'Adobe Clean', sans-serif);
         font-size: var(--Font-size-100, 14px);
         font-style: normal;
         font-weight: 400;
